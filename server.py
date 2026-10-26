@@ -32,6 +32,10 @@ logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 app.register_blueprint(materials_bp)
 
+# قوالب وملفات ثابتة تتحدث فوراً بعد أي تحديث ذاتي (بدون إعادة تشغيل)
+app.config["TEMPLATES_AUTO_RELOAD"] = True
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
+
 PORT = int(os.getenv("PORT", "8080"))
 
 # ================== أدوات التواريخ والأوقات ==================
@@ -1141,36 +1145,98 @@ def start_cloudflare_if_enabled():
     return None
 
 
-def check_for_updates():
-    """تحديث تلقائي صامت عند كل تشغيل — يجلب آخر نسخة من مستودع التحديثات العام
+# ================== التحديث الذاتي ==================
+_UPDATE_LOCK = None
+
+
+def _update_status_path():
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "update_status.txt")
+
+
+def _write_status(txt):
+    """حالة آخر عملية تحديث — يقرؤها زر الواجهة و/أو /api/update/status"""
+    try:
+        with open(_update_status_path(), "w", encoding="utf-8") as f:
+            f.write(txt)
+    except Exception:
+        pass
+
+
+def _get_local_version():
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "version.txt"), "r", encoding="utf-8") as f:
+            return f.read().strip()
+    except Exception:
+        return ""
+
+
+def send_ntfy_update(msg):
+    """إشعار ntfy عند تطبيق تحديث — يخبر المستخدم بتحديث صفحة المتصفح"""
+    try:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        topic_file = os.path.join(base_dir, "ntfy_topic.txt")
+        topic = ""
+        if os.path.exists(topic_file):
+            with open(topic_file, "r", encoding="utf-8") as f:
+                topic = f.read().strip()
+        if not topic or " " in topic:
+            return
+        from urllib.request import Request, urlopen
+        now = datetime.now().strftime("%H:%M - %d/%m/%Y")
+        body = f"{msg}\nالساعة: {now}".encode("utf-8")
+        req = Request(
+            f"https://ntfy.sh/{topic}",
+            data=body,
+            headers={
+                "Title": "Pharmacy - Update",
+                "Tags": "arrows_clockwise",
+                "Priority": "default",
+            },
+        )
+        urlopen(req, timeout=15)
+        print("🔔 أُرسل إشعار ntfy بالتحديث")
+    except Exception:
+        pass
+
+
+def check_for_updates(silent=False):
+    """تحديث ذاتي — يعمل في 3 حالات: عند الإقلاع + كل 5 دقائق أثناء التشغيل + زر التحديث
     - يقارن version.txt المحلي مع البعيد؛ إن اختلفا ينزّل ملفات update_files.txt
-      ويستبدلها (مع نسخة احتياطية في backup_v<رقم>) ويعيد تشغيل نفسه إن تغيّر server.py
+      ويستبدلها (نسخة احتياطية في backup_v<رقم>) ويعيد تشغيل نفسه إن تغيّر server.py
     - أي فشل (بلا إنترنت مثلاً) = تجاهل والتشغيل بالنسخة الحالية
     """
+    global _UPDATE_LOCK
     base_dir = os.path.dirname(os.path.abspath(__file__))
     raw = "https://raw.githubusercontent.com/ehessan1974-maker/pharmacy-updates/main/"
     try:
+        import threading as _th
         import time as _t
         import shutil as _sh
         import urllib.request as _uq
         import urllib.parse as _up
 
-        local_v = ""
+        if _UPDATE_LOCK is None:
+            _UPDATE_LOCK = _th.Lock()
+        if not _UPDATE_LOCK.acquire(blocking=False):
+            if not silent:
+                _write_status("busy")
+            return
+
+        local_v = _get_local_version()
+        _write_status("checking")
         try:
-            with open(os.path.join(base_dir, "version.txt"), "r", encoding="utf-8") as f:
-                local_v = f.read().strip()
-        except Exception:
-            pass
-        try:
-            with _uq.urlopen(raw + "version.txt", timeout=6) as r:
+            with _uq.urlopen(raw + "version.txt", timeout=8) as r:
                 remote_v = r.read().decode("utf-8", "ignore").strip()
         except Exception:
+            _write_status("offline")
             return  # بلا إنترنت أو المستودع غير متاح — تشغيل عادي
         if not remote_v or remote_v == local_v:
+            _write_status("same:" + local_v)
             return
 
         print(f"⬇ يتوفر تحديث جديد (v{remote_v}) — جاري التحديث التلقائي...")
-        with _uq.urlopen(raw + "update_files.txt", timeout=10) as r:
+        _write_status("downloading:" + remote_v)
+        with _uq.urlopen(raw + "update_files.txt", timeout=12) as r:
             manifest = [l.strip() for l in r.read().decode("utf-8", "ignore").splitlines()
                         if l.strip() and not l.startswith("#")]
         backup_dir = os.path.join(base_dir, "backup_v" + remote_v)
@@ -1180,7 +1246,7 @@ def check_for_updates():
             if ".." in safe or safe.startswith("/"):
                 continue
             url = raw + _up.quote(safe)
-            with _uq.urlopen(url, timeout=20) as r:
+            with _uq.urlopen(url, timeout=25) as r:
                 data = r.read()
             dst = os.path.join(base_dir, *safe.split("/"))
             if os.path.exists(dst):
@@ -1191,20 +1257,57 @@ def check_for_updates():
             with open(dst + ".new", "wb") as f:
                 f.write(data)
             staged.append(dst)
+        _write_status("installing:" + remote_v)
         for dst in staged:
             os.replace(dst + ".new", dst)
         with open(os.path.join(base_dir, "version.txt"), "w", encoding="utf-8") as f:
             f.write(remote_v)
         print(f"✅ اكتمل التحديث إلى v{remote_v} — {len(staged)} ملفاً")
-        if any(os.path.basename(d) == "server.py" for d in staged):
+        restart_needed = any(os.path.basename(d) == "server.py" for d in staged)
+        if restart_needed:
+            _write_status("restart:" + remote_v)
+            send_ntfy_update(f"تم تحديث البرنامج إلى v{remote_v} — يعيد تشغيل نفسه الآن، انتظر نصف دقيقة ثم افتح الصفحة من جديد")
             print("🔄 إعادة تشغيل البرنامج بالنسخة الجديدة...")
-            _t.sleep(1)
+            _t.sleep(1.5)
             os.execv(sys.executable, [sys.executable, os.path.abspath(__file__)])
+        else:
+            _write_status("done:" + remote_v)
+            send_ntfy_update(f"تم تحديث البرنامج إلى v{remote_v} — حدّث صفحة المتصفح (F5) لتظهر التعديلات")
     except Exception as e:
         try:
-            print("⚠ تعذر التحديث التلقائي — سيتم التشغيل بالنسخة الحالية:", e)
+            _write_status("error:" + str(e)[:120])
+            if not silent:
+                print("⚠ تعذر التحديث التلقائي — سيتم التشغيل بالنسخة الحالية:", e)
         except Exception:
             pass
+    finally:
+        try:
+            if _UPDATE_LOCK is not None and _UPDATE_LOCK.locked():
+                _UPDATE_LOCK.release()
+        except Exception:
+            pass
+
+
+# ================== مسارات التحديث اليدوي (زر الواجهة) ==================
+@app.route("/api/update/now", methods=["POST"])
+def api_update_now():
+    """زر «تحديث البرنامج الآن» — يبدأ الفحص في خيط منفصل ويرد فوراً"""
+    import threading
+    _write_status("starting")
+    threading.Thread(target=check_for_updates, kwargs={"silent": False}, daemon=True).start()
+    return jsonify({"ok": True, "msg": "بدأ فحص التحديث"})
+
+
+@app.route("/api/update/status")
+def api_update_status():
+    """حالة آخر فحص تحديث + الإصدار الحالي (يستعلمه زر الواجهة كل ثانيتين)"""
+    status = ""
+    try:
+        with open(_update_status_path(), "r", encoding="utf-8") as f:
+            status = f.read().strip()
+    except Exception:
+        status = ""
+    return jsonify({"status": status or "idle", "version": _get_local_version()})
 
 
 if __name__ == "__main__":
@@ -1214,6 +1317,18 @@ if __name__ == "__main__":
     try:
         tunnel_proc = None
         check_for_updates()
+
+        # فحص دوري كل 5 دقائق أثناء التشغيل — التعديلات تصل بلا تدخل من المستخدم
+        def _periodic_update_check():
+            import time as _pt
+            while True:
+                _pt.sleep(300)
+                try:
+                    check_for_updates(silent=True)
+                except Exception:
+                    pass
+
+        threading.Thread(target=_periodic_update_check, daemon=True).start()
         ng = start_ngrok_if_configured()
         if ng:
             tunnel_proc, turl = ng

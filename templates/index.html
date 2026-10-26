@@ -335,6 +335,17 @@
         <button class="btn-edit-sales" onclick="openSales()">🗂️ فتح في أكسس</button>
       </div>
     </div>
+
+    <!-- زر البرنامج والتحديث الذاتي — التعديلات تصل مباشرة بلا تنزيل -->
+    <div class="sidebar-item">
+      <button id="programSidebarBtn" class="sidebar-btn">
+        <i class="fas fa-sync-alt"></i> البرنامج
+      </button>
+      <div id="programSidebarMenu" class="sidebar-dropdown">
+        <button id="updateProgramBtn">⬇️ تحديث البرنامج الآن</button>
+        <button id="versionInfoBtn" style="cursor:default;">ℹ️ الإصدار الحالي: —</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -384,9 +395,66 @@
     return {};
   }
 
+  // ===== زر تحديث البرنامج — التعديلات تصل مباشرة بلا تنزيل من المستخدم =====
+  (function () {
+    const updBtn = document.getElementById('updateProgramBtn');
+    const verBtn = document.getElementById('versionInfoBtn');
+    if (!updBtn) return;
+    fetch('/api/update/status').then(r => r.json()).then(d => {
+      if (verBtn) verBtn.textContent = 'ℹ️ الإصدار الحالي: v' + (d.version || '1');
+    }).catch(() => {});
+    let pollTimer = null;
+    function finish(msg, reload, waitRestart) {
+      if (pollTimer) clearInterval(pollTimer);
+      updBtn.textContent = msg;
+      updBtn.disabled = false;
+      if (reload) setTimeout(() => location.reload(), 2500);
+      if (waitRestart) {
+        let tries = 0;
+        const t = setInterval(async () => {
+          tries++;
+          try {
+            await fetch('/api/update/status');
+            clearInterval(t);
+            updBtn.textContent = '✅ عاد البرنامج للعمل — جاري تحديث الصفحة...';
+            setTimeout(() => location.reload(), 1500);
+          } catch (e) { if (tries > 60) clearInterval(t); }
+        }, 3000);
+      }
+    }
+    function pollStatus() {
+      pollTimer = setInterval(async () => {
+        try {
+          const d = await (await fetch('/api/update/status')).json();
+          const s = String(d.status || '');
+          if (s.indexOf('same') === 0) finish('✅ البرنامج على آخر إصدار — لا يوجد تحديث جديد');
+          else if (s.indexOf('error') === 0) finish('⚠️ تعذر التحديث: ' + s.slice(6));
+          else if (s.indexOf('busy') === 0) finish('⏳ توجد عملية تحديث جارية بالفعل');
+          else if (s.indexOf('done') === 0) finish('✅ اكتمل التحديث إلى v' + s.split(':')[1] + ' — جاري تحديث الصفحة...', true);
+          else if (s.indexOf('restart') === 0) finish('🔄 البرنامج يعيد تشغيل نفسه... انتظر قليلاً', false, true);
+          else if (s.indexOf('offline') === 0) finish('⚠️ لا يوجد اتصال بالإنترنت — تحقق من الشبكة');
+          else updBtn.textContent = '⏳ جاري التحديث... لا تغلق البرنامج';
+        } catch (e) { /* السيرفر قد يعيد تشغيل نفسه — نستمر بالمحاولة */ }
+      }, 2000);
+    }
+    updBtn.addEventListener('click', async () => {
+      if (updBtn.disabled) return;
+      updBtn.disabled = true;
+      updBtn.textContent = '⏳ جاري الفحص...';
+      try {
+        await fetch('/api/update/now', { method: 'POST' });
+        pollStatus();
+      } catch (e) {
+        updBtn.textContent = '⚠️ تعذر الاتصال بالسيرفر';
+        updBtn.disabled = false;
+      }
+    });
+  })();
+
 document.addEventListener('DOMContentLoaded', function() {
     setupSidebarDropdown('invoiceSidebarBtn', 'invoiceSidebarMenu');
     setupSidebarDropdown('otherWindowsSidebarBtn', 'otherWindowsSidebarMenu');
+    setupSidebarDropdown('programSidebarBtn', 'programSidebarMenu');
 
     const sidebar = document.getElementById('sidebar');
     const SIDEBAR_THRESHOLD = 20;
