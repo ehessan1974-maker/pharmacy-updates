@@ -301,3 +301,48 @@
         background: rgba(0,0,0,0.3) !important;
     }
 }
+
+/* ============================================================================ */
+/* v10 — خفض ارتفاع هيدر النوافذ المنبثقة (جدول المبيعات + بطاقات المواد) وخانات البحث */
+/* ============================================================================ */
+#floatingModalHeader,
+#materialsHeader,
+#purchasesModalHeader {
+  padding: 3px 10px !important;
+  gap: 6px;
+}
+
+#floatingModalHeader .window-controls button,
+#materialsHeader .window-controls button,
+#purchasesModalHeader .window-controls button {
+  width: 22px !important;
+  height: 22px !important;
+  padding: 0 1px !important;
+}
+
+/* خانة البحث داخل الهيدر — أضيق (الحشوة العمودية كانت 10px عبر مكوّن البحث) */
+#floatingModalHeader .google-search-input,
+#materialsHeader .google-search-input,
+#purchasesModalHeader .google-search-input {
+  padding: 2px 20px 2px 64px !important;
+  border-radius: 14px !important;
+}
+
+/* زر فلترة التاريخ في هيدر المبيعات */
+#floatingModalHeader #filterDropdownBtn {
+  padding: 3px 10px !important;
+}
+
+/* شريط العمليات الجماعية (Bulk) تحت هيدر المبيعات — أرقّ */
+#floatingModal > div:nth-of-type(3) {
+  padding: 4px 10px !important;
+}
+
+/* وضع التصغير — يمنع فيض ما تحت الهيدر خارج الشريط
+   (كانت overflow: visible !important أعلاه تتغلب على inline hidden
+    فيظهر شريط Bulk خارج النافذة المصغرة) */
+#floatingModal.modal-minimized,
+#materialsModal.modal-minimized,
+#purchasesModal.modal-minimized {
+  overflow: hidden !important;
+}
