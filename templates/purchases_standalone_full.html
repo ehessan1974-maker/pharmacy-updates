@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>📦 المشتريات - تعديل الفاتورة</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='floating-modal-common.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { margin: 0; padding: 20px; background: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .standalone-purchases-container { max-width: 100%; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column; height: calc(100vh - 40px); position: relative; }
+        .purchases-header { background: #1f4f3a; color: white; padding: 12px 15px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; position: sticky; top: 0; z-index: 100; flex-shrink: 0; }
+        .filter-toolbar { background: #e9ecef; padding: 10px 15px; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; border-bottom: 1px solid #dee2e6; position: sticky; top: 60px; z-index: 99; flex-shrink: 0; }
+        .purchases-toolbar { background: #f8f9fa; padding: 10px 15px; border-bottom: 1px solid #dee2e6; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; position: sticky; top: 110px; z-index: 98; flex-shrink: 0; }
+        #purchasesModalContent { flex: 1; overflow: auto !important; padding: 10px; background: #fafafa; min-height: 0; }
+        .btn-small { background: #2c6e49; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+        .btn-small:hover { opacity: 0.85; }
+        .btn-filter { background: #198754; }
+        #purchasesTable { width: 100%; border-collapse: collapse; font-size: 13px; }
+        #purchasesTable thead th { background: #2c6e49; color: white; position: sticky; top: 0; z-index: 10; padding: 10px 6px; border: 1px solid #1a4d32; }
+        #purchasesTable tbody td { padding: 8px 6px; border: 1px solid #dee2e6; text-align: center; }
+        #purchasesTable tbody tr:hover { background: #f5f5f5; }
+        #purchasesTable tfoot { position: sticky; bottom: 0; z-index: 20; }
+        #purchasesTable tfoot tr#totalsPurchasesRow { background: #1f4f3a; font-weight: bold; }
+        #purchasesTable tfoot tr#totalsPurchasesRow td { background: #1f4f3a; color: #f1c40f; border-top: 2px solid #1e2a36; padding: 10px 6px; }
+        .col-invoiceNo:hover, .col-to:hover, .col-date:hover { cursor: pointer; color: #007bff; font-weight: bold; background: #e8f0fe; text-decoration: underline; }
+        #purchasesTable tbody tr.row-selected { background-color: #cfe2ff !important; }
+        .loading { text-align: center; padding: 50px; color: #666; }
+        .highlight { background: linear-gradient(90deg, #fff59d, #ffe082); color: #000; font-weight: bold; padding: 1px 2px; border-radius: 3px; }
+        .purchases-search-wrapper { flex: 1; margin: 0 15px; max-width: 420px; position: relative; }
+        .purchases-search-wrapper .google-search-input { background: white; border: 1px solid #ced4da; border-radius: 28px; padding: 8px 20px 8px 80px; font-size: 14px; width: 100%; box-sizing: border-box; }
+        .purchases-search-wrapper .google-search-input:focus { border-color: #198754; box-shadow: 0 0 0 2px rgba(25,135,84,0.2); outline: none; }
+        .toggle-columns-btn { background: transparent; border: none; color: white; font-size: 18px; cursor: pointer; margin-left: 8px; padding: 4px 8px; border-radius: 4px; }
+        .toggle-columns-btn:hover { background: rgba(255,255,255,0.2); }
+        .columns-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100001; display: flex; align-items: center; justify-content: center; }
+        .columns-modal { background: white; border-radius: 16px; width: 90%; max-width: 450px; max-height: 85%; display: flex; flex-direction: column; direction: rtl; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .columns-modal-header { background: #1f4f3a; color: white; padding: 15px 20px; border-radius: 16px 16px 0 0; display: flex; justify-content: space-between; align-items: center; }
+        .columns-modal-header button { background: none; border: none; color: white; font-size: 28px; cursor: pointer; }
+        .columns-modal-list { flex: 1; overflow-y: auto; padding: 10px 0; }
+        .column-item { display: flex; align-items: center; gap: 12px; padding: 10px 20px; cursor: pointer; border-bottom: 1px solid #eee; }
+        .column-item:hover { background: #f5f5f5; }
+        .column-item input { width: 20px; height: 20px; cursor: pointer; }
+        .column-item label { flex: 1; cursor: pointer; font-size: 14px; }
+        .columns-modal-actions { padding: 12px 16px; border-top: 1px solid #ddd; display: flex; gap: 12px; justify-content: flex-end; }
+        .columns-modal-actions button { padding: 8px 18px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
+        .btn-reset { background: #198754; color: white; }
+        .btn-close-modal { background: #6c757d; color: white; }
+        .filter-popup { position: fixed; background: white; border: 1px solid #ced4da; border-radius: 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.2); z-index: 100050; width: 300px; padding: 15px; direction: rtl; display: none; }
+        .filter-popup select, .filter-popup input { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; margin-top: 5px; }
+        .filter-popup label { display: block; font-weight: bold; margin-bottom: 5px; }
+        .filter-buttons { display: flex; justify-content: space-between; gap: 10px; margin-top: 15px; }
+        .filter-buttons button { flex: 1; padding: 8px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; }
+        #applyFilterBtn { background: #0d6efd; color: white; }
+        #cancelFilterBtn { background: #6c757d; color: white; }
+        td[data-field="expDate"][contenteditable="true"] { background-color: #fff8e7; cursor: text; }
+        td[data-field="expDate"][contenteditable="true"]:focus { outline: 2px solid #4dabf7; background-color: #fff; }
+        .editable-mode-indicator { background: #ffc107; color: #000; padding: 4px 12px; border-radius: 20px; font-size: 12px; margin-right: 15px; }
+    </style>
+</head>
+<body>
+<div class="standalone-purchases-container">
+    <div class="purchases-header">
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <span class="window-title">📦 المشتريات</span>
+            <button id="fitAllColumnsPurchasesBtn" class="btn-small">⛶ ضبط تلقائي</button>
+            <button id="refitAllColumnsPurchasesBtn" class="btn-small">✖ إلغاء الضبط</button>
+            <button id="togglePurchasesColumnsBtn" class="toggle-columns-btn">☷ تخصيص الأعمدة</button>
+            <span id="editingBadge" class="editable-mode-indicator" style="display:none;">✏️ وضع التحرير المباشر</span>
+        </div>
+        <div class="purchases-search-wrapper google-search-wrapper"></div>
+    </div>
+
+    <div class="filter-toolbar">
+        <button id="purchasesFilterDropdownBtn" class="btn-small btn-filter">
+            📅 فلترة التاريخ <span style="font-size: 12px;">▼</span>
+        </button>
+        <span id="currentFilterDisplay" style="color: #555; font-size: 13px;">📅 اليوم</span>
+    </div>
+
+    <div class="purchases-toolbar">
+        <div><span>📅 التاريخ:</span> <input type="date" id="purchasesBulkDateInput"></div>
+        <button id="purchasesApplyBulkDateBtn" class="btn-small">تطبيق على المحددين</button>
+        <button id="purchasesSelectAllRowsBtn" class="btn-small">تحديد الكل</button>
+        <span id="purchasesSelectedCountBadge" style="background:#6c757d; padding:4px 12px; border-radius:20px; color:white;">0 محدد</span>
+        <button id="purchasesDeselectAllRowsBtn" class="btn-small">إلغاء التحديد</button>
+        <div><span>🏢 إلى:</span> <input type="text" id="purchasesBulkToInput" placeholder="اسم العميل/الشركة"></div>
+        <button id="purchasesApplyBulkToBtn" class="btn-small">تطبيق على المحددين</button>
+    </div>
+
+    <div id="purchasesFilterPopup" class="filter-popup">
+        <div>
+            <label>فلترة حسب التاريخ</label>
+            <select id="purchasesFilterTypeSelect">
+                <option value="today">اليوم</option>
+                <option value="yesterday">البارحة</option>
+                <option value="this_week">هذا الأسبوع</option>
+                <option value="this_month">هذا الشهر</option>
+                <option value="single_date">تاريخ محدد</option>
+                <option value="date_range">بين تاريخين</option>
+                <option value="all">الكل</option>
+            </select>
+        </div>
+        <div id="purchasesSingleDateGroup" style="display: none; margin-top: 10px;">
+            <label>اختر تاريخ:</label>
+            <input type="date" id="purchasesSingleDateInput">
+        </div>
+        <div id="purchasesDateRangeGroup" style="display: none; margin-top: 10px;">
+            <label>من تاريخ:</label>
+            <input type="date" id="purchasesStartDateInput" style="margin-bottom: 10px;">
+            <label>إلى تاريخ:</label>
+            <input type="date" id="purchasesEndDateInput">
+        </div>
+        <div class="filter-buttons">
+            <button id="purchasesApplyFilterBtn">تطبيق</button>
+            <button id="purchasesCancelFilterBtn">إلغاء</button>
+        </div>
+    </div>
+
+    <div id="purchasesModalContent">
+        <table id="purchasesTable">
+            <thead>
+                <tr>
+                    <th data-col-index="0">ترتيب</th>
+                    <th data-col-index="1">المادة</th>
+                    <th data-col-index="2">أساس العرض</th>
+                    <th data-col-index="3">مجاني العرض</th>
+                    <th data-col-index="4">حسم العرض</th>
+                    <th data-col-index="5">الكمية</th>
+                    <th data-col-index="6">المجاني</th>
+                    <th data-col-index="7">سعر الشراء</th>
+                    <th data-col-index="8">حسم %</th>
+                    <th data-col-index="9">رقم الطبخة</th>
+                    <th data-col-index="10">تاريخ الصنع</th>
+                    <th data-col-index="11">تاريخ انتهاء الفعالية</th>
+                    <th data-col-index="12">رقم الفاتورة</th>
+                    <th data-col-index="13">المستخدم</th>
+                    <th data-col-index="14">من</th>
+                    <th data-col-index="15">إلى</th>
+                    <th data-col-index="16">التاريخ</th>
+                    <th data-col-index="17">الوقت</th>
+                    <th data-col-index="18">ملاحظات</th>
+                    <th data-col-index="19">البيان</th>
+                </tr>
+            </thead>
+            <tbody id="purchasesTbody">
+                <tr><td colspan="20" class="loading">⏳ جاري التحميل...<\/td><\/tr>
+            </tbody>
+            <tfoot>
+                <tr id="totalsPurchasesRow">
+                    <td id="purchasesTotalItems">0</td>
+                    <td colspan="2">المجموع</td>
+                    <td colspan="3"></td>
+                    <td id="purchasesTotalQty">0</td>
+                    <td id="purchasesTotalFree">0</td>
+                    <td colspan="12"></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+<script src="/static/column-auto-fit.js"></script>
+<script src="/static/column-resizer.js"></script>
+<script src="/static/highlight-utils.js"></script>
+<script src="/static/google-search-component.js"></script>
+<script src="/static/modal-persistence.js"></script>
+
+<script>
+(function() {
+    "use strict";
+    
+    // قراءة معامل الفاتورة من الرابط
+    const urlParams = new URLSearchParams(window.location.search);
+    const specificInvoice = urlParams.get('invoice');
+    const isEditingMode = !!specificInvoice;
+    
+    // المتغيرات العامة
+    let purchasesAllData = [];
+    let purchasesOffset = 0;
+    let purchasesLimit = 200;
+    let isLoadingMore = false;
+    let hasMoreData = true;
+    let purchasesSelectedRows = new Set();
+    let currentSearchTerm = "";
+    let currentDateFilter = "today";
+    let singleDate = "", startDate = "", endDate = "";
+    let filterPopup = null;
+    const HIDDEN_STORAGE_KEY = 'hiddenPurchasesColumnsStandalone';
+    let hiddenColumns = [];
+    const columnNames = [
+        "ترتيب", "المادة", "أساس العرض", "مجاني العرض", "حسم العرض",
+        "الكمية", "المجاني", "سعر الشراء", "حسم %", "رقم الطبخة",
+        "تاريخ الصنع", "تاريخ انتهاء الفعالية", "رقم الفاتورة", "المستخدم",
+        "من", "إلى", "التاريخ", "الوقت", "ملاحظات", "البيان"
+    ];
+    
+    const tbody = document.getElementById('purchasesTbody');
+    
+    if (isEditingMode) {
+        const badge = document.getElementById('editingBadge');
+        if (badge) badge.style.display = 'inline-block';
+        document.title = `📝 تعديل الفاتورة: ${specificInvoice}`;
+    }
+    
+    // دوال مساعدة
+    function formatDateYMD(date) {
+        return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+    }
+    function getStartOfWeek(date) {
+        const d = new Date(date);
+        d.setDate(d.getDate() - d.getDay());
+        return d;
+    }
+    function showToast(msg, type = "info") {
+        const toast = document.createElement("div");
+        toast.innerText = msg;
+        toast.style.cssText = `position:fixed; bottom:20px; right:20px; background:${type === "success" ? "#28a745" : type === "error" ? "#dc3545" : "#ffc107"}; color:${type === "warning" ? "#000" : "#fff"}; padding:10px 16px; border-radius:8px; z-index:20000; font-size:14px;`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
+    }
+    function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str).replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+    
+    // تحميل البيانات
+    async function loadPurchasesData() {
+        if (!tbody) return;
+        if (purchasesOffset === 0) {
+            tbody.innerHTML = '<tr><td colspan="20" class="loading">⏳ جاري التحميل...</td></tr>';
+        }
+        
+        let url = '';
+        if (isEditingMode && specificInvoice) {
+            url = `/api/purchases/invoice/${encodeURIComponent(specificInvoice)}`;
+            console.log("🔍 تحميل فاتورة محددة:", specificInvoice);
+        } else {
+            const today = new Date();
+            if (currentDateFilter === 'today') {
+                url = `/api/purchases?date=${formatDateYMD(today)}`;
+            } else if (currentDateFilter === 'yesterday') {
+                const yesterday = new Date(today);
+                yesterday.setDate(today.getDate() - 1);
+                url = `/api/purchases?date=${formatDateYMD(yesterday)}`;
+            } else if (currentDateFilter === 'this_week') {
+                const startWeek = getStartOfWeek(today);
+                const endWeek = new Date(startWeek);
+                endWeek.setDate(startWeek.getDate() + 6);
+                url = `/api/purchases?start_date=${formatDateYMD(startWeek)}&end_date=${formatDateYMD(endWeek)}`;
+            } else if (currentDateFilter === 'this_month') {
+                const startMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                const endMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                url = `/api/purchases?start_date=${formatDateYMD(startMonth)}&end_date=${formatDateYMD(endMonth)}`;
+            } else if (currentDateFilter === 'single_date' && singleDate) {
+                url = `/api/purchases?date=${singleDate}`;
+            } else if (currentDateFilter === 'date_range' && startDate && endDate) {
+                url = `/api/purchases?start_date=${startDate}&end_date=${endDate}`;
+            } else {
+                url = `/api/purchases?offset=${purchasesOffset}&limit=${purchasesLimit}`;
+            }
+        }
+        
+        try {
+            const response = await fetch(url);
+            let data = await response.json();
+            console.log("📦 البيانات الخام:", data);
+            
+            if (!Array.isArray(data)) {
+                if (data.data && Array.isArray(data.data)) data = data.data;
+                else data = [];
+            }
+            
+            if (isEditingMode && specificInvoice) {
+                data = data.filter(item => String(item.invoiceNo || '') === specificInvoice);
+                if (data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="20" style="text-align:center; color:red;">⚠️ لم يتم العثور على الفاتورة: ${specificInvoice}</td></tr>`;
+                    return;
+                }
+                hasMoreData = false;
+            }
+            
+            purchasesAllData = data;
+            renderPurchasesRows(data, currentSearchTerm);
+            updateTotals();
+            if (isEditingMode) {
+                showToast(`✅ تم تحميل الفاتورة ${specificInvoice} - يمكن تعديل تواريخ انتهاء الفعالية`, "success");
+            }
+        } catch(err) {
+            console.error("❌ خطأ في التحميل:", err);
+            if (purchasesOffset === 0) {
+                tbody.innerHTML = `<tr><td colspan="20" style="text-align:center; color:red;">❌ خطأ في تحميل البيانات: ${err.message}</td></tr>`;
+            }
+        } finally {
+            isLoadingMore = false;
+        }
+    }
+    
+    // عرض الجدول
+    function renderPurchasesRows(data, searchTerm = '') {
+        if (!tbody) return;
+        if (!data.length) {
+            tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;">📭 لا توجد بيانات</td></tr>';
+            updateSelectionUI();
+            applyColumnVisibility();
+            return;
+        }
+        
+        const fragment = document.createDocumentFragment();
+        data.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.dataset.invoice = row.invoiceNo || "";
+            tr.dataset.order = row.orderNo || "";
+            const isSelected = purchasesSelectedRows.has(`${row.invoiceNo}_${row.orderNo}`);
+            if (isSelected) tr.classList.add("row-selected");
+            
+            tr.innerHTML = `
+                <td data-field="orderNo">${row.orderNo || ""}</td>
+                <td data-field="name" class="press-cell">${window.highlightText(escapeHtml(row.name || ""), searchTerm)}</td>
+                <td data-field="baseOffer">${row.baseOffer || ""}</td>
+                <td data-field="freeOffer">${row.freeOffer || ""}</td>
+                <td data-field="discountOffer">${row.discountOffer || ""}</td>
+                <td data-field="quantity">${row.quantity || ""}</td>
+                <td data-field="freeQty">${row.freeQty || ""}</td>
+                <td data-field="buyPrice">${row.buyPrice || ""}</td>
+                <td data-field="discountPercent">${row.discountPercent || ""}</td>
+                <td data-field="batchNo">${window.highlightText(escapeHtml(row.batchNo || ""), searchTerm)}</td>
+                <td data-field="mfgDate">${row.mfgDate || ""}</td>
+                <td data-field="expDate" ${isEditingMode ? 'contenteditable="true"' : ''}>${row.expDate || ""}</td>
+                <td data-field="invoiceNo" class="col-invoiceNo press-cell">${window.highlightText(escapeHtml(row.invoiceNo || ""), searchTerm)}</td>
+                <td data-field="user">${window.highlightText(escapeHtml(row.user || ""), searchTerm)}</td>
+                <td data-field="from">${window.highlightText(escapeHtml(row.from || ""), searchTerm)}</td>
+                <td data-field="to" class="col-to press-cell">${window.highlightText(escapeHtml(row.supplier || ""), searchTerm)}</td>
+                <td data-field="date" class="col-date press-cell">${row.date || ""}</td>
+                <td data-field="time">${row.time || ""}</td>
+                <td data-field="notes">${window.highlightText(escapeHtml(row.notes || ""), searchTerm)}</td>
+                <td data-field="statement">${window.highlightText(escapeHtml(row.statement || ""), searchTerm)}</td>
+            `;
+            if (isEditingMode) {
+                const expCell = tr.querySelector('td[data-field="expDate"]');
+                if (expCell) expCell._oldValue = row.expDate || "";
+            }
+            fragment.appendChild(tr);
+        });
+        
+        tbody.innerHTML = "";
+        tbody.appendChild(fragment);
+        updateSelectionUI();
+        applyColumnVisibility();
+        
+        if (isEditingMode) {
+            attachExpDateSaveEvents();
+        }
+    }
+    
+    function appendPurchasesRows(data) {
+        const searchTerm = currentSearchTerm;
+        data.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.dataset.invoice = row.invoiceNo || "";
+            tr.dataset.order = row.orderNo || "";
+            tr.innerHTML = `
+                <td data-field="orderNo">${row.orderNo || ""}</td>
+                <td data-field="name" class="press-cell">${window.highlightText(escapeHtml(row.name || ""), searchTerm)}</td>
+                <td data-field="baseOffer">${row.baseOffer || ""}</td>
+                <td data-field="freeOffer">${row.freeOffer || ""}</td>
+                <td data-field="discountOffer">${row.discountOffer || ""}</td>
+                <td data-field="quantity">${row.quantity || ""}</td>
+                <td data-field="freeQty">${row.freeQty || ""}</td>
+                <td data-field="buyPrice">${row.buyPrice || ""}</td>
+                <td data-field="discountPercent">${row.discountPercent || ""}</td>
+                <td data-field="batchNo">${window.highlightText(escapeHtml(row.batchNo || ""), searchTerm)}</td>
+                <td data-field="mfgDate">${row.mfgDate || ""}</td>
+                <td data-field="expDate">${row.expDate || ""}</td>
+                <td data-field="invoiceNo" class="col-invoiceNo press-cell">${window.highlightText(escapeHtml(row.invoiceNo || ""), searchTerm)}</td>
+                <td data-field="user">${window.highlightText(escapeHtml(row.user || ""), searchTerm)}</td>
+                <td data-field="from">${window.highlightText(escapeHtml(row.from || ""), searchTerm)}</td>
+                <td data-field="to" class="col-to press-cell">${window.highlightText(escapeHtml(row.supplier || ""), searchTerm)}</td>
+                <td data-field="date" class="col-date press-cell">${row.date || ""}</td>
+                <td data-field="time">${row.time || ""}</td>
+                <td data-field="notes">${window.highlightText(escapeHtml(row.notes || ""), searchTerm)}</td>
+                <td data-field="statement">${window.highlightText(escapeHtml(row.statement || ""), searchTerm)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+        applyColumnVisibility();
+        updateTotals();
+        updateSelectionUI();
+    }
+    
+    // حفظ التغييرات
+    async function saveExpDate(cell, row, invoiceNo, materialName, newValue, oldValue) {
+        if (newValue === oldValue) return true;
+        try {
+            const response = await fetch('/api/purchases/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    invoice_no: invoiceNo,
+                    material_name: materialName,
+                    field: 'تاريخ انتهاء الفعالية',
+                    value: newValue
+                })
+            });
+            const result = await response.json();
+            if (result.success) {
+                cell._oldValue = newValue;
+                showToast(`✅ تم حفظ تاريخ انتهاء الفعالية`, "success");
+                return true;
+            } else {
+                showToast(`❌ فشل الحفظ: ${result.error || "خطأ غير معروف"}`, "error");
+                return false;
+            }
+        } catch(err) {
+            console.error(err);
+            showToast("❌ خطأ في الاتصال بالسيرفر", "error");
+            return false;
+        }
+    }
+    
+    function attachExpDateSaveEvents() {
+        const expCells = tbody.querySelectorAll('td[data-field="expDate"][contenteditable="true"]');
+        const handleBlur = async (e) => {
+            const cell = e.target;
+            const tr = cell.closest('tr');
+            const invoiceNo = tr.dataset.invoice;
+            const materialName = tr.querySelector('td[data-field="name"]')?.textContent.trim();
+            const newValue = cell.textContent.trim();
+            const oldValue = cell._oldValue || '';
+            if (newValue !== oldValue && invoiceNo && materialName) {
+                const success = await saveExpDate(cell, tr, invoiceNo, materialName, newValue, oldValue);
+                if (!success) {
+                    cell.textContent = oldValue;
+                }
+            }
+        };
+        expCells.forEach(cell => {
+            cell.removeEventListener('blur', handleBlur);
+            cell.addEventListener('blur', handleBlur);
+        });
+    }
+    
+    // إدارة الأعمدة المخفية
+    function loadHiddenColumns() {
+        const saved = localStorage.getItem(HIDDEN_STORAGE_KEY);
+        if (saved) { try { hiddenColumns = JSON.parse(saved); } catch(e) {} }
+    }
+    function saveHiddenColumns() { localStorage.setItem(HIDDEN_STORAGE_KEY, JSON.stringify(hiddenColumns)); }
+    function applyColumnVisibility() {
+        const table = document.getElementById('purchasesTable');
+        if (!table) return;
+        const theadRow = table.querySelector('thead tr');
+        if (theadRow) {
+            theadRow.querySelectorAll('th').forEach((th, idx) => {
+                th.style.display = hiddenColumns.includes(idx) ? 'none' : '';
+            });
+        }
+        document.querySelectorAll('#purchasesTbody tr').forEach(row => {
+            row.querySelectorAll('td').forEach((cell, idx) => {
+                cell.style.display = hiddenColumns.includes(idx) ? 'none' : '';
+            });
+        });
+        const tfootRow = table.querySelector('tfoot tr');
+        if (tfootRow) {
+            tfootRow.querySelectorAll('td').forEach((cell, idx) => {
+                cell.style.display = hiddenColumns.includes(idx) ? 'none' : '';
+            });
+        }
+    }
+    
+    function showColumnsModal() {
+        const existing = document.querySelector('.columns-modal-overlay');
+        if (existing) { existing.remove(); return; }
+        const overlay = document.createElement('div');
+        overlay.className = 'columns-modal-overlay';
+        const modal = document.createElement('div');
+        modal.className = 'columns-modal';
+        modal.innerHTML = `
+            <div class="columns-modal-header">
+                <span>📋 تخصيص الأعمدة - المشتريات</span>
+                <button class="close-col-modal">&times;</button>
+            </div>
+            <div class="columns-modal-list" id="colList"></div>
+            <div class="columns-modal-actions">
+                <button id="resetColsBtn" class="btn-reset">إظهار الكل</button>
+                <button id="closeColBtn" class="btn-close-modal">إغلاق</button>
+            </div>
+        `;
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        const listDiv = modal.querySelector('#colList');
+        columnNames.forEach((name, idx) => {
+            const isHidden = hiddenColumns.includes(idx);
+            const item = document.createElement('div');
+            item.className = 'column-item';
+            const chk = document.createElement('input');
+            chk.type = 'checkbox';
+            chk.checked = !isHidden;
+            const label = document.createElement('label');
+            label.textContent = name;
+            chk.addEventListener('change', () => {
+                if (chk.checked) hiddenColumns = hiddenColumns.filter(i => i !== idx);
+                else if (!hiddenColumns.includes(idx)) hiddenColumns.push(idx);
+                saveHiddenColumns();
+                applyColumnVisibility();
+            });
+            item.appendChild(chk);
+            item.appendChild(label);
+            listDiv.appendChild(item);
+        });
+        const closeModal = () => overlay.remove();
+        modal.querySelector('.close-col-modal').onclick = closeModal;
+        modal.querySelector('#closeColBtn').onclick = closeModal;
+        modal.querySelector('#resetColsBtn').onclick = () => {
+            hiddenColumns = [];
+            saveHiddenColumns();
+            applyColumnVisibility();
+            listDiv.querySelectorAll('input').forEach(cb => cb.checked = true);
+        };
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+        document.addEventListener('keydown', function escHandler(e) {
+            if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', escHandler); }
+        });
+    }
+    
+    // دوال التحديد والمجاميع
+    function getRowId(row) { return `${row.dataset.invoice}_${row.dataset.order}`; }
+    function updateSelectionUI() {
+        const rows = document.querySelectorAll('#purchasesTbody tr');
+        rows.forEach(row => {
+            const id = getRowId(row);
+            if (purchasesSelectedRows.has(id)) row.classList.add("row-selected");
+            else row.classList.remove("row-selected");
+        });
+        const countSpan = document.getElementById("purchasesSelectedCountBadge");
+        if (countSpan) countSpan.innerText = `${purchasesSelectedRows.size} محدد`;
+    }
+    function selectAllRows() {
+        document.querySelectorAll('#purchasesTbody tr').forEach(row => {
+            if (row.dataset.invoice && row.dataset.order) purchasesSelectedRows.add(`${row.dataset.invoice}_${row.dataset.order}`);
+        });
+        updateSelectionUI();
+    }
+    function deselectAllRows() { purchasesSelectedRows.clear(); updateSelectionUI(); }
+    async function applyDateToSelectedRows(newDate) {
+        if (!newDate || purchasesSelectedRows.size === 0) return;
+        for (const row of document.querySelectorAll('#purchasesTbody tr')) {
+            const id = getRowId(row);
+            if (purchasesSelectedRows.has(id)) {
+                const invoiceNo = row.dataset.invoice;
+                const orderNo = row.dataset.order;
+                if (invoiceNo && orderNo) {
+                    await fetch("/api/purchases/update", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ invoice_no: invoiceNo, order_no: orderNo, field: "التاريخ", value: newDate })
+                    }).catch(e => console.error);
+                }
+            }
+        }
+        purchasesSelectedRows.clear();
+        await loadPurchasesData();
+    }
+    async function applyToToSelectedRows(newTo) {
+        if (!newTo || purchasesSelectedRows.size === 0) return;
+        for (const row of document.querySelectorAll('#purchasesTbody tr')) {
+            const id = getRowId(row);
+            if (purchasesSelectedRows.has(id)) {
+                const invoiceNo = row.dataset.invoice;
+                const orderNo = row.dataset.order;
+                if (invoiceNo && orderNo) {
+                    await fetch("/api/purchases/update", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ invoice_no: invoiceNo, order_no: orderNo, field: "إلى", value: newTo })
+                    }).catch(e => console.error);
+                }
+            }
+        }
+        purchasesSelectedRows.clear();
+        await loadPurchasesData();
+    }
+    
+    function updateTotals() {
+        let totalQty = 0, totalFree = 0, rowCount = 0;
+        document.querySelectorAll('#purchasesTbody tr').forEach(tr => {
+            if (tr.dataset.invoice) {
+                rowCount++;
+                totalQty += Number(tr.querySelector('td[data-field="quantity"]')?.textContent) || 0;
+                totalFree += Number(tr.querySelector('td[data-field="freeQty"]')?.textContent) || 0;
+            }
+        });
+        const itemsEl = document.getElementById("purchasesTotalItems");
+        if (itemsEl) itemsEl.textContent = rowCount;
+        const qtyEl = document.getElementById("purchasesTotalQty");
+        if (qtyEl) qtyEl.textContent = totalQty;
+        const freeEl = document.getElementById("purchasesTotalFree");
+        if (freeEl) freeEl.textContent = totalFree;
+    }
+    
+    // الفلترة
+    function updateFilterDisplay() {
+        const displaySpan = document.getElementById('currentFilterDisplay');
+        if (!displaySpan) return;
+        switch(currentDateFilter) {
+            case 'today': displaySpan.innerHTML = '📅 اليوم'; break;
+            case 'yesterday': displaySpan.innerHTML = '📅 البارحة'; break;
+            case 'this_week': displaySpan.innerHTML = '📅 هذا الأسبوع'; break;
+            case 'this_month': displaySpan.innerHTML = '📅 هذا الشهر'; break;
+            case 'single_date': displaySpan.innerHTML = `📅 ${singleDate}`; break;
+            case 'date_range': displaySpan.innerHTML = `📅 ${startDate} → ${endDate}`; break;
+            default: displaySpan.innerHTML = '📅 الكل';
+        }
+    }
+    async function applyFilter() {
+        const filterTypeSelect = document.getElementById('purchasesFilterTypeSelect');
+        const filterType = filterTypeSelect.value;
+        if (filterType === 'single_date') {
+            const sDate = document.getElementById('purchasesSingleDateInput').value;
+            if (!sDate) { alert("الرجاء اختيار تاريخ"); return; }
+            currentDateFilter = filterType; singleDate = sDate; startDate = ""; endDate = "";
+        } else if (filterType === 'date_range') {
+            const stDate = document.getElementById('purchasesStartDateInput').value;
+            const enDate = document.getElementById('purchasesEndDateInput').value;
+            if (!stDate || !enDate) { alert("الرجاء إدخال تاريخ البداية والنهاية"); return; }
+            currentDateFilter = filterType; singleDate = ""; startDate = stDate; endDate = enDate;
+        } else {
+            currentDateFilter = filterType; singleDate = ""; startDate = ""; endDate = "";
+        }
+        updateFilterDisplay();
+        const popup = document.getElementById('purchasesFilterPopup');
+        if (popup) popup.style.display = 'none';
+        purchasesOffset = 0; hasMoreData = true; isLoadingMore = false; purchasesAllData = []; purchasesSelectedRows.clear();
+        updateSelectionUI();
+        await loadPurchasesData();
+    }
+    function initFilter() {
+        const filterBtn = document.getElementById('purchasesFilterDropdownBtn');
+        filterPopup = document.getElementById('purchasesFilterPopup');
+        const filterTypeSelect = document.getElementById('purchasesFilterTypeSelect');
+        const singleDateGroup = document.getElementById('purchasesSingleDateGroup');
+        const dateRangeGroup = document.getElementById('purchasesDateRangeGroup');
+        const applyFilterBtn = document.getElementById('purchasesApplyFilterBtn');
+        const cancelFilterBtn = document.getElementById('purchasesCancelFilterBtn');
+        if (!filterBtn || !filterPopup) return;
+        function setPopupPosition() {
+            const container = document.querySelector('.standalone-purchases-container');
+            if (!container) return;
+            const btnRect = filterBtn.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            let top = btnRect.bottom + window.scrollY + 5;
+            let left = btnRect.left + window.scrollX;
+            const popupHeight = filterPopup.offsetHeight || 260;
+            if (top + popupHeight > containerRect.bottom + window.scrollY) top = btnRect.top + window.scrollY - popupHeight - 5;
+            left = Math.min(Math.max(left, containerRect.left + window.scrollX + 10), containerRect.right + window.scrollX - 310);
+            filterPopup.style.position = 'absolute';
+            filterPopup.style.top = `${top}px`;
+            filterPopup.style.left = `${left}px`;
+        }
+        filterBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isVisible = filterPopup.style.display === 'block';
+            if (!isVisible) {
+                const container = document.querySelector('.standalone-purchases-container');
+                if (filterPopup.parentElement !== container) container.appendChild(filterPopup);
+                setPopupPosition();
+                filterPopup.style.display = 'block';
+            } else {
+                filterPopup.style.display = 'none';
+            }
+        });
+        window.addEventListener('resize', () => { if (filterPopup.style.display === 'block') setPopupPosition(); });
+        const scrollContent = document.getElementById('purchasesModalContent');
+        if (scrollContent) scrollContent.addEventListener('scroll', () => { if (filterPopup.style.display === 'block') setPopupPosition(); });
+        document.addEventListener('click', (e) => {
+            if (filterPopup.style.display === 'block' && !filterPopup.contains(e.target) && e.target !== filterBtn) filterPopup.style.display = 'none';
+        });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && filterPopup.style.display === 'block') filterPopup.style.display = 'none'; });
+        if (filterTypeSelect) {
+            filterTypeSelect.addEventListener('change', () => {
+                const val = filterTypeSelect.value;
+                if (singleDateGroup) singleDateGroup.style.display = (val === 'single_date') ? 'block' : 'none';
+                if (dateRangeGroup) dateRangeGroup.style.display = (val === 'date_range') ? 'block' : 'none';
+            });
+            filterTypeSelect.dispatchEvent(new Event('change'));
+        }
+        if (applyFilterBtn) applyFilterBtn.addEventListener('click', () => { applyFilter(); filterPopup.style.display = 'none'; });
+        if (cancelFilterBtn) cancelFilterBtn.addEventListener('click', () => { filterPopup.style.display = 'none'; });
+    }
+    
+    // ربط الأحداث العامة
+    function bindEvents() {
+        document.getElementById('purchasesSelectAllRowsBtn')?.addEventListener('click', selectAllRows);
+        document.getElementById('purchasesDeselectAllRowsBtn')?.addEventListener('click', deselectAllRows);
+        document.getElementById('purchasesApplyBulkDateBtn')?.addEventListener('click', () => {
+            const date = document.getElementById('purchasesBulkDateInput').value;
+            if (date) applyDateToSelectedRows(date);
+        });
+        document.getElementById('purchasesApplyBulkToBtn')?.addEventListener('click', () => {
+            const to = document.getElementById('purchasesBulkToInput').value.trim();
+            if (to) applyToToSelectedRows(to);
+        });
+        document.getElementById('fitAllColumnsPurchasesBtn')?.addEventListener('click', () => {
+            if (typeof autoFitAllColumns === 'function') {
+                autoFitAllColumns('purchasesTable', 'purchasesColumnWidths');
+                setTimeout(() => applyColumnVisibility(), 10);
+            }
+        });
+        document.getElementById('refitAllColumnsPurchasesBtn')?.addEventListener('click', () => {
+            if (typeof disableAutoFit === 'function') {
+                disableAutoFit('purchasesTable', 'purchasesModalContent', 'purchasesColumnWidths');
+                setTimeout(() => applyColumnVisibility(), 10);
+            }
+        });
+        document.getElementById('togglePurchasesColumnsBtn')?.addEventListener('click', showColumnsModal);
+        const content = document.getElementById("purchasesModalContent");
+        if(content) content.addEventListener('scroll', () => { if(filterPopup && filterPopup.style.display === 'block') setPopupPosition(); });
+        
+        const tbodyEl = document.getElementById('purchasesTbody');
+        if (tbodyEl) {
+            tbodyEl.addEventListener('click', (e) => {
+                if (!e.ctrlKey) return;
+                const row = e.target.closest('tr');
+                if (!row || !row.dataset.invoice) return;
+                const id = getRowId(row);
+                if (purchasesSelectedRows.has(id)) purchasesSelectedRows.delete(id);
+                else purchasesSelectedRows.add(id);
+                updateSelectionUI();
+                e.preventDefault();
+            });
+            tbodyEl.addEventListener('dblclick', (e) => {
+                const invoiceCell = e.target.closest('.col-invoiceNo');
+                if (invoiceCell) {
+                    const row = invoiceCell.closest('tr');
+                    const invoiceNo = row?.dataset.invoice;
+                    if (invoiceNo && window.opener?.invoice?.loadInvoice) {
+                        window.opener.invoice.loadInvoice(invoiceNo);
+                    }
+                }
+            });
+        }
+        document.addEventListener('click', (e) => {
+            if (e.ctrlKey) return;
+            const exceptions = ['purchasesSelectAllRowsBtn', 'purchasesDeselectAllRowsBtn', 'purchasesBulkDateInput', 'purchasesApplyBulkDateBtn', 'purchasesBulkToInput', 'purchasesApplyBulkToBtn'];
+            if (exceptions.some(id => e.target.closest(`#${id}`))) return;
+            if (purchasesSelectedRows.size > 0) { purchasesSelectedRows.clear(); updateSelectionUI(); }
+        });
+    }
+    
+    function initSearch() {
+        const searchWrapper = document.querySelector('.purchases-search-wrapper');
+        if (!searchWrapper) return;
+        if (typeof GoogleSearchComponent === 'undefined') { setTimeout(initSearch, 500); return; }
+        new GoogleSearchComponent({
+            container: searchWrapper,
+            storageKey: 'purchasesSearchHistory_standalone',
+            placeholder: '🔍 بحث عام في كل المشتريات (مادة، فاتورة، مورد، طبخة)...',
+            onSearch: async function(term) {
+                currentSearchTerm = term;
+                if (!term || term.trim() === '') {
+                    await loadPurchasesData();
+                    return;
+                }
+                tbody.innerHTML = '<tr><td colspan="20" class="loading">🔎 جاري البحث...</td></tr>';
+                try {
+                    const res = await fetch(`/api/purchases/search?q=${encodeURIComponent(term)}&limit=1000&_=${Date.now()}`);
+                    const data = await res.json();
+                    renderPurchasesRows(data, term);
+                    updateTotals();
+                } catch(err) {
+                    console.error(err);
+                    tbody.innerHTML = '<tr><td colspan="20" style="text-align:center; color:red;">❌ خطأ في البحث</td></tr>';
+                }
+            },
+            debounceMs: 400
+        });
+    }
+    
+    // التهيئة
+    function init() {
+        loadHiddenColumns();
+        loadPurchasesData();
+        initSearch();
+        initFilter();
+        bindEvents();
+        if (typeof restoreColumnWidths === 'function') restoreColumnWidths('purchasesTable', 'purchasesColumnWidths');
+        const observer = new MutationObserver(() => applyColumnVisibility());
+        if (tbody) observer.observe(tbody, { childList: true, subtree: true });
+    }
+    
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+    else init();
+    
+    window.loadPurchasesData = loadPurchasesData;
+    window.showPurchasesColumnsModal = showColumnsModal;
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,288 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='purchases_modal.css') }}">
+
+<!-- النموذج العائم للمشتريات -->
+<div id="purchasesModal" class="modal-window" style="display: none;">
+
+  <!-- رأس النافذة -->
+  <div id="purchasesModalHeader">
+
+
+    <!-- أزرار التحكم في الأعمدة -->
+    <div class="window-controls">
+      <span class="window-title">📦 جدول المشتريات</span>
+      <button id="fitAllColumnsPurchasesBtn" title="Auto Fit لجميع الأعمدة">⛶</button>
+      <button id="refitAllColumnsPurchasesBtn" title="إلغاء Auto Fit">✖</button>
+      <!-- 🔥 زر تخصيص الأعمدة الجديد -->
+      <button id="togglePurchasesColumnsBtn" class="toggle-columns-btn" title="تخصيص الأعمدة">☷</button>
+    </div>
+
+    <!-- حاوية البحث -->
+    <div class="purchases-search-wrapper google-search-wrapper" style="flex: 1; margin: 0 15px; max-width: 420px; position: relative;"></div>
+
+    <!-- زر الفلترة -->
+    <button id="purchasesFilterDropdownBtn" type="button" style="background: #198754; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; margin-left: 10px;">
+      📅 فلترة التاريخ <span style="font-size: 12px;">▼</span>
+    </button>
+
+    <!-- أزرار التحكم في النافذة -->
+    <div class="window-controls">
+      <button id="minimizePurchasesBtn" type="button" title="تصغير">🗕</button>
+      <button id="maximizePurchasesBtn" type="button" title="تكبير/استعادة">🗖</button>
+      <button id="closePurchasesBtn" type="button" title="إغلاق">✖</button>
+    </div>
+  </div>
+
+  <!-- القائمة المنبثقة للفلترة -->
+  <div id="purchasesFilterPopup" style="display: none; position: fixed; background: white; border: 1px solid #ddd; border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.2); z-index: 100000; width: 300px; padding: 15px; direction: rtl;">
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: bold; margin-bottom: 8px; color: #333;">فلترة حسب التاريخ</label>
+      <select id="purchasesFilterTypeSelect" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+        <option value="today">اليوم</option>
+        <option value="yesterday">البارحة</option>
+        <option value="this_week">هذا الأسبوع</option>
+        <option value="this_month">هذا الشهر</option>
+        <option value="single_date">تاريخ محدد</option>
+        <option value="date_range">بين تاريخين</option>
+        <option value="all">الكل</option>
+      </select>
+    </div>
+
+    <div id="purchasesSingleDateGroup" style="display: none; margin-bottom: 15px;">
+      <label style="display: block; font-weight: bold; margin-bottom: 5px;">اختر تاريخ:</label>
+      <input type="date" id="purchasesSingleDateInput" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+    </div>
+
+    <div id="purchasesDateRangeGroup" style="display: none; margin-bottom: 15px;">
+      <label style="display: block; font-weight: bold; margin-bottom: 5px;">من تاريخ:</label>
+      <input type="date" id="purchasesStartDateInput" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; margin-bottom: 10px;">
+      <label style="display: block; font-weight: bold; margin-bottom: 5px;">إلى تاريخ:</label>
+      <input type="date" id="purchasesEndDateInput" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+    </div>
+
+    <div style="display: flex; justify-content: space-between; gap: 10px; margin-top: 10px;">
+      <button id="purchasesApplyFilterBtn" style="flex: 1; background: #0d6efd; color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer; font-weight: bold;">تطبيق</button>
+      <button id="purchasesCancelFilterBtn" style="flex: 1; background: #6c757d; color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer;">إلغاء</button>
+    </div>
+  </div>
+
+  <!-- شريط الأدوات السفلي (Bulk operations) -->
+  <div class="purchases-toolbar">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span>📅 التاريخ:</span>
+      <input type="date" id="purchasesBulkDateInput" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #ccc;">
+    </div>
+    <button id="purchasesApplyBulkDateBtn" class="btn-small">تطبيق على المحددين</button>
+    <button id="purchasesSelectAllRowsBtn" class="btn-small">تحديد الكل</button>
+    <span id="purchasesSelectedCountBadge" style="background: #6c757d; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem;">0 محدد</span>
+    <button id="purchasesDeselectAllRowsBtn" class="btn-small">إلغاء التحديد</button>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span>🏢 إلى:</span>
+      <input type="text" id="purchasesBulkToInput" placeholder="اسم العميل/الشركة" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #ccc;">
+    </div>
+    <button id="purchasesApplyBulkToBtn" class="btn-small">تطبيق على المحددين</button>
+  </div>
+
+  <!-- منطقة المحتوى -->
+  <div id="purchasesModalContent">
+    <table id="purchasesTable">
+<thead>
+    <tr>
+        <th class="sortable" data-field="orderNo">ترتيب <span class="sort-indicator"></span></th>
+        <th class="sortable" data-field="name">المادة <span class="sort-indicator"></span></th>
+        <th class="sortable" data-field="baseOffer">أساس العرض <span class="sort-indicator"></span></th>
+        <th class="sortable" data-field="freeOffer">مجاني العرض <span class="sort-indicator"></span></th>
+        <th class="sortable" data-field="discountOffer">حسم العرض <span class="sort-indicator"></span></th>
+        <th class="sortable" data-field="quantity">الكمية <span class="sort-indicator"></span></th>
+        <th class="sortable" data-field="freeQty">المجاني <span class="sort-indicator"></span></th>
+        <th class="sortable" data-field="buyPrice">سعر الشراء <span class="sort-indicator"></span></th>
+        <th class="sortable" data-field="discountPercent">حسم % <span class="sort-indicator"></span></th>
+        <th class="sortable" data-field="batchNo">رقم الطبخة <span class="sort-indicator"></span></th>
+        <th class="sortable" data-field="mfgDate">تاريخ الصنع <span class="sort-indicator"></span></th>
+        <th class="sortable" data-field="expDate">تاريخ انتهاء الفعالية <span class="sort-indicator"></span></th>
+        <th class="sortable" data-field="invoiceNo">رقم الفاتورة <span class="sort-indicator"></span></th>
+        <th class="sortable" data-field="user">المستخدم <span class="sort-indicator"></span></th>
+        <th class="sortable" data-field="from">من <span class="sort-indicator"></span></th>
+        <th class="sortable" data-field="supplier">إلى <span class="sort-indicator"></span></th>
+        <th class="sortable" data-field="date">التاريخ <span class="sort-indicator"></span></th>
+        <th class="sortable" data-field="time">الوقت <span class="sort-indicator"></span></th>
+        <th class="sortable" data-field="notes">ملاحظات <span class="sort-indicator"></span></th>
+        <th class="sortable" data-field="statement">البيان <span class="sort-indicator"></span></th>
+    </tr>
+</thead>
+      <tbody></tbody>
+<tfoot>
+  <tr id="totalsPurchasesRow">
+    <!-- عمود الترتيب (0) -->
+    <td></td>
+    <!-- عمود المادة (1) -> عرض عدد الأصناف -->
+    <td id="purchasesTotalItems">0</td>
+    <!-- أعمدة 2-4 (أساس العرض، مجاني العرض، حسم العرض) -->
+    <td colspan="3"></td>
+    <!-- عمود الكمية (5) -->
+    <td id="purchasesTotalQty">0</td>
+    <!-- عمود المجاني (6) -->
+    <td id="purchasesTotalFree">0</td>
+    <!-- باقي الأعمدة (7-19) -> 13 عموداً -->
+    <td colspan="13"></td>
+  </tr>
+</tfoot>
+    </table>
+  </div>
+
+  <!-- مقابض تغيير الحجم -->
+  <div class="resize-handle resize-bottom-right"></div>
+  <div class="resize-handle resize-bottom-left"></div>
+  <div class="resize-handle resize-up-right"></div>
+  <div class="resize-handle resize-up-left"></div>
+  <div class="resize-handle resize-right"></div>
+  <div class="resize-handle resize-left"></div>
+  <div class="resize-handle resize-bottom"></div>
+  <div class="resize-handle resize-up"></div>
+</div>
+
+<style>
+/* 🔥 أنماط زر تخصيص الأعمدة */
+.toggle-columns-btn {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    margin-left: 8px;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+.toggle-columns-btn:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+/* 🔥 نافذة تخصيص الأعمدة */
+.columns-manager-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.columns-manager-modal {
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 85%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    direction: rtl;
+}
+.columns-manager-header {
+    background: #1f4f3a;
+    color: white;
+    padding: 15px 20px;
+    border-radius: 16px 16px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.columns-manager-header button {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 28px;
+    cursor: pointer;
+}
+.columns-manager-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 0;
+}
+.column-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+}
+.column-item:hover {
+    background: #f5f5f5;
+}
+.column-item input {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+.column-item label {
+    flex: 1;
+    cursor: pointer;
+    font-size: 14px;
+}
+.columns-manager-actions {
+    padding: 12px 16px;
+    border-top: 1px solid #ddd;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+.columns-manager-actions button {
+    padding: 8px 18px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+}
+.btn-reset {
+    background: #198754;
+    color: white;
+}
+.btn-close {
+    background: #6c757d;
+    color: white;
+}
+
+/* جعل حاوية المحتوى قابلة للتمرير ومرجعاً للفوتر الثابت */
+#purchasesModalContent {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto !important;
+    max-height: calc(100vh - 180px); /* اضبط حسب ارتفاع الهيدر والأدوات */
+}
+
+/* تذييل الجدول (صف المجاميع) يبقى في الأسفل */
+#purchasesTable {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* جعل tfoot يلتصق بالأسفل */
+#purchasesTable tfoot {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    background: #2c3e50; /* لون الخلفية نفس الموجود */
+}
+
+/* ضمان ظهور المحتوى بشكل صحيح */
+#purchasesTable thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #2c6e49;
+}
+
+/* تحسين صف المجاميع نفسه */
+#totalsPurchasesRow td {
+    background: #2c3e50 !important;
+    color: #f1c40f !important;
+    border-top: 2px solid #f1c40f;
+    font-weight: bold;
+}
+</style>

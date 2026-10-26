@@ -1,0 +1,303 @@
+/* =======================================================
+   floating-modal-common.css
+   الأنماط العامة الموحدة مع متغيرات ألوان مركزية
+   ======================================================= */
+
+:root {
+  /* الخطوط */
+  --modal-font-family: 'Segoe UI', 'Tahoma', 'Geneva', 'Verdana', sans-serif;
+  --modal-font-size-base: 14px;
+  --modal-line-height: 1.5;
+
+  /* الألوان الأساسية للنوافذ */
+  --modal-bg: #ffffff;
+  --modal-header-bg: #1f4f3a;        /* أخضر داكن موحد للهيدر */
+  --modal-header-text: #ffffff;
+  --modal-content-bg: #f8f9fa;
+
+  /* ألوان الجداول */
+  --modal-table-header-bg: #2c6e49;   /* أخضر متوسط لرأس الجدول */
+  --modal-table-header-text: #ffffff;
+  --modal-table-border: #dee2e6;
+  --modal-table-row-even-bg: #f2f2f2;
+  --modal-table-row-hover-bg: #e9ecef;
+  --modal-table-text: #212529;
+
+  /* الحقول والمدخلات */
+  --modal-input-border: #ced4da;
+  --modal-input-focus-border: #2c6e49;
+
+  /* ألوان المقابض */
+  --resize-handle-bg: rgba(0,0,0,0.15);
+  --resize-handle-hover-bg: #ff9800;
+  --resize-corner-bg: rgba(220,53,69,0.4);
+  --resize-corner-hover-bg: #dc3545;
+  --resize-handle-111-bg: #2196f3;
+
+  /* أبعاد موحدة للنوافذ المنبثقة */
+  --modal-default-width: 1100px; 
+  --modal-default-height: 700px; 
+  --modal-min-width: 150px;
+  --modal-min-height: 125px;
+  --modal-max-width: none;
+  --modal-max-height: none;
+}
+
+/* ========== أبعاد وتموضع موحد لجميع النوافذ ========== */
+.modal-window,
+#materialsModal,
+#floatingModal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  
+  /* الأبعاد الأساسية */
+  width: var(--modal-default-width);
+  height: var(--modal-default-height);
+  min-width: var(--modal-min-width);
+  min-height: var(--modal-min-height);
+  max-width: var(--modal-max-width);
+  max-height: var(--modal-max-height);
+  
+  /* تخطيط مرن للمحتوى */
+  display: flex;
+  flex-direction: column;
+  overflow: visible !important;
+  z-index: 10000;
+}
+
+/* ================================================ */
+/* تطبيق الخطوط والخلفيات على كل النوافذ */
+.modal-window,
+#materialsModal,
+#floatingModal {
+  font-family: var(--modal-font-family);
+  font-size: var(--modal-font-size-base);
+  line-height: var(--modal-line-height);
+  color: var(--modal-table-text);
+  background: var(--modal-bg);
+  border: 1px solid #aaa;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
+
+/* رأس النافذة */
+.modal-window-header,
+#materialsHeader,
+#floatingModalHeader {
+  background: var(--modal-header-bg);
+  color: var(--modal-header-text);
+  padding: 10px 15px;
+  cursor: move;
+  user-select: none;
+  border-radius: 10px 10px 0 0;
+}
+
+/* محتوى النافذة */
+.modal-window-content,
+#materialsContent,
+#floatingModalContent {
+  background: var(--modal-content-bg);
+  padding: 10px;
+  flex: 1;
+  overflow: auto;
+}
+
+/* الجداول */
+.modal-table,
+#materialsTable,
+#floatingTable {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--modal-table-text);
+}
+
+.modal-table th,
+#materialsTable th,
+#floatingTable th {
+  background: var(--modal-table-header-bg);
+  color: var(--modal-table-header-text);
+  padding: 10px 6px;
+  border: 1px solid var(--modal-table-border);
+  text-align: center;
+  font-weight: 600;
+}
+
+.modal-table td,
+#materialsTable td,
+#floatingTable td {
+  padding: 8px 6px;
+  border: 1px solid var(--modal-table-border);
+  text-align: center;
+}
+
+.modal-table tbody tr:nth-child(even),
+#materialsTable tbody tr:nth-child(even),
+#floatingTable tbody tr:nth-child(even) {
+  background: var(--modal-table-row-even-bg);
+}
+
+.modal-table tbody tr:hover,
+#materialsTable tbody tr:hover,
+#floatingTable tbody tr:hover {
+  background: var(--modal-table-row-hover-bg);
+}
+
+/* الحقول */
+.modal-input,
+#materialsSearchInput,
+#salesSearchInput {
+  font-family: inherit;
+  font-size: inherit;
+  border: 1px solid var(--modal-input-border);
+  border-radius: 28px;
+  padding: 10px 20px 10px 80px;
+  outline: none;
+  background: white;
+}
+.modal-input:focus {
+  border-color: var(--modal-input-focus-border);
+  box-shadow: 0 0 0 2px rgba(44,110,73,0.2);
+}
+
+/* مقابض التحجيم (كما كانت سابقاً مع نفس التأثير) */
+.resize-handle {
+  position: absolute;
+  pointer-events: auto !important;
+  z-index: 1000000;
+  transition: all 0.2s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+  opacity: 0.3;
+  background: var(--resize-handle-bg);
+  border-radius: 4px;
+}
+.resize-handle:hover {
+  opacity: 1 !important;
+  background: var(--resize-handle-hover-bg) !important;
+  box-shadow: 0 0 12px rgba(255, 152, 0, 0.9);
+  z-index: 2000000 !important;
+}
+.resize-right, .resize-left {
+  top: 30px;
+  bottom: 30px;
+  width: 6px;
+  cursor: ew-resize;
+}
+.resize-right { right: -4px; }
+.resize-left { left: -4px; }
+.resize-bottom, .resize-up {
+  left: 30px;
+  right: 30px;
+  height: 6px;
+  cursor: ns-resize;
+}
+
+.resize-bottom { bottom: -4px; }
+.resize-up { top: -4px; }
+
+/* ========== مقابض الزوايا (المثلثات) ========== */
+.resize-bottom-right,
+.resize-bottom-left,
+.resize-up-right,
+.resize-up-left {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  background: var(--resize-corner-bg);
+  transition: all 0.2s ease;
+  overflow: visible;
+  z-index: 100;
+}
+
+.resize-bottom-right { right: -6px; bottom: -6px; cursor: nwse-resize; }
+.resize-bottom-left  { left: -6px; bottom: -6px; cursor: nesw-resize; }
+.resize-up-right     { right: -6px; top: -6px; cursor: nesw-resize; }
+.resize-up-left      { left: -6px; top: -6px; cursor: nwse-resize; }
+
+/* عند التحويم: تكبير وتغيير اللون + تحويل الشكل إلى مثلث كبير */
+.resize-bottom-right:hover,
+.resize-bottom-left:hover,
+.resize-up-right:hover,
+.resize-up-left:hover {
+  background: var(--resize-corner-hover-bg) !important;
+  box-shadow: 0 0 12px rgba(220,53,69,0.9);
+  transform: scale(1.5);
+}
+
+/* أشكال المثلث الكبير (الخارجي) */
+.resize-bottom-right:hover { clip-path: polygon(100% 0%, 100% 100%, 0% 100%); }
+.resize-bottom-left:hover  { clip-path: polygon(0% 0%, 100% 100%, 0% 100%); }
+.resize-up-right:hover     { clip-path: polygon(100% 0%, 100% 100%, 0% 0%); }
+.resize-up-left:hover      { clip-path: polygon(0% 0%, 100% 0%, 0% 100%); }
+
+/* الزيادات الاختيارية */
+.modal-active {
+  z-index: 20000 !important;
+}
+.resize-disabled .resize-handle,
+.resize-handle[data-disabled="true"] {
+  pointer-events: none !important;
+  opacity: 0.1 !important;
+}
+/* ========== تمييز نص البحث (عام) ========== */
+.highlight {
+  background: linear-gradient(90deg, #fff59d, #ffe082);
+  color: #000;
+  font-weight: bold;
+  padding: 1px 2px;
+  border-radius: 3px;
+}
+/* ================================================ */
+/* قواعد عامة للنوافذ على الشاشات الصغيرة */
+@media (max-width: 768px) {
+  #floatingModal,
+  #materialsModal {
+    position: fixed !important;
+    top: 10px !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: 10px !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: calc(100vw - 20px) !important;
+    max-height: calc(100vh - 20px) !important;
+    min-width: unset !important;
+    min-height: unset !important;
+    transform: none !important;
+    margin: 0 !important;
+    overflow: auto !important;
+  }
+
+  /* تصغير الخط في الجداول */
+  #floatingTable th,
+  #floatingTable td,
+  #materialsTable th,
+  #materialsTable td {
+    font-size: 11px;
+    padding: 4px 2px;
+    white-space: normal;
+  }
+
+  /* إخفاء بعض الأعمدة غير الضرورية على الموبايل (اختياري) */
+  #floatingTable .col-user,
+  #floatingTable .col-from,
+  #floatingTable .col-time,
+  #floatingTable .tarkim-col {
+    display: none;
+  }
+
+  /* تقليص أزرار التحكم */
+  .window-controls button {
+    font-size: 14px;
+    padding: 2px 4px;
+  }
+
+  /* جعل حقل البحث يأخذ عرضاً مناسباً */
+  .google-search-wrapper {
+    max-width: 180px !important;
+  }
+    .resize-handle {
+        width: 16px !important;
+        background: rgba(0,0,0,0.3) !important;
+    }
+}

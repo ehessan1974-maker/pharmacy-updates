@@ -1,0 +1,242 @@
+@import url("floating-modal-common.css");
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+#floatingModalHeader {
+  flex-shrink: 0;
+  padding: 12px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: move;
+  user-select: none;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+#floatingModalHeader .window-controls button {
+  background: transparent;
+  border: none;
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+#floatingModalHeader .window-controls button:hover { background: #0f5132; }
+#closeBtnWindow:hover { background: red !important; }
+
+#floatingModalContent {
+  flex: 1;
+  overflow: auto !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  scrollbar-width: thin;
+  scrollbar-color: #198754 #e5e7eb;
+  padding: 10px;
+  background: #fafafa;
+  min-height: 0;
+  pointer-events: auto;
+}
+#floatingModalContent::-webkit-scrollbar { width: 8px; height: 8px; }
+#floatingModalContent::-webkit-scrollbar-thumb { background: #198754; border-radius: 4px; }
+#floatingModalContent::-webkit-scrollbar-track { background: #f1f3f5; }
+
+#floatingTable {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  display: table !important;
+}
+#floatingTable th,
+#floatingTable td {
+  text-align: center;
+  vertical-align: middle;
+  box-sizing: border-box;
+  padding: 8px;
+  text-overflow: ellipsis;
+  position: relative;
+}
+
+/* Auto Fit Mode */
+.auto-fit-mode th, .auto-fit-mode td { white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; }
+.no-auto-fit th, .no-auto-fit td {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+  word-break: break-all;
+  hyphens: auto;
+  line-height: 1.4;
+}
+#floatingTable.no-auto-fit { table-layout: fixed !important; width: 100% !important; }
+#floatingTable.no-auto-fit th,
+#floatingTable.no-auto-fit td { min-width: 85px !important; }
+
+/* تذييل المجاميع */
+#floatingTable tfoot tr#totalsRow {
+  position: sticky;
+  bottom: 0;
+  background: #e9ecef;
+  font-weight: bold;
+  border-top: 2px solid #2c6e49;
+  z-index: 6;
+}
+
+/* البحث والمؤشرات */
+#salesSearchInput {
+  width: 100%;
+  padding: 8px 90px 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  user-select: text !important;
+  cursor: text !important;
+}
+#search-btn, #clearSearchBtn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+#search-btn { right: 8px; }
+#clearSearchBtn { right: 45px; display: none; }
+
+/* قائمة تاريخ البحث */
+.search-history-dropdown {
+  position: absolute !important;
+  top: calc(100% + 5px) !important;
+  left: 0 !important;
+  width: 100% !important;
+  background: #ffffff !important;
+  border: 1px solid #ced4da !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.18) !important;
+  max-height: 380px !important;
+  overflow-y: auto !important;
+  z-index: 10001 !important;
+  padding: 6px 0 !important;
+  color: #333333 !important;
+}
+.search-history-dropdown div {
+  padding: 11px 16px !important;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+}
+.search-history-dropdown div:hover { background-color: #e8f0fe !important; color: #1e40af !important; }
+
+/* منع تحديد النص أثناء السحب */
+#floatingModal *:not(input):not(textarea) { user-select: none; }
+#floatingModal, #floatingModal * {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+}
+#salesSearchInput, #salesSearchInput * { user-select: text !important; }
+
+/* خلايا قابلة للنقر */
+.press-cell:hover {
+  cursor: pointer;
+  color: #007bff;
+  font-weight: bold;
+  background: #f5f5f5;
+  text-decoration: underline;
+}
+
+/* منتقي التاريخ */
+#datepicker { position: fixed; z-index: 9999; display: none; }
+
+/* تغيير عرض الأعمدة (resizer) */
+#floatingTable th { position: relative; direction: rtl; }
+.resizer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+}
+.resizer::after {
+  content: "";
+  position: absolute;
+  right: 2px;
+  top: 10%;
+  width: 2px;
+  height: 80%;
+  background: #ccc;
+}
+.resizer:hover::after { background: #2196f3; }
+
+/* أيقونة التقويم */
+#floatingTable td.col-date { position: relative; }
+#floatingTable td.col-date .date-icon {
+  font-size: 14px;
+  opacity: 0.7;
+  transition: 0.2s;
+}
+#floatingTable td.col-date:hover .date-icon { display: inline-block !important; }
+#floatingTable td.col-date .date-icon:hover { opacity: 1; transform: scale(1.1); }
+
+/* أدوات مساعدة */
+#modalOverlay { pointer-events: none; }
+.flex-search-wrapper { position: relative; }
+
+/* ============================== */
+/* تحسين ظهور الصف المحدد */
+#floatingTable tbody tr.row-selected td:first-child {
+  border-right: 3px solid #0a58ca;
+}
+/* ================ تنسيق خلية إلى لتظهر بشكل قابل للتعديل ================== */
+.col-to.press-cell:hover {
+  cursor: pointer;
+  color: #007bff;
+  font-weight: bold;
+  background: #f5f5f5;
+  text-decoration: underline;
+}
+
+/* أنماط زر الفلترة والقائمة المنبثقة */
+#filterDropdownBtn {
+  background: #198754 !important;
+  color: white !important;
+  border: none !important;
+  padding: 6px 12px !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  font-size: 13px !important;
+}
+
+#filterDropdownBtn:hover {
+  opacity: 0.85 !important;
+}
+
+.filter-popup {
+  background: white !important;
+  border: 1px solid #ced4da !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2) !important;
+  z-index: 10050 !important;
+}
+
+.filter-popup select,
+.filter-popup input {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 6px;
+}
+
+.btn-small {
+  background: #2c6e49;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.btn-small:hover {
+  opacity: 0.85;
+}

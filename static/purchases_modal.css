@@ -1,0 +1,362 @@
+@import url("floating-modal-common.css");
+
+/* ========== خصائص خاصة بنموذج المشتريات ========== */
+
+#purchasesModalHeader {
+  flex-shrink: 0;
+  padding: 12px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: move;
+  user-select: none;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #1f4f3a;  /* 🔥 نفس لون هيدر المبيعات */
+}
+
+#purchasesModalHeader .window-controls button {
+  background: transparent;
+  border: none;
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#purchasesModalHeader .window-controls button:hover {
+  background: #0f5132;
+}
+
+#closePurchasesBtn:hover {
+  background: red !important;
+}
+
+/* 🔥 شريط الأدوات - نفس ألوان المبيعات */
+.purchases-toolbar {
+  background: #f8f9fa;
+  padding: 10px 15px;
+  border-bottom: 1px solid #dee2e6;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  align-items: center;
+}
+
+/* 🔥 أزرار الأدوات بنفس ألوان المبيعات */
+.btn-small {
+  background: #2c6e49;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.btn-small:hover {
+  opacity: 0.85;
+}
+
+/* 🔥 زر الفلترة - نفس لون زر الفلترة في المبيعات */
+#purchasesFilterDropdownBtn {
+  background: #198754 !important;
+  color: white !important;
+  border: none !important;
+  padding: 6px 12px !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  font-size: 13px !important;
+}
+
+#purchasesFilterDropdownBtn:hover {
+  opacity: 0.85 !important;
+}
+
+/* 🔥 القائمة المنبثقة للفلترة - نفس ستايل المبيعات */
+.filter-popup {
+  background: white !important;
+  border: 1px solid #ced4da !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2) !important;
+  z-index: 10050 !important;
+}
+
+.filter-popup select,
+.filter-popup input {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 6px;
+}
+
+/* 🔥 مؤشرات التحميل والبحث */
+.loading {
+  text-align: center;
+  padding: 30px;
+  color: #666;
+  font-size: 14px;
+}
+
+.highlight {
+  background: linear-gradient(90deg, #fff59d, #ffe082);
+  color: #000;
+  font-weight: bold;
+  padding: 1px 2px;
+  border-radius: 3px;
+}
+
+/* 🔥 تحسين ظهور نتائج البحث - نفس المبيعات */
+#purchasesTable tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+#purchasesTable tbody tr:hover {
+  background-color: #f5f5f5 !important;
+}
+
+/* 🔥 حقل البحث - نفس ألوان المبيعات */
+.purchases-search-wrapper .google-search-input {
+  background: white !important;
+  border: 1px solid #ced4da !important;
+  border-radius: 28px !important;
+  padding: 8px 20px 8px 80px !important;
+  font-size: 14px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.purchases-search-wrapper .google-search-input:focus {
+  border-color: #198754 !important;
+  box-shadow: 0 0 0 2px rgba(25,135,84,0.2) !important;
+  outline: none !important;
+}
+
+/* 🔥 رأس الجدول - نفس ألوان المبيعات */
+#purchasesTable thead th {
+  background: #2c6e49;
+  color: white;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* 🔥 تذييل المجاميع - نفس ألوان المبيعات */
+#purchasesTable tfoot tr#totalsPurchasesRow {
+  background: #2c3e50 !important;
+  color: #f1c40f !important;
+  font-weight: bold !important;
+}
+
+#purchasesTable tfoot tr#totalsPurchasesRow td {
+  background: #2c3e50 !important;
+  color: #f1c40f !important;
+  padding: 10px 6px !important;
+}
+
+/* 🔥 الأعمدة القابلة للنقر */
+.press-cell:hover {
+  cursor: pointer;
+  color: #007bff;
+  font-weight: bold;
+  background: #f5f5f5;
+  text-decoration: underline;
+}
+
+/* 🔥 الصفوف المحددة */
+#purchasesTable tbody tr.row-selected {
+  background-color: #cfe2ff !important;
+}
+
+/* 🔥 مقابض تغيير حجم الأعمدة */
+#purchasesTable th {
+  position: relative;
+  direction: rtl;
+}
+
+.resizer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+}
+
+.resizer::after {
+  content: "";
+  position: absolute;
+  right: 2px;
+  top: 10%;
+  width: 2px;
+  height: 80%;
+  background: #ccc;
+}
+
+.resizer:hover::after {
+  background: #2196f3;
+}
+
+/* 🔥 محتوى النافذة - نفس خلفية المبيعات */
+#purchasesModalContent {
+  flex: 1;
+  overflow: auto !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  scrollbar-width: thin;
+  scrollbar-color: #198754 #e5e7eb;
+  padding: 10px;
+  background: #fafafa;
+  min-height: 0;
+  pointer-events: auto;
+}
+
+#purchasesModalContent::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+#purchasesModalContent::-webkit-scrollbar-thumb {
+  background: #198754;
+  border-radius: 4px;
+}
+
+#purchasesModalContent::-webkit-scrollbar-track {
+  background: #f1f3f5;
+}
+
+/* 🔥 الجدول */
+#purchasesTable {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  display: table !important;
+}
+
+#purchasesTable th,
+#purchasesTable td {
+  text-align: center;
+  vertical-align: middle;
+  box-sizing: border-box;
+  padding: 8px;
+  text-overflow: ellipsis;
+  position: relative;
+}
+
+/* 🔥 وضع Auto Fit */
+.auto-fit-mode th, .auto-fit-mode td {
+  white-space: nowrap !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.no-auto-fit th, .no-auto-fit td {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+  word-break: break-all;
+  hyphens: auto;
+  line-height: 1.4;
+}
+
+#purchasesTable.no-auto-fit {
+  table-layout: fixed !important;
+  width: 100% !important;
+}
+
+#purchasesTable.no-auto-fit th,
+#purchasesTable.no-auto-fit td {
+  min-width: 85px !important;
+}
+/* منع تمدد الصف الواحد في جدول المشتريات */
+#purchasesTable {
+  height: auto !important;
+}
+
+#purchasesTable tbody tr {
+  height: auto !important;
+  max-height: none !important;
+}
+
+#purchasesTable tbody td {
+  height: auto !important;
+  vertical-align: top; /* أو middle حسب رغبتك، لكن لا يمدد */
+}
+
+/* إذا كان الجدول داخل حاوية flex، تأكد من أنه لا يتمدد أيضاً */
+#purchasesModalContent {
+  display: block; /* أو flex مع اتجاه عمودي ولكن الجدول يظل auto */
+}
+
+/* الخيار الأفضل: إبقاء overflow ولكن الجدول يأخذ ارتفاعه الطبيعي */
+#purchasesTable {
+  width: 100%;
+  display: table;
+  table-layout: fixed;
+}
+/* ============================================ */
+/* السماح بخروج القائمة من حدود النافذة */
+#purchasesModal,
+#purchasesModalContent,
+#purchasesModalHeader,
+.modal-window,
+.purchases-search-wrapper,
+.google-search-wrapper {
+    overflow: visible !important;
+}
+
+/* حاوية البحث تكون مرجع تموضع */
+.purchases-search-wrapper,
+.google-search-wrapper {
+    position: relative !important;
+}
+
+/* رفع القائمة المنسدلة فوق كل شيء */
+.google-search-dropdown,
+.search-history-dropdown {
+    position: absolute !important;
+    top: calc(100% + 4px) !important;
+    left: 0;
+    right: 0;
+    z-index: 99999999 !important;
+}
+
+/* تخفيض رأس الجدول قليلاً */
+#purchasesTable thead th {
+    z-index: 5 !important;
+}
+
+/* الهيدر يبقى فوق المحتوى لكن تحت القائمة */
+#purchasesModalHeader {
+    z-index: 100 !important;
+}td[data-field="expDate"] {
+    cursor: pointer;
+}
+td[data-field="expDate"]:hover {
+    background-color: #e9ecef;
+}
+
+/* تنسيق رؤوس الأعمدة القابلة للترتيب */
+#purchasesTable thead th.sortable {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    transition: background 0.2s;
+}
+#purchasesTable thead th.sortable:hover {
+    background: #1e6b3e;
+}
+#purchasesTable thead th.sortable.asc::after {
+    content: " ▲";
+    font-size: 11px;
+}
+#purchasesTable thead th.sortable.desc::after {
+    content: " ▼";
+    font-size: 11px;
+}
+.sort-indicator {
+    display: inline-block;
+    width: 12px;
+    margin-right: 4px;
+}

@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>فاتورة مبيعات</title>
+
+  <!-- Fonts & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- 1️⃣ الأساس والتخطيط العام -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='ستايل.css') }}">
+
+  <!-- Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  
+  <style>
+    /* ========== القوائم المنسدلة (بدون تضخيم النموذج) ========== */
+    .header, .actions, .container {
+      overflow: visible !important;
+    }
+    .header {
+      position: relative;
+    }
+    .dropdown-container {
+      position: relative;
+      display: inline-block;
+    }
+    .dropdown-btn {
+      background: linear-gradient(135deg, #0d6efd, #0a58ca);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dropdown-btn:hover {
+      background: linear-gradient(135deg, #0b5ed7, #084298);
+      transform: translateY(-1px);
+    }
+    .dropdown-content {
+      position: absolute;
+      top: 110%;
+      right: 0;
+      background: white;
+      min-width: 240px;
+      max-height: 400px;
+      overflow-y: auto;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      z-index: 1050;
+      display: none;
+      flex-direction: column;
+      padding: 8px 0;
+      border: 1px solid #e0e0e0;
+    }
+    .dropdown-content.show {
+      display: flex;
+    }
+    .dropdown-content button,
+    .dropdown-content .target-wrapper {
+      margin: 4px 12px;
+      padding: 8px 12px;
+      border: none;
+      background: #f8f9fa;
+      text-align: right;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #1e1e2f;
+      font-weight: 500;
+    }
+    .dropdown-content button:hover {
+      background: #e9ecef;
+      transform: translateX(-2px);
+      color: #000;
+    }
+    .dropdown-content .target-wrapper {
+      background: #fff3cd;
+      border: 1px solid #ffeeba;
+      cursor: default;
+      color: #856404;
+    }
+    .dropdown-content .target-wrapper input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      outline: none;
+      font-size: 14px;
+      padding: 4px;
+      color: #333;
+    }
+    /* زر حفظ منفرد */
+    .btn-save-standalone {
+      background: linear-gradient(135deg, #dc3545, #b02a37);
+      color: white;
+      border: none;
+      padding: 8px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: 0.2s;
+    }
+    .btn-save-standalone:hover {
+      background: linear-gradient(135deg, #c82333, #9a1f2c);
+      transform: scale(1.02);
+      box-shadow: 0 2px 8px rgba(220,53,69,0.4);
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      padding: 10px;
+      overflow: visible !important;
+    }
+    /* دفع مجموعة القوائم إلى اليسار */
+    .dropdown-group {
+      margin-right: auto;
+      display: flex;
+      gap: 12px;
+    }
+    @media (max-width: 768px) {
+      .dropdown-content {
+        position: absolute;
+        top: 110%;
+        right: 0;
+        min-width: 240px;
+        max-width: calc(100vw - 20px);
+        overflow-y: auto;
+        overflow-x: hidden;
+        z-index: 99999;
+      }
+      .dropdown-group {
+        margin-right: 0;
+        width: 100%;
+        justify-content: flex-start;
+      }
+    }
+
+    /* ========== الشريط الجانبي ========== */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 240px;
+      height: 100vh;
+      background: #1f4f3a;
+      color: white;
+      z-index: 9999;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+      transform: translateX(-240px);
+      transition: transform 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar.open {
+      transform: translateX(0);
+    }
+
+    .sidebar-header {
+      padding: 15px;
+      background: #0f3a28;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 18px;
+      font-weight: bold;
+      border-bottom: 1px solid #2c6e49;
+    }
+
+    .sidebar-menu {
+      padding: 10px 0;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .sidebar-item {
+      margin: 5px 10px;
+      position: relative;
+    }
+
+    .sidebar-btn {
+      background: #2c6e49;
+      color: white;
+      border: none;
+      width: 100%;
+      padding: 12px 15px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      text-align: right;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sidebar-btn:hover {
+      background: #3a8a5a;
+    }
+
+    .sidebar-dropdown {
+      display: none;
+      margin-top: 5px;
+      background: #2c6e49;
+      border-radius: 8px;
+      padding: 5px 0;
+      box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    .sidebar-dropdown.open {
+      display: block;
+    }
+
+    .sidebar-dropdown button,
+    .sidebar-dropdown .target-wrapper {
+      display: block;
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: white;
+      padding: 10px 15px;
+      text-align: right;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.2s;
+      border-bottom: 1px solid #3a8a5a;
+    }
+
+    .sidebar-dropdown button:hover {
+      background: #3a8a5a;
+    }
+
+    .sidebar-dropdown .target-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #3a8a5a;
+      padding: 8px 12px;
+    }
+
+    .sidebar-dropdown .target-wrapper input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: white;
+      padding: 4px;
+      outline: none;
+    }
+
+    .sidebar-dropdown .target-wrapper input::placeholder {
+      color: #ccc;
+    }
+
+    /* تعديل المحتوى عند فتح الشريط */
+    body.sidebar-open .container {
+      margin-left: 240px;
+      transition: margin-left 0.3s ease;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 200px;
+        transform: translateX(-200px);
+      }
+      body.sidebar-open .container {
+        margin-left: 200px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+<!-- تم حذف القوائم العلوية والزر الأساسي للحفظ -->
+
+<!-- الشريط الجانبي -->
+<div id="sidebar" class="sidebar">
+  <div class="sidebar-header">
+    <span>☰ القائمة</span>
+    <button id="closeSidebarBtn" style="background:none; border:none; color:white; font-size:20px; cursor:pointer;">✖</button>
+  </div>
+  <div class="sidebar-menu">
+    <!-- زر خيارات الفاتورة -->
+    <div class="sidebar-item">
+      <button id="invoiceSidebarBtn" class="sidebar-btn">
+        <i class="fas fa-file-invoice"></i> خيارات الفاتورة
+      </button>
+      <div id="invoiceSidebarMenu" class="sidebar-dropdown">
+        <button id="addRowBtn">➕ إضافة سطر</button>
+        <button id="print-btn">🖨️ طباعة</button>
+        <button id="refresh-g-k-sadalia-Btn">🔄 تحديث جدول ك صيدلية</button>
+        <button id="toggleNotificationModeBtn">🔔 وضع التنبيه: (حالي)</button>
+        <button id="toggleInvoiceColumnsBtn">📋 تخصيص الأعمدة</button>
+        <div class="target-wrapper">
+          <span>🎯 الإجمالي المطلوب:</span>
+          <input type="number" id="targetTotalInput" placeholder="المبلغ بعد الحسم">
+        </div>
+      </div>
+    </div>
+
+    <!-- زر نوافذ إضافية -->
+    <div class="sidebar-item">
+      <button id="otherWindowsSidebarBtn" class="sidebar-btn">
+        <i class="fas fa-window-restore"></i> نوافذ إضافية
+      </button>
+      <div id="otherWindowsSidebarMenu" class="sidebar-dropdown">
+        <button id="openModalBtn">📦 مبيعات</button>
+        <button onclick="window.open('/sales_standalone_full', '_blank')">📌 مبيعات (مستقل)</button>
+        <button id="openMaterialsBtn">📦 بطاقات المواد</button>
+        <button onclick="window.open('/materials_standalone_full', '_blank')">📌 بطاقات المواد</button>
+        <button id="openPurchasesBtn">📦 مشتريات</button>
+        <button onclick="window.open('/purchases_standalone_full', '_blank')">📌 مشتريات</button>
+        <button class="btn-edit-sales" onclick="openSales()">🗂️ فتح في أكسس</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  async function openSales() {
+    try {
+      const res = await fetch("/open_sales_table");
+      const msg = await res.text();
+      console.log(msg);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  // 🔥 الدالة المعدلة: كل قائمة مستقلة وتحفظ حالتها في localStorage
+  function setupSidebarDropdown(btnId, menuId) {
+    const btn = document.getElementById(btnId);
+    const menu = document.getElementById(menuId);
+    if (!btn || !menu) return;
+
+    // استعادة الحالة المخزنة
+    const state = getDropdownState();
+    if (state[menuId]) {
+      menu.classList.add('open');
+    }
+
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      menu.classList.toggle('open');
+      // تحديث الحالة المخزنة
+      const state = getDropdownState();
+      state[menuId] = menu.classList.contains('open');
+      localStorage.setItem('sidebarDropdownState', JSON.stringify(state));
+    });
+  }
+
+  // دالة لقراءة حالة القوائم من التخزين
+  function getDropdownState() {
+    const stored = localStorage.getItem('sidebarDropdownState');
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (e) {
+        return {};
+      }
+    }
+    return {};
+  }
+
+document.addEventListener('DOMContentLoaded', function() {
+    setupSidebarDropdown('invoiceSidebarBtn', 'invoiceSidebarMenu');
+    setupSidebarDropdown('otherWindowsSidebarBtn', 'otherWindowsSidebarMenu');
+
+    const sidebar = document.getElementById('sidebar');
+    const SIDEBAR_THRESHOLD = 20;
+    const isMobile = window.innerWidth < 768; // تعريف الموبايل
+
+    let mouseLeaveTimeout = null;
+    let isSidebarOpen = false;
+
+    // ---- فقط على سطح المكتب: فتح عند اقتراب الماوس من الحافة ----
+    if (!isMobile) {
+        document.addEventListener('mousemove', function(e) {
+            const x = e.clientX;
+            if (x < SIDEBAR_THRESHOLD && !sidebar.classList.contains('open')) {
+                clearTimeout(mouseLeaveTimeout);
+                sidebar.classList.add('open');
+                isSidebarOpen = true;
+                document.body.classList.add('sidebar-open');
+            } else if (x >= SIDEBAR_THRESHOLD && sidebar.classList.contains('open')) {
+                clearTimeout(mouseLeaveTimeout);
+                mouseLeaveTimeout = setTimeout(() => {
+                    if (!sidebar.matches(':hover')) {
+                        sidebar.classList.remove('open');
+                        isSidebarOpen = false;
+                        document.body.classList.remove('sidebar-open');
+                    }
+                }, 300);
+            }
+        });
+
+        sidebar.addEventListener('mouseenter', function() {
+            clearTimeout(mouseLeaveTimeout);
+        });
+
+        sidebar.addEventListener('mouseleave', function() {
+            if (isSidebarOpen) {
+                clearTimeout(mouseLeaveTimeout);
+                mouseLeaveTimeout = setTimeout(() => {
+                    sidebar.classList.remove('open');
+                    isSidebarOpen = false;
+                    document.body.classList.remove('sidebar-open');
+                }, 300);
+            }
+        });
+    }
+
+    // ---- أحداث اللمس (للجوال) ----
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isSwiping = false;
+    const swipeThreshold = 30;
+
+    document.addEventListener('touchstart', function(e) {
+        if (e.touches.length === 1) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            isSwiping = false;
+        }
+    });
+
+    document.addEventListener('touchmove', function(e) {
+        if (e.touches.length === 1) {
+            const touch = e.touches[0];
+            const dx = touch.clientX - touchStartX;
+            const dy = touch.clientY - touchStartY;
+            if (Math.abs(dx) > swipeThreshold && Math.abs(dx) > Math.abs(dy)) {
+                isSwiping = true;
+                if (dx > 0 && touchStartX < 30) {
+                    e.preventDefault();
+                    if (!sidebar.classList.contains('open')) {
+                        sidebar.classList.add('open');
+                        isSidebarOpen = true;
+                        document.body.classList.add('sidebar-open');
+                    }
+                } else if (dx < -30 && touchStartX < 30) {
+                    if (sidebar.classList.contains('open')) {
+                        sidebar.classList.remove('open');
+                        isSidebarOpen = false;
+                        document.body.classList.remove('sidebar-open');
+                    }
+                }
+            }
+        }
+    });
+
+    document.addEventListener('touchend', function(e) {
+        // إغلاق عند النقر خارج القائمة (وليس عند السحب)
+        if (isSidebarOpen && !sidebar.contains(e.target)) {
+            sidebar.classList.remove('open');
+            isSidebarOpen = false;
+            document.body.classList.remove('sidebar-open');
+        }
+    });
+
+    // ---- إغلاق عند النقر خارج القائمة (لجميع الأجهزة) ----
+    document.addEventListener('click', function(e) {
+        if (isSidebarOpen && !sidebar.contains(e.target)) {
+            if (!e.target.closest('.sidebar')) {
+                sidebar.classList.remove('open');
+                isSidebarOpen = false;
+                document.body.classList.remove('sidebar-open');
+            }
+        }
+    });
+
+    // زر إغلاق الشريط الجانبي يدوياً (موجود بالفعل)
+    document.getElementById('closeSidebarBtn').addEventListener('click', function() {
+        sidebar.classList.remove('open');
+        isSidebarOpen = false;
+        document.body.classList.remove('sidebar-open');
+    });
+
+    // على الموبايل: أضف زر تبديل (هامبرغر) إذا لم يكن موجوداً
+    if (isMobile) {
+        let toggleBtn = document.getElementById('toggleSidebarBtn');
+        if (!toggleBtn) {
+            toggleBtn = document.createElement('button');
+            toggleBtn.id = 'toggleSidebarBtn';
+            toggleBtn.innerHTML = '☰';
+            toggleBtn.style.cssText = `
+                position: fixed;
+                top: 15px;
+                left: 15px;
+                z-index: 10000;
+                background: #1f4f3a;
+                color: white;
+                border: none;
+                padding: 10px 14px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 18px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                display: block;
+            `;
+            document.body.appendChild(toggleBtn);
+            toggleBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                sidebar.classList.toggle('open');
+                isSidebarOpen = sidebar.classList.contains('open');
+                document.body.classList.toggle('sidebar-open');
+            });
+        }
+    }
+});
+
+  // ======== تحديث وضع التنبيه ========
+  function updateNotificationModeButton() {
+    const btn = document.getElementById('toggleNotificationModeBtn');
+    if (!btn) return;
+    const mode = getNotificationMode();
+    const modeText = mode === 'alert' ? '⚠️ منبثق' : (mode === 'toast' ? '🍞 عائم' : '🔕 صامت');
+    btn.innerHTML = `🔔 وضع التنبيه: ${modeText}`;
+  }
+
+  function toggleNotificationMode() {
+    const current = getNotificationMode();
+    let next = 'toast';
+    if (current === 'toast') next = 'none';
+    else if (current === 'none') next = 'alert';
+    else next = 'toast';
+    setNotificationMode(next);
+    updateNotificationModeButton();
+    showNotification(`تم تبديل وضع التنبيه إلى ${next === 'alert' ? 'منبثق' : next === 'toast' ? 'عائم' : 'صامت'}`, 'success');
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const toggleNotificationBtn = document.getElementById('toggleNotificationModeBtn');
+    if (toggleNotificationBtn) {
+      toggleNotificationBtn.onclick = (e) => {
+        e.stopPropagation();
+        toggleNotificationMode();
+      };
+    }
+    updateNotificationModeButton();
+  });
+</script>
+
+  <!-- حقول الفاتورة -->
+  <section class="grid">
+    <div>
+        <div><label>من</label><input id="من" placeholder="صيدلية إحسان العبد الله"></div>
+        <div><label>إلى</label><div style="position: relative;"><input type="text" id="buyer-name" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box;" placeholder="فاتورة نقدية" autocomplete="off"><div id="buyer-dropdown" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ccc; border-top: none; max-height: 200px; overflow-y: auto; z-index: 9999;"></div></div></div>
+    </div>
+    <div>
+        <div><label>التاريخ</label><input type="text" id="invoice-date" placeholder="يوم/شهر/سنة" /></div>
+        <div><label>الوقت</label><input type="text" id="invoice-time" placeholder="hh:mm:ss ص/م" /></div>
+    </div>
+    <div>
+        <div><label>المستخدم</label><input id="invoice-user" readonly></div>
+        <div><label>رقم الفاتورة</label><select id="invoice-number"></select></div>
+    </div>
+  </section>
+
+  <script>
+    document.getElementById("invoice-user").value = "{{ user_computer_info | safe }}";
+// ========== كومبو بوكس العملاء ==========
+let buyersDatabase = [];
+let selectedIndex = -1;
+const buyerInput = document.getElementById('buyer-name');
+const buyerDropdown = document.getElementById('buyer-dropdown');
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
+}
+
+function highlightMatch(text, searchTerm) {
+    if (!searchTerm || !text) return escapeHtml(text);
+    const term = searchTerm.trim().toLowerCase();
+    const textLower = text.toLowerCase();
+    const index = textLower.indexOf(term);
+    if (index === -1) return escapeHtml(text);
+    const before = text.substring(0, index);
+    const match = text.substring(index, index + term.length);
+    const after = text.substring(index + term.length);
+    return `${escapeHtml(before)}<span style="background-color: #fff59d; font-weight: bold; color: black; border-radius: 3px; padding: 0 2px;">${escapeHtml(match)}</span>${escapeHtml(after)}`;
+}
+
+function updateInvoiceNumberFromCombobox() {
+    if (window.invoice && typeof window.invoice.updateInvoiceNumber === 'function') {
+        window.invoice.updateInvoiceNumber();
+    } else {
+        const select = document.getElementById("invoice-number");
+        const buyer = buyerInput.value.trim() || "فاتورة نقدية";
+        const date = document.getElementById("invoice-date").value;
+        const time = document.getElementById("invoice-time").value;
+        if (select && select.options.length > 0 && select.value === "فاتورة جديدة") {
+            const newNumber = `${buyer} ${date} ${time}`;
+            select.options[0].value = newNumber;
+            select.options[0].textContent = newNumber;
+            select.value = newNumber;
+        }
+    }
+}
+
+async function loadBuyers() {
+    try {
+        const response = await fetch('/api/buyers');
+        const data = await response.json();
+        buyersDatabase = Array.isArray(data) ? data : [];
+        if (buyersDatabase.length === 0) buyersDatabase = ["فاتورة نقدية"];
+        buyersDatabase.sort((a, b) => a.localeCompare(b, 'ar'));
+        console.log(`✅ تم تحميل ${buyersDatabase.length} عميل`);
+    } catch (err) {
+        console.error("خطأ في تحميل العملاء:", err);
+        buyersDatabase = ["فاتورة نقدية"];
+    }
+}
+
+function showDropdown(items) {
+    if (!buyerDropdown) return;
+    if (items.length === 0) {
+        buyerDropdown.style.display = 'none';
+        return;
+    }
+    const searchTerm = buyerInput.value.trim().toLowerCase();
+    buyerDropdown.innerHTML = '';
+    items.forEach((item, idx) => {
+        const div = document.createElement('div');
+        div.style.padding = '8px 12px';
+        div.style.cursor = 'pointer';
+        div.style.borderBottom = '1px solid #eee';
+        div.innerHTML = highlightMatch(item, searchTerm);
+        div.setAttribute('data-index', idx);
+        div.onclick = () => {
+            buyerInput.value = item;
+            buyerDropdown.style.display = 'none';
+            updateInvoiceNumberFromCombobox();
+            buyerInput.focus();
+        };
+        div.onmouseenter = () => {
+            div.style.backgroundColor = '#e8f0fe';
+            selectedIndex = idx;
+        };
+        div.onmouseleave = () => { div.style.backgroundColor = ''; };
+        buyerDropdown.appendChild(div);
+    });
+    buyerDropdown.style.display = 'block';
+}
+
+function hideDropdown() { if (buyerDropdown) buyerDropdown.style.display = 'none'; }
+function filterBuyers() {
+    const searchTerm = buyerInput.value.trim().toLowerCase();
+    if (!searchTerm) { showDropdown(buyersDatabase.slice(0, 15)); return; }
+    const filtered = buyersDatabase.filter(b => b.toLowerCase().includes(searchTerm));
+    showDropdown(filtered.slice(0, 15));
+}
+function updateSelectedItem() {
+    const items = buyerDropdown.querySelectorAll('div');
+    items.forEach((item, idx) => {
+        if (idx === selectedIndex) {
+            item.style.backgroundColor = '#198754';
+            item.style.color = 'white';
+            const highlightSpan = item.querySelector('span');
+            if (highlightSpan) highlightSpan.style.backgroundColor = '#ffd700';
+            item.scrollIntoView({ block: 'nearest' });
+        } else {
+            item.style.backgroundColor = '';
+            item.style.color = '';
+            const highlightSpan = item.querySelector('span');
+            if (highlightSpan) highlightSpan.style.backgroundColor = '#fff59d';
+        }
+    });
+}
+function bindEvents() {
+    if (!buyerInput) return;
+    buyerInput.addEventListener('input', filterBuyers);
+    buyerInput.addEventListener('focus', filterBuyers);
+    buyerInput.addEventListener('blur', () => { setTimeout(() => { hideDropdown(); updateInvoiceNumberFromCombobox(); }, 200); });
+    buyerInput.addEventListener('change', () => { updateInvoiceNumberFromCombobox(); });
+    buyerInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const items = buyerDropdown.querySelectorAll('div');
+            if (selectedIndex >= 0 && items[selectedIndex]) buyerInput.value = items[selectedIndex].textContent;
+            hideDropdown();
+            updateInvoiceNumberFromCombobox();
+            const firstMaterial = document.querySelector('.material-input');
+            if (firstMaterial) firstMaterial.focus();
+        }
+    });
+    buyerInput.addEventListener('keydown', (e) => {
+        const items = buyerDropdown.querySelectorAll('div');
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (items.length) { selectedIndex = Math.min(selectedIndex + 1, items.length - 1); updateSelectedItem(); }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (items.length) { selectedIndex = Math.max(selectedIndex - 1, 0); updateSelectedItem(); }
+        } else if (e.key === 'Escape') {
+            hideDropdown();
+            selectedIndex = -1;
+        }
+    });
+}
+
+window.refreshBuyersList = async function() { await loadBuyers(); console.log("🔄 تم تحديث قائمة العملاء"); };
+document.addEventListener('DOMContentLoaded', () => { loadBuyers(); bindEvents(); });
+
+window.addEventListener("resize", () => {
+    document.querySelectorAll(".dropdown-content").forEach(menu => {
+        menu.style.left = "";
+        menu.style.right = "0";
+    });
+});
+// =================تحديث النص وتغيير وضع التنبيه===================
+
+function updateNotificationModeButton() {
+    const btn = document.getElementById('toggleNotificationModeBtn');
+    if (!btn) return;
+    const mode = getNotificationMode();
+    const modeText = mode === 'alert' ? '⚠️ منبثق' : (mode === 'toast' ? '🍞 عائم' : '🔕 صامت');
+    btn.innerHTML = `🔔 وضع التنبيه: ${modeText}`;
+}
+
+function toggleNotificationMode() {
+    const current = getNotificationMode();
+    let next = 'toast';
+    if (current === 'toast') next = 'none';
+    else if (current === 'none') next = 'alert';
+    else next = 'toast';
+    setNotificationMode(next);
+    updateNotificationModeButton();
+    showNotification(`تم تبديل وضع التنبيه إلى ${next === 'alert' ? 'منبثق' : next === 'toast' ? 'عائم' : 'صامت'}`, 'success');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const toggleBtn = document.getElementById('toggleNotificationModeBtn');
+    if (toggleBtn) toggleBtn.onclick = (e) => {
+        e.stopPropagation();
+        toggleNotificationMode();
+    };
+    updateNotificationModeButton();
+});
+
+// ====================================
+</script>
+
+  <!-- الجدول -->
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>المادة</th>
+          <th>الكمية</th>
+          <th>المبلغ المقبوض من مادة واحدة</th>
+          <th>إيصال نسبة الربح إلى</th>
+          <th>حسم %</th>
+          <th>الإجمالي قبل الحسم</th>
+          <th>رقم الطبخة</th>
+          <th>قيمة الحسم</th>
+          <th>سعر المبيع</th>
+          <th>الإجمالي بعد الحسم</th>
+          <th>نسبة الربح</th>
+          <th>إجمالي الربح</th>
+          <th>التكلفة</th>
+          <th>إجمالي التكلفة</th>
+          <th>حذف</th>
+        </tr>
+      </thead>
+
+      <tbody id="items-tbody">
+        <tr>
+          <td class="material-cell">
+            <div class="ghost-wrapper input-wrapper">
+              <input type="text"
+                     class="material-input ghost-input"
+                     data-field="name"
+                     placeholder="أدخل اسم المادة">
+              <span class="ghost-suggestion" data-ghost=""></span>
+            </div>
+          </td>
+          <td><input type="number" data-field="quantity" step="any"></td>
+          <td><input type="number" data-field="receivedAmount" step="any"></td>
+          <td><input type="number" data-field="إيصال_نسبة_الربح_إلى" step="any"></td>
+          <td><input type="number" data-field="discountPercent" step="any"></td>
+          <td><input type="text" data-field="totalBeforeDiscount" inputmode="decimal" readonly></td>
+          <td><input type="text" data-field="batchNo" readonly></td>
+          <td><input type="text" data-field="discountValue" inputmode="decimal" readonly></td>
+          <td><input type="text" data-field="sellPrice" inputmode="decimal" readonly></td>
+          <td><input type="text" data-field="totalAfterDiscount" inputmode="decimal" readonly></td>
+          <td><input type="text" data-field="profitPercentReal" inputmode="decimal" readonly></td>
+          <td><input type="text" data-field="totalProfit" inputmode="decimal" readonly></td>
+          <td><input type="text" data-field="cost" inputmode="decimal" readonly></td>
+          <td><input type="text" data-field="totalCost" inputmode="decimal" readonly></td>
+          <td><button type="button" class="btn delete-row">❌</button></td>
+        </tr>
+      </tbody>
+
+      <tfoot>
+        <tr>
+          <td>المجموع</td>
+          <td id="sum-qty">0</td>
+          <td id="sum-received">0</td>
+          <td></td>
+          <td></td>
+          <td id="sum-before">0</td>
+          <td></td>
+          <td id="sum-discount">0</td>
+          <td></td>
+          <td id="sum-after" class="sum-after-highlight"></td>
+          <td></td>
+          <td id="sum-profit">0</td>
+          <td></td>
+          <td id="sum-cost">0</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+<script>
+
+(function() {
+    const POSITION_STORAGE_KEY = 'floatingSaveBtnPos';
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'floating-save-btn';
+    saveBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الفاتورة';
+    document.body.appendChild(saveBtn);
+
+    function restorePosition() {
+        const saved = localStorage.getItem(POSITION_STORAGE_KEY);
+        if (!saved) return;
+        try {
+            const pos = JSON.parse(saved);
+            const maxX = window.innerWidth - saveBtn.offsetWidth - 10;
+            const maxY = window.innerHeight - saveBtn.offsetHeight - 10;
+            const left = Math.max(10, Math.min(pos.left, maxX));
+            const top = Math.max(10, Math.min(pos.top, maxY));
+            saveBtn.style.left = left + 'px';
+            saveBtn.style.top = top + 'px';
+            saveBtn.style.bottom = 'auto';
+            saveBtn.style.right = 'auto';
+        } catch (e) {
+            localStorage.removeItem(POSITION_STORAGE_KEY);
+        }
+    }
+
+    function savePosition() {
+        const left = parseInt(saveBtn.style.left) || 0;
+        const top = parseInt(saveBtn.style.top) || 0;
+        if (left > 0 && top > 0) {
+            localStorage.setItem(POSITION_STORAGE_KEY, JSON.stringify({ left, top }));
+        }
+    }
+
+    restorePosition();
+
+    let isDragging = false;
+    let isPointerDown = false;
+    let startX, startY;
+    let offsetX, offsetY;
+
+    // دالة مشتركة لبدء السحب (ماوس + لمس)
+    function onPointerDown(e) {
+        const clientX = e.clientX ?? e.touches[0].clientX;
+        const clientY = e.clientY ?? e.touches[0].clientY;
+        isPointerDown = true;
+        isDragging = false;
+        const rect = saveBtn.getBoundingClientRect();
+        offsetX = clientX - rect.left;
+        offsetY = clientY - rect.top;
+        startX = clientX;
+        startY = clientY;
+        saveBtn.style.cursor = 'grabbing';
+        e.preventDefault();
+    }
+
+    // دالة مشتركة للحركة
+    function onPointerMove(e) {
+        if (!isPointerDown) return;
+        const clientX = e.clientX ?? e.touches[0].clientX;
+        const clientY = e.clientY ?? e.touches[0].clientY;
+        if (!isDragging && (Math.abs(clientX - startX) > 5 || Math.abs(clientY - startY) > 5)) {
+            isDragging = true;
+        }
+        if (isDragging) {
+            const x = clientX - offsetX;
+            const y = clientY - offsetY;
+            saveBtn.style.left = x + 'px';
+            saveBtn.style.top = y + 'px';
+            saveBtn.style.bottom = 'auto';
+            saveBtn.style.right = 'auto';
+        }
+    }
+
+    // دالة مشتركة لإنهاء السحب
+    function onPointerUp(e) {
+        if (!isPointerDown) return;
+        isPointerDown = false;
+        if (isDragging) {
+            savePosition();
+        } else {
+            // إذا لم يكن سحب، ننفذ الحفظ
+            if (window.invoice && typeof window.invoice.saveInvoice === 'function') {
+                window.invoice.saveInvoice();
+            } else {
+                console.warn('لا يمكن حفظ الفاتورة، تأكد من تحميل التطبيق');
+            }
+        }
+        saveBtn.style.cursor = 'grab';
+        isDragging = false;
+    }
+
+    // أحداث الماوس
+    saveBtn.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('mousemove', onPointerMove);
+    document.addEventListener('mouseup', onPointerUp);
+
+    // أحداث اللمس (للجوال)
+    saveBtn.addEventListener('touchstart', onPointerDown, { passive: false });
+    document.addEventListener('touchmove', onPointerMove, { passive: false });
+    document.addEventListener('touchend', onPointerUp);
+
+    saveBtn.addEventListener('click', function(e) { e.preventDefault(); });
+
+    window.addEventListener('resize', function() {
+        const left = parseInt(saveBtn.style.left) || 0;
+        const top = parseInt(saveBtn.style.top) || 0;
+        const maxX = window.innerWidth - saveBtn.offsetWidth - 10;
+        const maxY = window.innerHeight - saveBtn.offsetHeight - 10;
+        if (left > maxX || top > maxY) {
+            const newLeft = Math.max(10, Math.min(left, maxX));
+            const newTop = Math.max(10, Math.min(top, maxY));
+            saveBtn.style.left = newLeft + 'px';
+            saveBtn.style.top = newTop + 'px';
+            savePosition();
+        }
+    });
+})();
+
+</script>
+
+  <!-- المودالات -->
+  {% include 'sales_modal.html' %}
+  {% include 'materials.modal.html' %}
+  {% include 'purchases.modal.html' %}
+
+  <!-- السكربتات الخارجية -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <script src="/static/column-auto-fit.js"></script>
+  <script src="/static/modal-helpers.js"></script>
+  <script src="/static/modal.manager.js"></script>
+  <script src="/static/modal.state.js"></script>
+  <script src="/static/google-search-component.js"></script>
+  <script src="/static/column-resizer.js"></script>
+  <script src="/static/columns-manager.js"></script>
+  <script defer src="/static/sales.modal.core.js"></script>
+  <script src="/static/highlight-utils.js"></script>
+  <script src="/static/modal-persistence.js"></script>
+  <script defer src="/static/sales.modal.data.js"></script>
+  <script defer src="/static/sales.modal.search.js"></script>
+  <script defer src="/static/materials.modal.js"></script>
+  <script type="module" src="/static/invoice.core.js"></script>
+  <script type="module" src="/static/autocomplete.ui.js"></script>
+  <script defer src="/static/autocomplete.data.js"></script>
+
+  <script src="/static/barcode-camera.js"></script>
+
+  <script type="module" src="/static/autocomplete.select.js"></script>
+  <script type="module" src="/static/invoice.math.js"></script>
+  <script type="module" src="/static/invoice-tatbic.js"></script>
+  <script type="module" src="/static/invoice-calculations.js"></script>
+
+  <script src="/static/invoice-columns-manager.js"></script>
+  <script defer src="/static/purchases.modal.core.js"></script>
+  <script defer src="/static/purchases.modal.data.js"></script>
+  <script defer src="/static/purchases.modal.search.js"></script>
+</body>
+</html>

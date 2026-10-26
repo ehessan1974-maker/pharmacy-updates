@@ -1,0 +1,138 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='بطاقات_المواد_العائم.css') }}">
+
+<!-- النموذج العائم لبطاقات المواد -->
+<div id="materialsModal" style="display: none;">
+<!-- <div id="materialsModal" class="modal-window" style="display: none;"> -->
+  
+  <!-- خلفية -->
+<!--  <div id="materialsOverlay"></div> -->
+
+  <!-- الرأس -->
+  <div id="materialsHeader">
+
+<div class="window-controls">
+  <span class="window-title">بطاقات المواد</span> 
+  <button id="fitAllColumnsMaterialsBtn">⛶</button>
+  <button id="refitAllColumnsMaterialsBtn">✖</button>
+</div> 
+
+<!-- البحث - سيتم إنشاؤه بواسطة GoogleSearchComponent -->
+<div class="google-search-wrapper" style="flex: 1; margin: 0 15px; max-width: 420px; position: relative;"></div>
+
+    <div class="window-controls">
+      <button id="minimizeMaterialsBtn">🗕</button>
+      <button id="maximizeMaterialsBtn">🗖</button>
+      <button id="closeMaterialsBtn">✖</button>
+    </div>
+  </div>
+
+  <!-- المحتوى -->
+  <div id="materialsContent"> 
+    <table id="materialsTable">
+      <thead>
+        <tr>
+<th class="sortable" data-field="barcode">
+  رمز الباركود <span class="sort-indicator"></span>
+</th>
+
+<th class="sortable" data-field="name">
+  المادة <span class="sort-indicator"></span>
+</th>
+
+<th class="sortable" data-field="company">
+  الشركة <span class="sort-indicator"></span>
+</th>
+
+<th class="sortable" data-field="base_price">
+  السعر الأساسي <span class="sort-indicator"></span>
+</th>
+
+<th class="sortable" data-field="general_free">
+  عموم حر <span class="sort-indicator"></span>
+</th>
+
+<th class="sortable" data-field="general_20">
+  عموم 20% <span class="sort-indicator"></span>
+</th>
+
+<th class="sortable" data-field="general_approved">
+  عموم معتمد <span class="sort-indicator"></span>
+</th>
+
+<th class="sortable" data-field="category">
+  التصنيف <span class="sort-indicator"></span>
+</th>
+
+<th class="sortable" data-field="profit_ratio">
+  نسبة الربح <span class="sort-indicator"></span>
+</th>
+
+<th class="sortable" data-field="latin_name">
+  الاسم اللاتيني <span class="sort-indicator"></span>
+</th>
+
+<th class="sortable" data-field="net_free">
+  نيت حر <span class="sort-indicator"></span>
+</th>
+
+<th class="sortable" data-field="package">
+  العبوة <span class="sort-indicator"></span>
+</th>
+
+<th class="sortable" data-field="strength">
+  العيار <span class="sort-indicator"></span>
+</th>
+
+<th class="sortable" data-field="form">
+  الشكل الصيدلاني <span class="sort-indicator"></span>
+</th>
+
+<th class="sortable" data-field="composition">
+  التركيب الكيميائي <span class="sort-indicator"></span>
+</th>
+
+<th class="sortable" data-field="unit">
+  وحدة العبوة <span class="sort-indicator"></span>
+</th>
+
+<th class="sortable" data-field="trade_name">
+  اسم المستحضر <span class="sort-indicator"></span>
+</th>
+
+<th class="sortable" data-field="code">
+  الرمز <span class="sort-indicator"></span>
+</th>
+
+<th class="sortable" data-field="updated">
+  تعديل جديد <span class="sort-indicator"></span>
+</th>
+
+<th class="sortable" data-field="base_price_usd">
+  السعر الأساسي دولار <span class="sort-indicator"></span>
+</th>
+
+<th class="sortable" data-field="general_approved_usd">
+  عموم معتمد دولار <span class="sort-indicator"></span>
+</th>
+
+<th class="sortable" data-field="general_20_usd">
+  عموم 20% دولار <span class="sort-indicator"></span>
+</th>
+        </tr>
+      </thead>
+      <tbody id="materialsVirtualTbody"></tbody>
+    </table>
+  </div>
+
+  <!-- Resize Handles -->
+<!-- يجب أن تكون هذه المقابض موجودة داخل #materialsModal -->
+<div class="resize-handle resize-right"></div>
+<div class="resize-handle resize-left"></div>
+<div class="resize-handle resize-bottom"></div>
+<div class="resize-handle resize-up"></div>
+
+<div class="resize-handle resize-bottom-right"></div>
+<div class="resize-handle resize-bottom-left"></div>
+<div class="resize-handle resize-up-right"></div>
+<div class="resize-handle resize-up-left"></div>
+</div>

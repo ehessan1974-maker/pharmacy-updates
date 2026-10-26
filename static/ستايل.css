@@ -1,0 +1,1216 @@
+/* =====================================================
+   Invoice Table Fields CSS
+   - المادة، الكمية، المقبوض، إيصال نسبة الربح، خصم، الإجمالي، الربح، التكلفة
+===================================================== */
+
+/* قائمة الاقتراحات */
+.autocomplete-list {
+  position: absolute; /* تموضع حر */
+  top: 100%; /* تحت الحقل */
+  right: 0;
+  z-index: 9999 !important;         /* تأكد أن القائمة فوق كل شيء */
+  background: #fff;
+  border: 1px solid #ccc;
+  max-height: 360px; /* أقصى ارتفاع */
+  overflow: auto; /* تمرير */
+  font-size: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,.15);
+  pointer-events: auto !important;
+}
+
+/* ===== Material Cell with Ghost Suggestion ===== */
+.material-cell {
+  position: relative  !important; 
+  overflow: visible !important; 
+  padding: 4px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  pointer-events: auto !important;
+}
+
+.material-cell input {
+  width: 100%; 
+  min-width: 250px; /* تكبير حقل الإدخال داخل الخلية */
+}
+
+.material-cell .ghost-wrapper {
+  position: relative !important; 
+  display: inline-block;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto !important;
+}
+
+.material-cell .ghost-input {
+  position: relative !important; 
+  width: 100%;
+  padding: 4px 6px;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  background: transparent;
+  z-index: 3; 
+  box-sizing: border-box;
+  pointer-events: auto !important;
+}
+
+.material-cell .ghost-suggestion {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;               /* ← أضف هذا إذا لم يكن موجودًا */
+  color: rgba(25,135,84,0.4);
+  pointer-events: none !important;   /* ← الأهم: يجب أن يكون none */
+  z-index: 1;
+  font-size: inherit;
+  line-height: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 4px 6px;
+}
+
+.material-cell .ghost-suggestion::after {
+  content: attr(data-ghost);
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 6px;
+  color: rgba(25, 135, 84, 0.4);
+  pointer-events: none;
+  z-index: 1; 
+}
+
+/* نبض عند كون خانة المادة فارغة */
+.material-input.material-empty-pulse{
+    animation: emptyPulse 2s infinite ease-in-out;
+    border: 2px solid #ef4444 !important;
+    background: #fff5f5;
+}
+
+@keyframes emptyPulse{
+    0%   { box-shadow: 0 0 0 0 rgba(239,68,68,.35); transform:scale(1);}
+    50%  { box-shadow: 0 0 10px 4px rgba(239,68,68,.15); transform:scale(1.05);}
+    100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); transform:scale(1);}
+}
+
+/* ===== General Input Styling ===== 
+td input[type="text"],
+td input[readonly],
+td input[type="number"] { 
+/*  width: 100%; */
+  min-width: 40px;
+/*  max-width: 300px; */
+  display: inline-block;
+  padding: 4px 6px;
+  font-size: 13px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  transition: all 0.25s ease; 
+
+  background-color: #f3f4f6;
+  cursor: default;
+  color: #111827;
+/*  text-align: center; */
+/*  text-align: left; */
+  text-align: right;
+} */
+
+td input[readonly]{
+  text-align: left; 
+}
+
+/* التركيز */
+td input:focus {
+  border-color: #198754;
+  box-shadow: 0 0 10px rgba(25,135,84,0.4);
+  background: #fff;
+}
+
+
+
+/* ===== Readonly fields ===== */
+ td input[type="text"],
+ td input[type="number"],
+ td input[readonly] {
+  min-width: 40px;
+/*  max-width: 300px;  */
+  display: inline-block;
+  width: 100%;  
+  padding: 4px 6px;
+  font-size: 13px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  transition: all 0.25s ease; 
+  background-color: #f3f4f6;
+  cursor: default;
+  color: #111827;
+} 
+
+td input[readonly][data-field="totalAfterDiscount"] {
+    background-color: #f3e5f5;
+    font-weight: bold;
+    color: #2c3e50;
+    text-align: left;
+    width: auto;  
+}
+
+/* ===== تخصيص الألوان لكل خانة ===== */
+td input[data-field="totalAfterDiscount"] { background: #0d6efd; color: #fff; font-weight: 700; }
+
+/* td input[data-field="quantity"] { background: #f0f9ff; }
+td input[data-field="receivedAmount"] { background: #fef9c3; }
+td input[data-field="إيصال_نسبة_الربح_إلى"] { background: #dcfce7; }
+td input[data-field="discountPercent"] { background: #fef2f2; }
+td input[data-field="totalBeforeDiscount"] { background: #e0f2fe; }
+td input[data-field="batchNo"] { background: #f3f4f6; }
+td input[data-field="discountValue"] { background: #fde68a; }
+td input[data-field="sellPrice"] { background: #e0f7fa; }
+td input[data-field="totalAfterDiscount"] { background: #0d6efd; color: #fff; font-weight: 700; }
+td input[data-field="profitPercentReal"] { background: #dcfce7; color: #15803d; }
+td input[data-field="totalProfit"] { background: #22c55e; color: #fff; font-weight: 700; }
+td input[data-field="cost"] { background: #fee2e2; color: #dc2626; }
+td input[data-field="totalCost"] { background: #f87171; color: #fff; font-weight: 700; }
+ */
+
+/* ===== Table Footer Totals ===== */
+tfoot td {
+  font-weight: 700;
+  text-align: center;
+  padding: 6px 4px;
+  border-top: 2px solid #0d6efd;
+  background: linear-gradient(to left, #10b981, #059669);
+  color: #fff;
+}
+
+/* أرقام الربح */
+/* #sum-profit {
+  background: #052e1a;
+  color: #22c55e;
+  border-radius: 6px;
+} */
+
+/* أرقام التكلفة */
+/* #sum-cost {
+  background: #3b0a0a;
+  color: #ef4444;
+  border-radius: 6px;
+} */
+
+/* عدد الأصناف */
+/* #sum-qty {
+  background: #1e3a8a;
+  color: #60a5fa;
+  border-radius: 6px;
+} */
+/* ======================================= */
+.ac-row {
+  display: grid; /* استخدام CSS Grid */
+  grid-template-columns:
+    160px 120px 90px 70px 90px
+    120px 130px 180px 140px
+    110px 110px 120px 160px
+    90px 110px; /* تحديد عرض كل عمود */
+  align-items: center; /* توسيط عمودي */
+  text-align: center; /* توسيط أفقي */
+  cursor: pointer; /* يتحول ليد */
+}
+
+/* عند المرور */
+.ac-row:hover {
+  background: #e0f2fe; /* أزرق فاتح */
+}
+
+/* عند التحديد */
+.ac-row.active {
+  background: #bfdbfe !important; /* أزرق أغمق */
+}
+
+/* =====================================================
+   1️⃣ حاوية الأزرار
+===================================================== */
+
+ .actions {
+  display: flex;              /* ترتيب الأزرار بجانب بعضها */
+  gap: 10px;                  /* مسافة بين كل زر */
+  margin-top: 12px;           /* مسافة فوق الأزرار */
+  flex-wrap: wrap;            /* التفاف الأزرار عند صغر الشاشة */
+} 
+/*--------------فصل الأزرار إلى يمين ويسار الصفحة------------------*/
+.left-buttons {
+  margin-left: auto;
+}
+
+/* =====================================================
+   2️⃣ الشكل الأساسي لكل زر
+===================================================== */
+/* تطبق على كل الأزرار ما عدا زر الحذف */
+/* .btn:not(.delete-row) { */
+.btn {
+  position: relative;         
+  overflow: hidden;           /* يمنع خروج تأثير اللمعة */
+  border: none;               /* إزالة الإطار الافتراضي */
+  cursor: pointer;            /* تحويل المؤشر لليد */
+  font-size: 14px;            /* حجم النص */
+  font-weight: 600;           /* سماكة النص */
+  padding: 8px 16px;         /* مسافة داخلية */
+  border-radius: 6px;        /* شكل كبسولة */
+  transition: all 0.2s ease; /* حركة سلسة */
+  transform-style: preserve-3d; /* تفعيل تأثير 3D */
+  
+  box-shadow:                 /* ظل احترافي متعدد الطبقات */
+    0 6px 0 rgba(0,0,0,0.25),
+    0 15px 25px rgba(0,0,0,0.25);
+}
+
+
+/* =====================================================
+   3️⃣ تأثير Hover
+===================================================== */
+
+.btn:hover { 
+  transform: translateY(-4px) scale(1.55); /*رفع الزر */
+  z-index: 999; /*-جعل الزر الفعال فوق الكل-*/
+  box-shadow:
+    0 12px 0 rgba(0,0,0,0.2),
+    0 25px 40px rgba(0,0,0,0.35);
+}
+
+
+/* =====================================================
+   4️⃣ تأثير الضغط
+===================================================== */
+
+.btn:active {
+  transform: translateY(2px) scale(0.97); /* نزول الزر عند الضغط */
+  box-shadow: 0 2px 0 rgba(0,0,0,0.3);    /* تقليل الظل */
+}
+
+
+/* =====================================================
+   5️⃣ تأثير اللمعة المتحركة
+===================================================== */
+
+.btn::before {
+  content: "";                        /* عنصر وهمي */
+  position: absolute;                 /* داخل الزر */
+  top: 0;
+  left: -120%;                        /* يبدأ خارج الزر */
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    120deg,
+    transparent,
+    rgba(255,255,255,0.8),
+    transparent
+  );                                  /* تأثير لمعان */
+  transform: skewX(-25deg);           /* ميلان اللمعة */
+  transition: left 0.7s ease;         /* حركة انزلاق */
+}
+
+.btn:hover::before {
+  left: 140%;                         /* تمرير اللمعة عبر الزر */
+}
+
+
+/* =====================================================
+   6️⃣ ألوان الأزرار (Variants)
+===================================================== */
+
+
+/* ===== أزرار المبيعات - تدرج أزرق ===== */
+.btn-sales {
+    background: linear-gradient(135deg, #60a5fa, #3b82f6);
+    color: white;
+    border: none;
+}
+.btn-sales-standalone {
+    background: linear-gradient(135deg, #3b82f6, #1e3a8a);
+    color: white;
+    border: none;
+}
+
+/* ===== أزرار بطاقات المواد - تدرج أخضر ===== */
+.btn-materials {
+    background: linear-gradient(135deg, #34d399, #10b981);
+    color: white;
+    border: none;
+}
+.btn-materials-standalone {
+    background: linear-gradient(135deg, #10b981, #065f46);
+    color: white;
+    border: none;
+}
+
+/* ===== أزرار المشتريات - تدرج بنفسجي ===== */
+.btn-purchases {
+    background: linear-gradient(135deg, #a78bfa, #8b5cf6);
+    color: white;
+    border: none;
+}
+.btn-purchases-standalone {
+    background: linear-gradient(135deg, #8b5cf6, #5b21b6);
+    color: white;
+    border: none;
+}
+
+/* زر فتح في أكسس */
+.btn-edit-sales {
+    background: linear-gradient(135deg, #fed7aa, #f59e0b, #d97706);
+    color: #000;                /* نص أسود */
+    border: none;
+}
+
+
+.btn-print,
+.btn-refresh,
+.btn-secondary,
+.btn-add {
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  color: #212529;             /* رمادي داكن */
+}
+
+/* زر الحفظ */
+.btn-save {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: #fff;                /* نص أبيض */
+  font-size: 38px;
+  font-family: 'Tahoma', 'Segoe UI', sans-serif;
+  font-weight: normal;
+}
+
+/* زر حذف سطر */
+.delete-row {
+  padding: 10px 10px; /*-القطرين متساويين لنعمل دائرة-*/
+  border-radius: 25px; /*-دائرة-*/
+/*  border: none; */
+  border: 3px solid #ccc; /*-حافة رمادية-*/
+  font-weight: bold;
+  font-size: 14px;
+  background: #3498db;
+/*  color: white; */
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.delete-row:hover {
+  transform: scale(1.55); /*-قطر االزر عند المرور فوقه-*/
+}
+.delete-row:active {
+  transform: translateY(2px) scale(0.97); /* نزول الزر عند الضغط */
+  box-shadow: 0 2px 0 rgba(0,0,0,0.3);    /* تقليل الظل */
+}
+
+/*-----------------------------------------------------------*/
+/* =====================================================
+   7️⃣ إخفاء الأزرار عند الطباعة
+===================================================== */
+
+@media print {
+  .btn {
+    display: none;            /* إخفاء جميع الأزرار عند الطباعة */
+  }
+}
+
+/* =====================================================
+   Grid Layout for Custom Fields
+===================================================== */
+
+.grid {
+  display: flex;               /* ترتيب المجموعات أفقي */
+  gap: 20px;                   /* مسافة بين المجموعات */
+  flex-wrap: wrap;             /* التفاف إذا صغر العرض */
+}
+
+/* كل مجموعة عمودين */
+.grid > div {
+  display: flex;
+  flex-direction: column;      /* خانتين فوق بعض */
+  gap: 12px;                   /* مسافة بين الخانتين */
+  flex: 1;                     /* توزيع متساوي لكل مجموعة */
+  min-width: 150px;            /* ضمان الحد الأدنى للعرض */
+}
+
+/* ستايلات عامة للـ inputs */
+.grid input,
+.grid select {
+  width: 100%; 
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  box-sizing: border-box;
+  transition: all 0.25s ease;
+}
+
+/* عند التركيز */
+.grid input:focus,
+.grid select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 6px rgba(59,130,246,0.3);
+  background: #fff;
+}
+
+/* تخصيص ألوان الحقول */
+#من,
+#buyer-name {
+  background-color: #f9fafb;
+}
+
+#invoice-date,
+#invoice-time {
+  background-color: #f0f8ff;
+  text-align: center;
+}
+
+#invoice-user {
+  background-color: #fef9c3;
+  text-align: center;
+  cursor: not-allowed;
+}
+
+#invoice-number {
+  background-color: #e0f2fe;
+  text-align: center;
+  cursor: pointer;
+}
+
+/* Placeholder Style */
+#من::placeholder,
+#buyer-name::placeholder,
+#invoice-date::placeholder,
+#invoice-time::placeholder {
+  color: #9ca3af;
+  opacity: 1;
+  font-style: italic;
+}
+/* ======================================= */
+/* حاوية القائمة المنسدلة */
+.dropdown {
+  border: 1px solid #ccc; /* إطار رمادي خفيف */
+  width: 300px; /* عرض ثابت للقائمة */
+}
+
+/* رأس القائمة */
+.dropdown-header {
+  background: #198754; /* أخضر صيدلي */
+  color: #fff; /* نص أبيض */
+  padding: 8px; /* مسافة داخلية */
+  font-weight: bold; /* خط عريض */
+
+}
+
+/* عنصر داخل القائمة */
+.dropdown-item {
+  padding: 8px; /* مسافة داخلية */
+  cursor: pointer; /* مؤشر يد */
+}
+
+/* تأثير المرور */
+.dropdown-item:hover {
+  background: #f1f1f1; /* خلفية رمادية عند hover */
+}
+
+/* ======================================= */
+* {
+  box-sizing: border-box; /* احتساب padding داخل العرض */
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Tajawal', sans-serif; /* خط عربي جميل */
+  background: linear-gradient(135deg,#667eea,#764ba2);
+  min-height: 100vh;
+  padding: 15px;
+}
+
+.container {
+  max-width: 95vw;
+  margin: auto;
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.15);
+}
+
+.header {
+  background: linear-gradient(135deg,#1e40af,#3b82f6);
+  color: #fff;
+  padding: 25px;
+  text-align: center;
+}
+
+.header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+}
+/* ======================================= */
+input[type="date"] {
+  direction: rtl; /* اتجاه من اليمين */
+  text-align: right; /* محاذاة يمين */
+}
+/* ======================================= */
+#spinner {
+  position: fixed; /* يغطي الشاشة */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.4); /* تعتيم */
+  display: flex;
+  justify-content: center; /* توسيط أفقي */
+  align-items: center; /* توسيط عمودي */
+  flex-direction: column;
+  z-index: 9999; 
+  color: white;
+  font-size: 20px;
+}
+
+/* دائرة التحميل */
+.loader {
+  border: 6px solid #f3f3f3;
+  border-top: 6px solid #3498db;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  animation: spin 1s linear infinite;
+}
+
+/* حركة الدوران */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ===== سطر المجاميع الجديد ===== */
+
+tfoot tr{
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+
+    background:
+      linear-gradient(
+        135deg,
+        #1f2937,
+        #111827
+      );
+
+    color:white;
+
+    box-shadow:
+      0 -6px 18px rgba(0,0,0,.18);
+
+    border-top:3px solid #22c55e;
+}
+
+/* كل خلايا المجاميع بنفس الشكل */
+
+tfoot td{
+
+    border-radius:10px;
+
+    padding:12px 10px !important;
+
+    text-align:center;
+
+    font-weight:700;
+
+    border:none !important;
+
+    white-space:nowrap;
+
+    transition:.2s;
+}
+
+tfoot td:hover{
+    transform:translateY(-1px);
+}
+/* الإجمالي بعد الحسم - مميز لكن بنفس شكل الخانات */
+
+/* خانة الإجمالي بعد الحسم */
+
+#sum-after{
+    background:linear-gradient(
+        135deg,
+        #ffe082,
+        #ffca28
+    );
+
+    color:#5d2a00;
+border: 2px solid #ef4444 !important;
+    font-size:24px;
+    font-weight:900;
+
+    padding:6px 10px;
+    border-radius:10px;
+}
+
+/* النبض يعمل فقط عند وجود قيمة */
+#sum-after.sum-active{
+    animation:pulseTotal 2s infinite ease-in-out;
+}
+
+@keyframes pulseTotal{
+    0%   { box-shadow: 0 0 0 0 rgba(239,68,68,.35);}
+    50%  { box-shadow: 0 0 10px 4px rgba(239,68,68,.15);}
+    100% { box-shadow: 0 0 0 0 rgba(239,68,68,0);}
+    0%{transform:scale(1);}
+    50%{transform:scale(1.05);}
+    100%{transform:scale(1);}
+
+
+}
+
+#sum-profit{
+    color:#86efac;
+}
+
+#sum-discount{
+    color:#fca5a5;
+}
+
+#sum-cost{
+    color:#93c5fd;
+}
+
+#sum-qty{
+    color:#fde68a;
+}
+
+/* موبايل */
+@media(max-width:768px){
+
+    tfoot td{
+        padding:8px 4px !important;
+        font-size:12px;
+    }
+
+}
+
+/* ======================================= */
+/* اعطِ الخلايا حجم تلقائي للعرض */
+ .material-cell input,
+.material-cell textarea {
+/*  width: auto; */
+/*  width: 100%; */
+/*  min-width: 100px; */ /* تعيين الحد الأدنى من العرض */ 
+/*  max-width: 300px; */ /* الحد الأقصى لعرض الحقل */ 
+  padding: 5px;  
+} 
+
+
+/* ==================ستايل خانة المبلغ المقبوض===================== */
+/* للتأكيد عند الكتابة والتركيز */
+td input[data-field="receivedAmount"]{
+    width:auto;
+    color:red;
+    font-size:15px; 
+    max-width: 200px;
+    border: 5px solid #ccc;           /* حافة خفيفة وأنيقة */
+    font-weight: bold;
+    background-color: yellow;
+    border-radius: 10px;        /* شكل كبسولة */
+}
+ td input[type="number"]{
+    direction: ltr !important;
+    text-align: left !important;
+    unicode-bidi: isolate !important;
+} 
+/* =================الإجمالي بعد الحسم====================== */
+.sum-after-highlight {
+    width:auto;
+    color:red;
+    font-size:20px;
+    font-weight: bold;
+    background:yellow;
+    border-radius: 20px;        /* شكل كبسولة */
+/*    background: linear-gradient(135deg, #0d6efd, #0a58ca); /* تدرج أزرق */ 
+/*  color: #fff; /* نص أبيض */ */
+
+
+    border: 1px solid #0a58ca;  /* إطار */ 
+    box-shadow: 0 0 6px rgba(13,110,253,0.4); /* ظل خفيف */ 
+    position: relative; 
+/*  display: inline-block; */ /* يسمح بتحديد عرض */ 
+/*  width: 100%; /* عرض كامل */ */
+/*  max-width: 300px; /* حد أقصى */ */
+/*  margin: 10px auto; /* توسيط */ */
+/*  font-weight: bold; /* خط ثقيل */ */
+/*  text-align: center; /* توسيط النص */ */
+  padding: 10px; /* مسافة داخلية */ 
+/*  transition: transform 0.25s ease; /* حركة سلسة */ */
+} 
+
+/* تأثير رفع */
+ .sum-after-highlight:hover {
+  transform: translateY(-3px);
+} 
+
+
+td input[data-field="quantity"],
+td input[data-field="receivedAmount"],
+td input[data-field="إيصال_نسبة_الربح_إلى"],
+td input[data-field="discountPercent"]{
+/*    width: 10px;  */        /* حجم صغير جدًا قبل الكتابة */
+/*    box-sizing: content-box; */
+/*    padding: 2px 4px;  */   /* padding حسب تصميمك */
+    background:yellow;
+}
+
+input.dynamic-width::placeholder {
+    color: #aaa;       /* لون واضح للـ placeholder */
+}
+input.dynamic-width {
+    overflow: visible; /* يمنع اختفاء النص عند تقييد العرض */
+}
+/*---------------إخفاء spinner controls أسهم التحكم الخاصة---------------*/
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Firefox */
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+th {
+    justify-content: center; /* يتحرك أفقياً حسب حجم العمود */
+    align-items: center;     /* يحرك رأسياً في وسط الخلية */
+    font-size: 12px;
+    padding: 0 5px;
+}
+
+/* عناوين أعمدة الفاتورة — أصغر وأنحف لتوفير مساحة أكبر */
+.table-container thead th {
+    font-size: 10px;        /* كانت 12px */
+    font-weight: 500;       /* كانت عريضة 700 — الآن شبه نحيفة */
+    padding: 2px 3px;       /* هوامش أضيق */
+    line-height: 1.25;      /* أسطر متراصة لو التف العنوان */
+}
+
+
+
+.مربع-نص-تغيير-الحسم {
+  overflow: visible !important;
+  padding: 6px 10px;               /* مساحة داخلية أفضل */
+  border-radius: 6px;               /* حواف أنعم */
+  background: #ffffff;
+  pointer-events: auto !important;
+  border: 2px solid #ccc;           /* حافة خفيفة وأنيقة */
+  transition: all 0.3s ease;        /* حركة سلسة لكل التغييرات */
+}
+
+/* عند التركيز */
+.مربع-نص-تغيير-الحسم:focus {
+  border-color: #198754; 
+  box-shadow: 0 0 8px rgba(25,135,84,0.5); /* ظل أخضر خفيف */
+  background: #f9fff9;               /* لون خلفية خفيف عند التركيز */
+  outline: none;                     /* إزالة أي إطار افتراضي */
+}
+
+/* عند المرور بالفأرة */
+.مربع-نص-تغيير-الحسم:hover { 
+  transform: translateY(-3px) scale(1.1); /* رفع خفيف وزيادة حجم لطيفة */
+  z-index: 1000;                        /* التأكد من ظهوره فوق العناصر */
+  box-shadow: 
+    0 4px 10px rgba(0,0,0,0.15),       /* ظل خفيف وناعم */
+    0 8px 20px rgba(0,0,0,0.2);
+  cursor: pointer;                      /* مؤشر جميل عند التحويم */
+}
+/*-------------------------------*/
+/* تمدد تلقائي لكل خانات الإدخال أثناء الكتابة */
+td input:not([readonly]):not([type="button"]) {
+/*    box-sizing: content-box !important; */
+    width: 100% !important;
+/*    min-width: 100px !important;  */   /* الحد الأدنى لكل الخانات */
+/*    max-width: none !important; */
+    padding: 4px 12px !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+}
+
+/* تحسين التمدد عند التركيز (Focus) */
+td input:not([readonly]):not([type="button"]):focus {
+    min-width: 180px !important;     /* يمكنك تغيير الرقم حسب رغبتك */
+    width: auto !important;
+}
+
+/* استثناء بعض الخانات إذا أردت (مثل خانة الحذف) */
+td:last-child input,
+.delete-row {
+    min-width: auto !important;
+    width: auto !important;
+}
+/* ================================= */
+.modal-active {
+  box-shadow: 0 15px 40px rgba(0,0,0,0.45);
+  border: 2px solid #4da3ff;
+  transform: scale(1.01);
+}
+
+.modal {
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+/* ================================================ */
+/* تخصيص قائمة اختيار الأعمدة */
+.column-picker-dropdown label:hover {
+    background-color: #f0f0f0;
+}
+.column-picker-dropdown input {
+    margin: 0;
+}
+.toggle-columns-btn {
+    background: transparent !important;
+    border: none !important;
+    font-size: 15px !important;
+    cursor: pointer !important;
+    color: inherit !important;
+}
+.toggle-columns-btn:hover {
+    opacity: 0.8;
+}
+/* ============================================*/
+/* جعل الصفحة الرئيسية تأخذ كامل العرض على الموبايل */
+@media (max-width: 768px) {
+  body {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: white; /* يمكنك إبقاء الخلفية أو جعلها بيضاء */
+  }
+
+  .container {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow-x: auto; /* يسمح بالتمرير الأفقي للجدول */
+  }
+
+  /* تحسين عرض الجدول */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* تقليل الهوامش الداخلية للجدول */
+  table {
+    min-width: 700px; /* يضمن أن الجدول ليس ضيقاً جداً، ويمكن تمريره */
+    width: max-content;
+  }
+
+  /* تصغير الخط والخلايا قليلاً */
+  th, td {
+    font-size: 11px;
+    padding: 6px 3px !important;
+    white-space: nowrap; /* يمنع التفاف النص للحفاظ على عرض الأعمدة معقول */
+  }
+
+  /* جعل أزرار الحذف أصغر */
+  .delete-row {
+    padding: 4px 8px !important;
+  }
+}
+/* =================================== */
+/* إخفاء مربعات وإطارات html5-qrcode */
+#qr-reader-simple__dashboard_section_csr,
+#qr-reader-simple__scan_region,
+.qr-scanner-frame {
+    display: none !important;
+    border: none !important;
+    outline: none !important;
+}
+/* ======================================= */
+/* تحسين قائمة تخصيص الأعمدة على الموبايل */
+@media (max-width: 768px) {
+  .invoice-column-picker {
+    font-size: 16px !important;
+  }
+  .invoice-column-picker label {
+    padding: 12px 16px !important;
+  }
+  .invoice-column-picker input[type="checkbox"] {
+    transform: scale(1.2);
+    margin-left: 8px;
+  }
+}
+
+/* ========== Custom Combobox Styles ========== */
+.combobox-container {
+    position: relative;
+    width: 100%;
+}
+
+.combobox-input {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    box-sizing: border-box;
+    background: white;
+}
+
+.combobox-input:focus {
+    border-color: #198754;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(25,135,84,0.2);
+}
+
+.combobox-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ccc;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 10000;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    display: none;
+}
+
+.combobox-dropdown.show {
+    display: block;
+}
+
+.combobox-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    border-bottom: 1px solid #eee;
+}
+
+.combobox-item:hover {
+    background-color: #e8f0fe;
+}
+
+.combobox-item.selected {
+    background-color: #198754;
+    color: white;
+}
+
+.combobox-highlight {
+    font-weight: bold;
+    color: #198754;
+}
+
+.combobox-item.selected .combobox-highlight {
+    color: #ffd700;
+}
+/* ===== تقليص الشريط الأزرق (header + actions) فقط ===== */
+.header {
+    padding: 8px 12px !important;          /* تقليل الحواشي من 25px إلى 8px */
+    min-height: 0 !important;
+    text-align: left !important;           /* إلغاء التوسيط لتوفير المساحة */
+}
+
+.header .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px !important;                   /* تصغير الفجوة بين الأزرار */
+    margin-top: 0 !important;              /* إزالة الهامش العلوي */
+    padding: 0 !important;
+}
+
+/* تصغير حجم الأزرار نفسها داخل الشريط */
+.header .actions .dropdown-btn,
+.header .actions .btn-save-standalone {
+    padding: 4px 10px !important;
+    font-size: 13px !important;
+    height: 30px !important;
+    line-height: 1 !important;
+}
+
+/* تصغير محتوى القوائم المنسدلة */
+.header .dropdown-content button,
+.header .dropdown-content .target-wrapper {
+    font-size: 12px !important;
+    padding: 4px 8px !important;
+}
+
+/* إزالة أي هوامش زائدة من الأزرار أو الحاويات */
+.header .dropdown-container {
+    margin: 0 !important;
+}
+/* زر الحفظ العائم */
+.floating-save-btn {
+    position: fixed;
+    bottom: 30px;
+    left: 30px;
+    z-index: 9999;
+    background: linear-gradient(135deg, #dc3545, #b02a37);
+    color: white;
+    border: none;
+    padding: 14px 24px;
+    border-radius: 50px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: grab;
+    box-shadow: 0 8px 20px rgba(220, 53, 69, 0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    user-select: none;
+}
+
+.floating-save-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 12px 30px rgba(220, 53, 69, 0.6);
+}
+
+.floating-save-btn:active {
+    cursor: grabbing;
+}
+
+/* ========== الشريط الجانبي ========== */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 240px;
+  height: 100vh;
+  background: #1f4f3a;
+  color: white;
+  z-index: 9999;
+  box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+  transform: translateX(-240px); /* مخفي افتراضياً */
+  transition: transform 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow-y: auto;
+}
+
+.sidebar.open {
+  transform: translateX(0);
+}
+
+.sidebar-header {
+  padding: 15px;
+  background: #0f3a28;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 18px;
+  font-weight: bold;
+  border-bottom: 1px solid #2c6e49;
+}
+
+.sidebar-menu {
+  padding: 10px 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.sidebar-item {
+  margin: 5px 10px;
+  position: relative;
+}
+
+.sidebar-btn {
+  background: #2c6e49;
+  color: white;
+  border: none;
+  width: 100%;
+  padding: 12px 15px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  text-align: right;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sidebar-btn:hover {
+  background: #3a8a5a;
+}
+
+.sidebar-dropdown {
+  display: none;
+  margin-top: 5px;
+  background: #2c6e49;
+  border-radius: 8px;
+  padding: 5px 0;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.sidebar-dropdown.open {
+  display: block;
+}
+
+.sidebar-dropdown button,
+.sidebar-dropdown .target-wrapper {
+  display: block;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: white;
+  padding: 10px 15px;
+  text-align: right;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s;
+  border-bottom: 1px solid #3a8a5a;
+}
+
+.sidebar-dropdown button:hover {
+  background: #3a8a5a;
+}
+
+.sidebar-dropdown .target-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #3a8a5a;
+  padding: 8px 12px;
+}
+
+.sidebar-dropdown .target-wrapper input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: white;
+  padding: 4px;
+  outline: none;
+}
+
+.sidebar-dropdown .target-wrapper input::placeholder {
+  color: #ccc;
+}
+
+/* زر فتح/إغلاق الشريط (يمكن وضعه في الزاوية) */
+#toggleSidebarBtn {
+  position: fixed;
+  top: 15px;
+  left: 15px;
+  z-index: 10000;
+  background: #1f4f3a;
+  color: white;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 18px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  display: none; /* سيظهر عند الحاجة */
+}
+
+body.sidebar-open .container {
+  margin-left: 240px;
+}
