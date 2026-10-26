@@ -37,7 +37,10 @@ function restoreModalState(modalId, defaultSize = {}) {
       if (s.width && !s.maximized) modal.style.width = s.width;
       if (s.height && !s.maximized) modal.style.height = s.height;
 
-      if (s.left && s.top && !s.maximized) {
+      // v8-fix: "0px" قيمة صحيحة — كانت تُعد ناقصة فتُعاد التمركزية وتعود القفزة
+      const hasL = s.left !== undefined && s.left !== null && s.left !== "";
+      const hasT = s.top !== undefined && s.top !== null && s.top !== "";
+      if (hasL && hasT && !s.maximized) {
         modal.style.left = s.left;
         modal.style.top = s.top;
         modal.style.transform = "none";
@@ -154,11 +157,23 @@ setActiveModal(modal, modalId);
   dragging = true;
   lock("drag", modalId);
 
+  // v8-fix: تحويل التمركز النسبي (50% + translate) إلى بكسل قبل السحب
+  // — بدونه تقفز النافذة نصف حجمها مع أول حركة
+  try {
+    const r0 = modal.getBoundingClientRect();
+    if (modal.style.transform && modal.style.transform !== "none") {
+      modal.style.transform = "none";
+      modal.style.left = r0.left + "px";
+      modal.style.top = r0.top + "px";
+    }
+  } catch (err) { }
+
   const rect = modal.getBoundingClientRect();
   offsetX = e.clientX - rect.left;
   offsetY = e.clientY - rect.top;
 
   modal.style.transition = "none";
+  document.body.style.userSelect = "none";
 });
 
     document.addEventListener("mousemove", (e) => {
@@ -167,8 +182,15 @@ setActiveModal(modal, modalId);
 
       e.preventDefault();
 
-      modal.style.left = (e.clientX - offsetX) + "px";
-      modal.style.top = (e.clientY - offsetY) + "px";
+      // v8-fix: تتبع دقيق + منع ضياع النافذة خارج الشاشة (تبقى 100px مرئية على الأقل)
+      let nx = e.clientX - offsetX;
+      let ny = e.clientY - offsetY;
+      const w = modal.offsetWidth;
+      const h = modal.offsetHeight;
+      nx = Math.max(100 - w, Math.min(nx, window.innerWidth - 100));
+      ny = Math.max(0, Math.min(ny, window.innerHeight - 60));
+      modal.style.left = nx + "px";
+      modal.style.top = ny + "px";
     });
 
     document.addEventListener("mouseup", () => {
@@ -177,6 +199,7 @@ setActiveModal(modal, modalId);
       dragging = false;
       unlock();
       modal.style.transition = "";
+      document.body.style.userSelect = "";
     });
   };
 // ===============================================
@@ -248,6 +271,16 @@ window.enableModalResize = function (modal, modalId) {
         setActiveModal(modal, modalId);
         if (!canStart("resize", modalId)) return;
 
+        // v8-fix: نفس إصلاح السحب — إلغاء التمركز النسبي قبل قراءة المستطيل
+        try {
+          const r0 = modal.getBoundingClientRect();
+          if (modal.style.transform && modal.style.transform !== "none") {
+            modal.style.transform = "none";
+            modal.style.left = r0.left + "px";
+            modal.style.top = r0.top + "px";
+          }
+        } catch (err) { }
+
         lock("resize", modalId);
         active = true;
         type = getType(handle);
@@ -283,17 +316,22 @@ window.enableModalResize = function (modal, modalId) {
 
         switch (type) {
             case "right": w += dx; break;
-            case "left": w -= dx; l += dx; break;
             case "bottom": h += dy; break;
-            case "up": h -= dy; t += dy; break;
             case "br": w += dx; h += dy; break;
-            case "bl": w -= dx; l += dx; h += dy; break;
-            case "tr": w += dx; h -= dy; t += dy; break;
-            case "tl": w -= dx; l += dx; h -= dy; t += dy; break;
+            case "left": w -= dx; break;
+            case "up": h -= dy; break;
+            case "bl": w -= dx; h += dy; break;
+            case "tr": w += dx; h -= dy; break;
+            case "tl": w -= dx; h -= dy; break;
         }
 
-        w = Math.max(MIN_W, Math.min(w, window.innerWidth - 10));
-        h = Math.max(MIN_H, Math.min(h, window.innerHeight - 10));
+        // v8-fix: حدود صحيحة — الحد الأدنى + بقاء الحافة المقابلة ثابتة + داخل الشاشة
+        const LEFT_EDGES = ["left", "bl", "tl"];
+        const TOP_EDGES = ["up", "tr", "tl"];
+        w = Math.max(MIN_W, Math.min(w, window.innerWidth - 10 - startL));
+        h = Math.max(MIN_H, Math.min(h, window.innerHeight - 10 - startT));
+        if (w !== startW && LEFT_EDGES.indexOf(type) >= 0) l = startL + (startW - w);
+        if (h !== startH && TOP_EDGES.indexOf(type) >= 0) t = startT + (startH - h);
 
         modal.style.width = w + "px";
         modal.style.height = h + "px";
