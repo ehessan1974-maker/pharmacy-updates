@@ -31,9 +31,11 @@
     }
 
     const rect = modal.getBoundingClientRect();
+    // v9-fix: عند التمركز النسبي نحفظ بكسلات فعلية — حفظ "50%" كان يعيد النافذة للزاوية لاحقاً
+    const __isT = modal.style.transform && modal.style.transform !== "none";
     const data = {
-      left: modal.style.left || rect.left + "px",
-      top: modal.style.top || rect.top + "px",
+      left: __isT ? rect.left + "px" : (modal.style.left || rect.left + "px"),
+      top: __isT ? rect.top + "px" : (modal.style.top || rect.top + "px"),
       width: modal.style.width || rect.width + "px",
       height: modal.style.height || rect.height + "px",
       maximized: state.isMaximized || false,
@@ -102,7 +104,10 @@
           if (h > window.innerHeight - 40) h = window.innerHeight - 40;
           modal.style.height = h + "px";
         }
-        if (data.left && data.top) {
+        // v9-fix: قيم "50%" القديمة المحفوظة غير صالحة — تمركز بدل القفز للزاوية
+        const __badL = typeof data.left === "string" && data.left.indexOf("%") >= 0;
+        const __badT = typeof data.top === "string" && data.top.indexOf("%") >= 0;
+        if (data.left && data.top && !__badL && !__badT) {
           let left = parseFloat(data.left);
           let top = parseFloat(data.top);
           left = Math.max(10, Math.min(left, window.innerWidth - modal.offsetWidth - 10));
@@ -152,11 +157,13 @@
     if (!state.isMinimized) {
       if (!state.normalSize) {
         const rect = modal.getBoundingClientRect();
+        // v9-fix: حفظ بكسلات فعلية عند التمركز النسبي
+        const __isT2 = modal.style.transform && modal.style.transform !== "none";
         state.normalSize = {
           width: modal.style.width || rect.width + "px",
           height: modal.style.height || rect.height + "px",
-          left: modal.style.left || rect.left + "px",
-          top: modal.style.top || rect.top + "px"
+          left: __isT2 ? rect.left + "px" : (modal.style.left || rect.left + "px"),
+          top: __isT2 ? rect.top + "px" : (modal.style.top || rect.top + "px")
         };
       }
       state.isMinimized = true;
@@ -170,9 +177,16 @@
       if (state.normalSize) {
         modal.style.width = state.normalSize.width;
         modal.style.height = state.normalSize.height;
-        modal.style.left = state.normalSize.left;
-        modal.style.top = state.normalSize.top;
-        modal.style.transform = "none";
+        // v9-fix: علاج قيم "50%" القديمة — تمركز بدل القفز
+        const __nl = String(state.normalSize.left || "");
+        const __nt = String(state.normalSize.top || "");
+        if (__nl.indexOf("%") >= 0 || __nt.indexOf("%") >= 0) {
+          centerModal(modal);
+        } else {
+          modal.style.left = __nl;
+          modal.style.top = __nt;
+          modal.style.transform = "none";
+        }
       }
       modal.style.minHeight = "";
       modal.style.overflow = "";
@@ -196,11 +210,13 @@
     if (!state.isMaximized) {
       if (!state.normalSize) {
         const rect = modal.getBoundingClientRect();
+        // v9-fix: حفظ بكسلات فعلية عند التمركز النسبي
+        const __isT2 = modal.style.transform && modal.style.transform !== "none";
         state.normalSize = {
           width: modal.style.width || rect.width + "px",
           height: modal.style.height || rect.height + "px",
-          left: modal.style.left || rect.left + "px",
-          top: modal.style.top || rect.top + "px"
+          left: __isT2 ? rect.left + "px" : (modal.style.left || rect.left + "px"),
+          top: __isT2 ? rect.top + "px" : (modal.style.top || rect.top + "px")
         };
       }
       modal.style.width = "calc(100vw - 20px)";
@@ -213,9 +229,16 @@
       if (state.normalSize) {
         modal.style.width = state.normalSize.width;
         modal.style.height = state.normalSize.height;
-        modal.style.left = state.normalSize.left;
-        modal.style.top = state.normalSize.top;
-        modal.style.transform = "none";
+        // v9-fix: علاج قيم "50%" القديمة — تمركز بدل القفز
+        const __nl = String(state.normalSize.left || "");
+        const __nt = String(state.normalSize.top || "");
+        if (__nl.indexOf("%") >= 0 || __nt.indexOf("%") >= 0) {
+          centerModal(modal);
+        } else {
+          modal.style.left = __nl;
+          modal.style.top = __nt;
+          modal.style.transform = "none";
+        }
       } else {
         centerModal(modal);
       }
