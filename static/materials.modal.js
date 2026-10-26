@@ -32,6 +32,16 @@
 
   function ensureModalInsideViewport(modal) {
     if (!modal || modal.style.display !== "flex") return;
+    // v9-fix: تحويل التمركز النسبي (50% + translate) إلى بكسل قبل أي حساب
+    // — كان parseFloat("50%") يُقرأ 50px فتقفز النافذة نصف عرضها عند أول فتح
+    try {
+      const r0 = modal.getBoundingClientRect();
+      if (modal.style.transform && modal.style.transform !== "none") {
+        modal.style.transform = "none";
+        modal.style.left = r0.left + "px";
+        modal.style.top = r0.top + "px";
+      }
+    } catch (err) { }
     const rect = modal.getBoundingClientRect();
     const winW = window.innerWidth;
     const winH = window.innerHeight;
@@ -39,8 +49,10 @@
       centerModal(modal);
       return;
     }
-    let left = parseFloat(modal.style.left) || rect.left;
-    let top = parseFloat(modal.style.top) || rect.top;
+    let left = parseFloat(modal.style.left);
+    if (isNaN(left)) left = rect.left;
+    let top = parseFloat(modal.style.top);
+    if (isNaN(top)) top = rect.top;
     let changed = false;
     if (left + rect.width > winW - 10) { left = winW - rect.width - 10; changed = true; }
     if (left < 10) { left = 10; changed = true; }
@@ -368,7 +380,7 @@ searchComponent.setValue(typeof searchTerm === "string" ? searchTerm : "");
     }, 150);
   }
 
-window.forceModalFit("floatingModal");  // أو materialsModal
+window.forceModalFit("materialsModal");  // v9-fix: كانت تُستدعى على نافذة المبيعات بالخطأ
 
 }
   function closeModal() {
