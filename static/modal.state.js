@@ -62,17 +62,22 @@
     try {
       const data = JSON.parse(saved);
       if (data.minimized) {
+        // v10-fix: نبدأ بحالة غير مصغرة ثم نستدعي minimizeModal — كان isMinimized:true
+        // يقلب التبديل فيستعيد النافذة بدل تصغيرها فتضيع حالة التصغير بعد إعادة الفتح/التحديث
         modalStates[modalId] = {
-          isMinimized: true,
+          isMinimized: false,
           normalSize: data.normalSize,
           isMaximized: data.isMaximized || false
         };
         if (data.normalSize) {
           modal.style.width = data.normalSize.width;
           modal.style.height = data.normalSize.height;
-          if (data.normalSize.left && data.normalSize.top) {
-            modal.style.left = data.normalSize.left;
-            modal.style.top = data.normalSize.top;
+          // v10-fix: قيم "%" القديمة غير صالحة — نترك التمركز الافتراضي
+          const __nl0 = String(data.normalSize.left || "");
+          const __nt0 = String(data.normalSize.top || "");
+          if (__nl0 && __nt0 && __nl0.indexOf("%") < 0 && __nt0.indexOf("%") < 0) {
+            modal.style.left = __nl0;
+            modal.style.top = __nt0;
             modal.style.transform = "none";
           }
         }
@@ -168,11 +173,37 @@
       }
       state.isMinimized = true;
       state.isMaximized = false;
-      modal.style.height = "52px";
-      modal.style.minHeight = "52px";
+      // v10-fix: ارتفاع الشريط = ارتفاع الهيدر الفعلي + هامش — 52px الثابتة كانت تقصّ الأزرار أو تترك فجوة
+      let __hdr = null;
+      let __strip = 34;
+      try {
+        __hdr = modal.querySelector("#floatingModalHeader, #materialsHeader, #purchasesModalHeader, .modal-window-header");
+        if (__hdr) {
+          const __wasHidden = modal.style.display !== "flex";
+          if (__wasHidden) modal.style.display = "flex";
+          const __hh = __hdr.getBoundingClientRect().height;
+          if (__wasHidden) modal.style.display = "none";
+          if (__hh > 0) __strip = Math.round(__hh) + 4;
+        }
+      } catch (err) { __hdr = null; }
+      modal.style.height = __strip + "px";
+      modal.style.minHeight = __strip + "px";
+      modal.classList.add("modal-minimized");
       modal.style.overflow = "hidden";
       if (content) content.style.display = "none";
       handles.forEach(h => h.style.display = "none");
+      // v10-fix: إخفاء كل ما دون الهيدر (شريط Bulk في المبيعات وغيره) حتى لا يفيض خارج الشريط
+      modal.querySelectorAll(":scope > *").forEach(ch => {
+        if (ch === content || ch === __hdr) return;
+        const __tg = ch.tagName || "";
+        if (__tg === "STYLE" || __tg === "LINK" || __tg === "SCRIPT") return;
+        if (ch.classList && ch.classList.contains("resize-handle")) return;
+        if (ch.style.display === "none") return;
+        ch.setAttribute("data-min-hidden", "1");
+        ch.style.display = "none";
+      });
+      const __mb = modal.querySelector("#minimizeBtnWindow, #minimizeMaterialsBtn, #minimizePurchasesBtn");
+      if (__mb) __mb.title = "استعادة";
     } else {
       if (state.normalSize) {
         modal.style.width = state.normalSize.width;
@@ -188,11 +219,18 @@
           modal.style.transform = "none";
         }
       }
+      modal.classList.remove("modal-minimized");
+      modal.querySelectorAll('[data-min-hidden="1"]').forEach(ch => {
+        ch.style.display = "";
+        ch.removeAttribute("data-min-hidden");
+      });
       modal.style.minHeight = "";
       modal.style.overflow = "";
       if (content) content.style.display = "";
       handles.forEach(h => h.style.display = "");
       state.isMinimized = false;
+      const __mb2 = modal.querySelector("#minimizeBtnWindow, #minimizeMaterialsBtn, #minimizePurchasesBtn");
+      if (__mb2) __mb2.title = "تصغير";
     }
     modalStates[modalId] = state;
     window.saveModalState(modalId);
