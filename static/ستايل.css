@@ -1231,3 +1231,21 @@ code, pre, kbd, samp {
     font-weight: 500 !important;
     line-height: 1.25;
 }
+
+/* ===== v7 — خفض ارتفاع خانات الرأس الست وخانات المجاميع ليناسب الخط الموحد 10px ===== */
+.grid input,
+.grid select {
+    padding: 3px 6px !important;
+    line-height: 1.2 !important;
+}
+
+tfoot td {
+    padding: 5px 8px !important;
+    border-radius: 6px;
+}
+
+tfoot td input {
+    padding: 2px 4px !important;
+    line-height: 1.2 !important;
+}
+
