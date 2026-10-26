@@ -961,13 +961,32 @@ def send_ntfy_link(url):
 
 
 def announce_tunnel(url, static=False):
-    """نشر رابط النفق: طباعة + نسخ للحافظة + الإشعارات المفعّلة (واتساب/ntfy)"""
+    """نشر رابط النفق: طباعة + نسخ للحافظة + الإشعارات المفعّلة (واتساب/ntfy)
+    الإشعارات تُرسَل فقط عند تغيّر الرابط عن آخر مرة (يُحفظ في last_tunnel_url.txt)
+    — الرابط الثابت لا يُرسَل عند كل تشغيل حتى لا يتكرر الإشعار المزعج."""
     tag = "رابطك الثابت (لا يتغير أبداً)" if static else "رابط مؤقت (يتغير كل تشغيل)"
     print(f"\n🌐 {tag}: {url}\n")
     try:
         if os.name == "nt":
             import subprocess
             subprocess.run(["clip"], input=url.encode(), shell=True)
+    except Exception:
+        pass
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    last_file = os.path.join(base_dir, "last_tunnel_url.txt")
+    last = ""
+    try:
+        if os.path.exists(last_file):
+            with open(last_file, "r", encoding="utf-8") as f:
+                last = f.read().strip()
+    except Exception:
+        pass
+    if last == url:
+        print("ℹ️ الرابط كما هو من آخر مرة — لن يُرسل إشعار مكرر")
+        return
+    try:
+        with open(last_file, "w", encoding="utf-8") as f:
+            f.write(url)
     except Exception:
         pass
     try:
@@ -1079,6 +1098,78 @@ def start_ngrok_if_configured():
             pass
     print("⚠️ ngrok لم يجهز خلال 20 ثانية — سجل:", os.path.basename(log_path))
     return None
+
+
+_NGROK_PROC = None  # آخر عملية ngrok شغّلها الحارس
+
+
+def _ngrok_watchdog(port):
+    """حارس النفق — كل دقيقة يتأكد أن رابطك الثابت حي، ويعيد تشغيل ngrok تلقائياً إن سقط
+    (بدونه: أي انقطاع بسيط بالشبكة يُسقط النفق ويبقى الرابط ميتاً حتى إعادة فتح البرنامج)
+    لا يعمل إلا إذا كان ngrok مفعّلاً (ملفا التوكن والنطاق موجودان بجانب البرنامج)."""
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+
+    def _read(p):
+        try:
+            if os.path.exists(p):
+                with open(p, "r", encoding="utf-8") as f:
+                    return f.read().strip()
+        except Exception:
+            pass
+        return ""
+
+    token = _read(os.path.join(base_dir, "ngrok_token.txt"))
+    domain = _read(os.path.join(base_dir, "ngrok_domain.txt"))
+    domain = domain.replace("https://", "").replace("http://", "").strip("/")
+    if not token or not domain:
+        return  # ngrok غير مفعّل — لا حاجة للحارس
+
+    import subprocess
+    import time
+    import shutil
+    import json as _json
+    from urllib.request import urlopen
+    global _NGROK_PROC
+
+    time.sleep(90)  # مهلة لإقلاع النفق الأول قبل أول فحص
+    while True:
+        try:
+            alive = False
+            try:
+                with urlopen("http://127.0.0.1:4040/api/tunnels", timeout=4) as r:
+                    data = _json.loads(r.read().decode("utf-8"))
+                for t in data.get("tunnels", []):
+                    if domain in (t.get("public_url") or ""):
+                        alive = True
+                        break
+            except Exception:
+                alive = False
+            if not alive:
+                print("⚠️ النفق سقط — جاري إعادة تشغيل ngrok تلقائياً...")
+                try:
+                    if _NGROK_PROC is not None:
+                        _NGROK_PROC.kill()
+                except Exception:
+                    pass
+                exe = os.path.join(base_dir, "ngrok.exe" if os.name == "nt" else "ngrok")
+                if not os.path.exists(exe):
+                    found = shutil.which("ngrok")
+                    exe = found if found else None
+                if exe:
+                    log_path = os.path.join(base_dir, "ngrok_log_watchdog.txt")
+                    try:
+                        _NGROK_PROC = subprocess.Popen(
+                            [exe, "http", str(port), "--domain=" + domain,
+                             "--authtoken=" + token, "--log=" + log_path,
+                             "--log-format=logfmt"],
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                        )
+                        print("🔄 أُعيد تشغيل ngrok — الرابط سيعود للعمل خلال ثوانٍ")
+                    except Exception as e:
+                        print("⚠️ فشلت إعادة تشغيل ngrok:", e)
+        except Exception:
+            pass
+        time.sleep(60)
 
 
 def start_cloudflare_if_enabled():
@@ -1368,6 +1459,9 @@ if __name__ == "__main__":
             if cf:
                 tunnel_proc, turl = cf
                 announce_tunnel(turl, static=False)
+
+        # حارس النفق: يبقي رابطك الثابت حياً — يعيد تشغيل ngrok تلقائياً إن سقط
+        threading.Thread(target=_ngrok_watchdog, args=(PORT,), daemon=True).start()
 
         ip = get_local_ip()
         local_url = f"http://{ip}:{PORT}"
