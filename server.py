@@ -1354,6 +1354,13 @@ def check_for_updates(silent=False):
         if not remote_v or remote_v == local_v:
             _write_status("same:" + local_v)
             return
+        # v10-fix: تحديث صاعد فقط — منع الرجوع لنسخة أقدم إن اختلفت المقارنة
+        try:
+            if int(remote_v) <= int(local_v):
+                _write_status("same:" + local_v)
+                return
+        except ValueError:
+            pass
 
         print(f"⬇ يتوفر تحديث جديد (v{remote_v}) — جاري التحديث التلقائي...")
         _write_status("downloading:" + remote_v)
