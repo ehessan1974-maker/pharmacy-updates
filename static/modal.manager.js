@@ -15,11 +15,13 @@ function saveModalState(modalId, stateObj = {}) {
 
   const rect = modal.getBoundingClientRect();
 
+  // v9-fix: حفظ بكسلات فعلية عند التمركز النسبي — "50%" المحفوظة كانت تقفز بالنافذة لاحقاً
+  const __isT = modal.style.transform && modal.style.transform !== "none";
   localStorage.setItem(`modalState_${modalId}`, JSON.stringify({
     width: modal.style.width || rect.width + "px",
     height: modal.style.height || rect.height + "px",
-    left: modal.style.left,
-    top: modal.style.top,
+    left: __isT ? rect.left + "px" : modal.style.left,
+    top: __isT ? rect.top + "px" : modal.style.top,
     maximized: stateObj.isMaximized || false
   }));
 }
@@ -38,8 +40,11 @@ function restoreModalState(modalId, defaultSize = {}) {
       if (s.height && !s.maximized) modal.style.height = s.height;
 
       // v8-fix: "0px" قيمة صحيحة — كانت تُعد ناقصة فتُعاد التمركزية وتعود القفزة
-      const hasL = s.left !== undefined && s.left !== null && s.left !== "";
-      const hasT = s.top !== undefined && s.top !== null && s.top !== "";
+      // v9-fix: قيم "50%" القديمة غير صالحة — تُتمرك بدل القفز للزاوية
+      const __badL = typeof s.left === "string" && s.left.indexOf("%") >= 0;
+      const __badT = typeof s.top === "string" && s.top.indexOf("%") >= 0;
+      const hasL = s.left !== undefined && s.left !== null && s.left !== "" && !__badL;
+      const hasT = s.top !== undefined && s.top !== null && s.top !== "" && !__badT;
       if (hasL && hasT && !s.maximized) {
         modal.style.left = s.left;
         modal.style.top = s.top;
