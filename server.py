@@ -1389,6 +1389,11 @@ def check_for_updates(silent=False):
             _write_status("restart:" + remote_v)
             send_ntfy_update(f"تم تحديث البرنامج إلى v{remote_v} — إن لم يعِد تشغيل نفسه خلال دقيقة أعد فتحه من start.bat")
             print("🔄 إعادة تشغيل البرنامج بالنسخة الجديدة...")
+            try:
+                with open(os.path.join(base_dir, "_updated_restart.tmp"), "w", encoding="utf-8") as f:
+                    f.write(str(_t.time()))
+            except Exception:
+                pass
             _t.sleep(1.5)
             os.execv(sys.executable, [sys.executable, os.path.abspath(__file__)])
         else:
@@ -1485,6 +1490,16 @@ if __name__ == "__main__":
         def open_browser():
             time.sleep(2)
             try:
+                marker = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_updated_restart.tmp")
+                if os.path.exists(marker):
+                    fresh = time.time() - os.path.getmtime(marker) < 300
+                    try:
+                        os.remove(marker)
+                    except Exception:
+                        pass
+                    if fresh:
+                        print("ℹ️ تخطي فتح متصفح جديد — إقلاع بعد تحديث والصفحة المفتوحة تحدّث نفسها")
+                        return
                 import webbrowser
                 webbrowser.open(f"http://localhost:{PORT}")
             except Exception:
