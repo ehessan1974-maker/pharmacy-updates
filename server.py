@@ -1147,6 +1147,7 @@ def start_cloudflare_if_enabled():
 
 # ================== التحديث الذاتي ==================
 _UPDATE_LOCK = None
+_WORKING_BASE = None  # آخر مصدر تنزيل نجح — يُجرَّب أولاً في المرات التالية
 
 
 def _update_status_path():
@@ -1200,20 +1201,50 @@ def send_ntfy_update(msg):
 
 
 def check_for_updates(silent=False):
-    """تحديث ذاتي — يعمل في 3 حالات: عند الإقلاع + كل 5 دقائق أثناء التشغيل + زر التحديث
-    - يقارن version.txt المحلي مع البعيد؛ إن اختلفا ينزّل ملفات update_files.txt
-      ويستبدلها (نسخة احتياطية في backup_v<رقم>) ويعيد تشغيل نفسه إن تغيّر server.py
-    - أي فشل (بلا إنترنت مثلاً) = تجاهل والتشغيل بالنسخة الحالية
+    """تحديث ذاتي — عند الإقلاع + كل 5 دقائق أثناء التشغيل + زر التحديث
+    التنزيل يجرب 3 مصادر بالترتيب (raw → jsDelivr → api.github) لأن بعض الشبكات
+    تحجب raw.githubusercontent.com — أول مصدر ينجح يُتذكر ويُجرَّب أولاً لاحقاً.
+    أي فشل (بلا إنترنت مثلاً) = تجاهل والتشغيل بالنسخة الحالية.
     """
-    global _UPDATE_LOCK
+    global _UPDATE_LOCK, _WORKING_BASE
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    raw = "https://raw.githubusercontent.com/ehessan1974-maker/pharmacy-updates/main/"
     try:
         import threading as _th
         import time as _t
         import shutil as _sh
         import urllib.request as _uq
         import urllib.parse as _up
+
+        BASES = [
+            "https://raw.githubusercontent.com/ehessan1974-maker/pharmacy-updates/main/",
+            "https://cdn.jsdelivr.net/gh/ehessan1974-maker/pharmacy-updates@main/",
+            "https://api.github.com/repos/ehessan1974-maker/pharmacy-updates/contents/",
+        ]
+
+        def _fetch(rel, timeout):
+            """تنزيل ملف واحد من أول مصدر ينجح — يتذكر المصدر الناجح ويعيد تجربة البقية عند الفشل"""
+            global _WORKING_BASE
+            order = []
+            if _WORKING_BASE:
+                order.append(_WORKING_BASE)
+            order += [b for b in BASES if b != _WORKING_BASE]
+            last_err = None
+            for b in order:
+                try:
+                    req = _uq.Request(b + _up.quote(rel))
+                    if "api.github.com" in b:
+                        req.add_header("Accept", "application/vnd.github.raw")
+                        req.add_header("User-Agent", "pharmacy-updater")
+                    with _uq.urlopen(req, timeout=timeout) as r:
+                        data = r.read()
+                    if _WORKING_BASE != b:
+                        _WORKING_BASE = b
+                        if not silent:
+                            print("   ↪ المصدر المستخدم:", b.split("/")[2])
+                    return data
+                except Exception as e2:
+                    last_err = e2
+            raise last_err if last_err else IOError("لا يوجد مصدر متاح")
 
         if _UPDATE_LOCK is None:
             _UPDATE_LOCK = _th.Lock()
@@ -1225,29 +1256,26 @@ def check_for_updates(silent=False):
         local_v = _get_local_version()
         _write_status("checking")
         try:
-            with _uq.urlopen(raw + "version.txt", timeout=8) as r:
-                remote_v = r.read().decode("utf-8", "ignore").strip()
+            remote_v = _fetch("version.txt", 8).decode("utf-8", "ignore").strip()
         except Exception:
             _write_status("offline")
-            return  # بلا إنترنت أو المستودع غير متاح — تشغيل عادي
+            return  # كل المصادر غير متاحة — تشغيل عادي
         if not remote_v or remote_v == local_v:
             _write_status("same:" + local_v)
             return
 
         print(f"⬇ يتوفر تحديث جديد (v{remote_v}) — جاري التحديث التلقائي...")
         _write_status("downloading:" + remote_v)
-        with _uq.urlopen(raw + "update_files.txt", timeout=12) as r:
-            manifest = [l.strip() for l in r.read().decode("utf-8", "ignore").splitlines()
-                        if l.strip() and not l.startswith("#")]
+        manifest_text = _fetch("update_files.txt", 12).decode("utf-8", "ignore")
+        manifest = [l.strip() for l in manifest_text.splitlines()
+                    if l.strip() and not l.startswith("#")]
         backup_dir = os.path.join(base_dir, "backup_v" + remote_v)
         staged = []
-        for rel in manifest:
+        for i, rel in enumerate(manifest, 1):
             safe = rel.replace("\\", "/")
             if ".." in safe or safe.startswith("/"):
                 continue
-            url = raw + _up.quote(safe)
-            with _uq.urlopen(url, timeout=25) as r:
-                data = r.read()
+            data = _fetch(safe, 25)
             dst = os.path.join(base_dir, *safe.split("/"))
             if os.path.exists(dst):
                 bdst = os.path.join(backup_dir, *safe.split("/"))
@@ -1257,6 +1285,8 @@ def check_for_updates(silent=False):
             with open(dst + ".new", "wb") as f:
                 f.write(data)
             staged.append(dst)
+            if not silent and i % 10 == 0:
+                print(f"   ...نُزل {i}/{len(manifest)}")
         _write_status("installing:" + remote_v)
         for dst in staged:
             os.replace(dst + ".new", dst)
@@ -1266,7 +1296,7 @@ def check_for_updates(silent=False):
         restart_needed = any(os.path.basename(d) == "server.py" for d in staged)
         if restart_needed:
             _write_status("restart:" + remote_v)
-            send_ntfy_update(f"تم تحديث البرنامج إلى v{remote_v} — يعيد تشغيل نفسه الآن، انتظر نصف دقيقة ثم افتح الصفحة من جديد")
+            send_ntfy_update(f"تم تحديث البرنامج إلى v{remote_v} — إن لم يعِد تشغيل نفسه خلال دقيقة أعد فتحه من start.bat")
             print("🔄 إعادة تشغيل البرنامج بالنسخة الجديدة...")
             _t.sleep(1.5)
             os.execv(sys.executable, [sys.executable, os.path.abspath(__file__)])
