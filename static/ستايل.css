@@ -1214,3 +1214,20 @@ td:last-child input,
 body.sidebar-open .container {
   margin-left: 240px;
 }
+
+/* =====================================================
+   توحيد شامل v6 — كل خطوط البرنامج بمقاس وشكل عناوين أعمدة الفاتورة
+   (نفس القاعدة: 10px / وزن 500 / أسطر متراصة 1.25)
+   قسم في نهاية الملف حتى تتغلب قواعده على كل ما سبقها
+===================================================== */
+html, body,
+h1, h2, h3, h4, h5, h6,
+p, a, span, div, li, ul, ol, label, small, strong, em, b, i, u,
+button, input, select, textarea, option, optgroup,
+table, thead, tbody, tfoot, tr, th, td, caption,
+nav, header, footer, section, aside, article, form, fieldset, legend,
+code, pre, kbd, samp {
+    font-size: 10px !important;
+    font-weight: 500 !important;
+    line-height: 1.25;
+}
