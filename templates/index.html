@@ -451,6 +451,26 @@
     });
   })();
 
+  // ===== مراقبة خلفية v7: هبط تحديث تلقائي؟ حدّث الصفحة المفتوحة بدل فتح صفحة جديدة =====
+  (function () {
+    let pageVersion = null;
+    let reloading = false;
+    function bgCheck() {
+      if (reloading) return;
+      fetch('/api/update/status', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+        const v = String(d.version || '');
+        if (pageVersion === null) { pageVersion = v; return; }
+        if (v && pageVersion && v !== pageVersion) {
+          reloading = true;
+          location.reload();
+        }
+      }).catch(function () { /* السيرفر يعيد تشغيل نفسه — ننتظر الدورة القادمة */ });
+    }
+    bgCheck();
+    setInterval(bgCheck, 15000);
+  })();
+
+
 document.addEventListener('DOMContentLoaded', function() {
     setupSidebarDropdown('invoiceSidebarBtn', 'invoiceSidebarMenu');
     setupSidebarDropdown('otherWindowsSidebarBtn', 'otherWindowsSidebarMenu');
