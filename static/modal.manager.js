@@ -205,6 +205,8 @@ setActiveModal(modal, modalId);
       unlock();
       modal.style.transition = "";
       document.body.style.userSelect = "";
+      // v10-fix: حفظ الموضع بعد السحب — كان يضيع عند التحديث/الإغلاق
+      if (typeof window.saveModalState === "function") window.saveModalState(modalId);
     });
   };
 // ===============================================
