@@ -40,7 +40,7 @@ button.retry{margin-top:14px;background:linear-gradient(180deg,#c2484c,#a4373a);
 'use strict';
 var USER='ehessan1974-maker', REPO='pharmacy-updates';
 var REL='نسخة اكسس HTML/فاتورة مشتريات.html';
-var K_HTML='__fatoret_last_html', K_SRC='__fatoret_last_src';
+var K_HTML='__fatoret_last_html';
 var enc=encodeURIComponent(REL);
 
 function sources(t){
@@ -83,15 +83,15 @@ function fail(){
 }
 
 (function boot(){
-  var s=st();
-  var saved=s?(function(){try{return s.getItem(K_SRC);}catch(e){return null}})():null;
-  var start=(saved!==null&&saved!==''&&!isNaN(+saved))?(+saved)%3:0;
+  /* ترتيب ثابت دائماً: raw أولاً (محدّث فوراً مع كاسر الكاش) ثم api.github ثم jsDelivr
+     (jsDelivr آخراً لأن كاشه قد يقدم نسخة قديمة دون فشل ظاهر) */
   var list=sources(Date.now());
-  var order=[]; for(var i=0;i<3;i++)order.push(list[(start+i)%3]);
+  var order=[list[0],list[2],list[1]];
   var idx=0;
 
   function tryNext(){
     if(idx>=3){
+      var s=st();
       var cached=s?(function(){try{return s.getItem(K_HTML);}catch(e){return null}})():null;
       if(isApp(cached)){
         document.getElementById('offnote').style.display='block';
@@ -100,11 +100,10 @@ function fail(){
       } else fail();
       return;
     }
-    var isApi=(idx===2);
+    var isApi=(idx===1);
     setMsg('جاري جلب آخر نسخة — المصدر '+(idx+1)+' من 3...');
-    fetchOne(order[idx],isApi,10000).then(function(html){
+    fetchOne(order[idx],isApi,8000).then(function(html){
       if(!isApp(html))throw new Error('محتوى غير صالح');
-      if(s){try{s.setItem(K_SRC,String(idx));}catch(e){}}
       setMsg('تم ✓ — تشغيل آخر نسخة ('+Math.round(html.length/1024)+' كب)');
       setTimeout(function(){runApp(html);},350);
     }).catch(function(){idx++;tryNext();});
