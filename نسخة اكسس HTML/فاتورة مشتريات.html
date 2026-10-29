@@ -1355,10 +1355,16 @@ function buildTabs() {
     if (!items.length) return;
     const grp = document.createElement('div');
     grp.className = 'ngrp';
+    grp.dataset.grp = g;
     const h = document.createElement('div');
     h.className = 'ngrp-h';
     h.innerHTML = `<span class="chev">▼</span><span>${g}</span><span class="gcount">${items.length}</span>`;
-    h.onclick = () => grp.classList.toggle('collapsed');
+    h.onclick = () => {
+      const c = grp.classList.toggle('collapsed');
+      const groups = Object.assign({}, loadUIPrefs().groups);
+      groups[g] = c;
+      saveUIPrefs({ groups });
+    };
     const bd = document.createElement('div');
     bd.className = 'ngrp-body';
     items.forEach(w => {
@@ -1376,17 +1382,43 @@ function buildTabs() {
   });
 }
 /* قسم التحكم في القائمة الجانبية: تمديد/تقليص بالنقر على العنوان */
-$('ctrlgrp').querySelector('.ngrp-h').addEventListener('click', () => $('ctrlgrp').classList.toggle('collapsed'));
+$('ctrlgrp').querySelector('.ngrp-h').addEventListener('click', () => {
+  const c = $('ctrlgrp').classList.toggle('collapsed');
+  saveUIPrefs({ ctrlCollapsed: c });
+});
+
+/* ---------- حفظ واستعادة خيارات المستخدم في القائمة الجانبية وعناصرها ---------- */
+const UI_KEY = 'fatora_mushtariat_uiprefs_v1';
+function loadUIPrefs() {
+  try { return JSON.parse(localStorage.getItem(UI_KEY)) || {}; } catch (e) { return {}; }
+}
+function saveUIPrefs(patch) {
+  try { localStorage.setItem(UI_KEY, JSON.stringify(Object.assign(loadUIPrefs(), patch))); } catch (e) {}
+}
+function restoreUIPrefs() {
+  const p = loadUIPrefs();
+  if (p.navOpen === true) openNav();                                /* فتح/إغلاق القائمة */
+  if (typeof p.ctrlCollapsed === 'boolean')                         /* قسم التحكم */
+    $('ctrlgrp').classList.toggle('collapsed', p.ctrlCollapsed);
+  if (p.groups && typeof p.groups === 'object')                     /* مجموعات الكائنات */
+    document.querySelectorAll('#np_body .ngrp').forEach(grp => {
+      if (typeof p.groups[grp.dataset.grp] === 'boolean')
+        grp.classList.toggle('collapsed', p.groups[grp.dataset.grp]);
+    });
+  if (typeof p.calc === 'string') $('sc_disp').value = p.calc;      /* الحاسبة السريعة */
+}
 
 /* ---------- اللوحة الجانبية: تُفتح وتُغلق بالنقر فقط، وتنزلق من أساس الشريط الأحمر الذي يبقى ظاهرًا بجانبها ---------- */
 const navRail = $('navrail'), navPane = $('objtabs');
 function openNav() {
   navRail.classList.add('open');
   document.body.classList.add('nav-open');
+  saveUIPrefs({ navOpen: true });
 }
 function closeNav() {
   navRail.classList.remove('open');
   document.body.classList.remove('nav-open');
+  saveUIPrefs({ navOpen: false });
 }
 $('navburger').addEventListener('click', e => {
   e.stopPropagation();
@@ -1695,18 +1727,22 @@ function bindEvents() {
   };
   /* --- الحاسبة السريعة في القائمة الجانبية (بديل حاسبة Eval بالنموذج) --- */
   const scDisp = $('sc_disp');
+  const scPersist = () => saveUIPrefs({ calc: scDisp.value });
   const scEval = () => {
     const v = evalExpr(scDisp.value);
     scDisp.value = (v === null) ? 'خطأ' : String(Number(v.toPrecision(12)));
+    scPersist();
   };
+  scDisp.addEventListener('input', scPersist);
   document.querySelectorAll('#sc_grid button').forEach(b => {
     b.addEventListener('click', () => {
       const k = b.dataset.k;
       if (scDisp.value === 'خطأ') scDisp.value = '';
-      if (k === 'C') { scDisp.value = ''; return; }
-      if (k === 'B') { scDisp.value = scDisp.value.slice(0, -1); return; }
+      if (k === 'C') { scDisp.value = ''; scPersist(); return; }
+      if (k === 'B') { scDisp.value = scDisp.value.slice(0, -1); scPersist(); return; }
       if (k === '=') { scEval(); return; }
       scDisp.value += k;
+      scPersist();
       scDisp.focus();
     });
   });
@@ -1807,6 +1843,7 @@ async function resetAll() {
 /* ================= التهيئة (autoexec) ================= */
 async function init() {
   buildTabs();
+  restoreUIPrefs();
   bindEvents();
   toast('جارٍ تحميل البيانات...');
   try {
