@@ -31,7 +31,7 @@ body{
   transition:padding-left .22s ease;
 }
 body.nav-open{padding-left:276px}
-/* ===== الشريط الجانبي الأحمر + لوحة الكائنات (تفتحان كوحدة واحدة وتدفعان المحتوى مثل أكسس) ===== */
+/* ===== الشريط الجانبي الأحمر + لوحة الكائنات (القائمة تنزلق من الحافة الخارجية فوق الشريط الأحمر فتغطّيه وتدفع المحتوى مثل أكسس، ويظهر الأحمر حين تكون القائمة مغلقة) ===== */
 #navrail{
   position:fixed;top:0;left:0;bottom:0;width:36px;z-index:90;
   background:linear-gradient(180deg,#a03437,#7c2325);
@@ -45,8 +45,8 @@ body.nav-open{padding-left:276px}
 }
 #navrail.pinned #navburger,#navburger:hover{background:rgba(255,255,255,.30)}
 #objtabs{
-  position:fixed;top:0;left:36px;bottom:0;width:240px;z-index:89;
-  background:#f6f5f3;border-left:1px solid #b0ada7;
+  position:fixed;top:0;left:0;bottom:0;width:276px;z-index:89;
+  background:#f6f5f3;border-right:1px solid #b0ada7;
   box-shadow:3px 0 14px rgba(0,0,0,.18);display:flex;flex-direction:column;
   transform:translateX(-100%);transition:transform .22s ease;
 }
