@@ -31,7 +31,7 @@ body{
   transition:padding-left .22s ease;
 }
 body.nav-open{padding-left:276px}
-/* ===== الشريط الجانبي الأحمر + لوحة الكائنات (القائمة تنزلق من الحافة الخارجية فوق الشريط الأحمر فتغطّيه وتدفع المحتوى مثل أكسس، ويظهر الأحمر حين تكون القائمة مغلقة) ===== */
+/* ===== الشريط الجانبي: الشريط الأحمر أساس القائمة ويبقى ظاهرًا، واللوحة تنزلق من تحته لتستقر بجانبه وتدفع المحتوى، والفتح والإغلاق بالنقر فقط ===== */
 #navrail{
   position:fixed;top:0;left:0;bottom:0;width:36px;z-index:90;
   background:linear-gradient(180deg,#a03437,#7c2325);
@@ -43,14 +43,14 @@ body.nav-open{padding-left:276px}
   color:#fff;font-size:16px;cursor:pointer;background:rgba(255,255,255,.10);
   transition:background .15s;
 }
-#navrail.pinned #navburger,#navburger:hover{background:rgba(255,255,255,.30)}
+#navburger:hover{background:rgba(255,255,255,.30)}
 #objtabs{
-  position:fixed;top:0;left:0;bottom:0;width:276px;z-index:89;
-  background:#f6f5f3;border-right:1px solid #b0ada7;
+  position:fixed;top:0;left:36px;bottom:0;width:240px;z-index:88;
+  background:#f6f5f3;border-left:1px solid #b0ada7;
   box-shadow:3px 0 14px rgba(0,0,0,.18);display:flex;flex-direction:column;
   transform:translateX(-100%);transition:transform .22s ease;
 }
-#navrail.open #objtabs{transform:none}
+body.nav-open #objtabs{transform:none}
 /* رأس لوحة الكائنات */
 .np-head{
   flex:none;display:flex;align-items:center;gap:8px;padding:8px 10px;
@@ -274,12 +274,13 @@ table.sheet td .edit-in{width:100%;border:1.5px solid var(--focus);padding:1px 5
 
 <body>
 <div id="navrail">
-  <div id="navburger" title="القائمة — مرّر لفتحها أو انقر للتثبيت">☰</div>
-  <div id="objtabs">
+  <div id="navburger" title="القائمة — انقر للفتح أو الإغلاق">☰</div>
+</div>
+
+<div id="objtabs">
     <div class="np-head"><span>كائنات البرنامج</span><span class="np-shut" id="np_shut" title="إغلاق القائمة">«</span></div>
     <div class="np-search"><input id="np_search" placeholder="بحث في الكائنات..." autocomplete="off"><span class="np-mag">🔍</span></div>
     <div class="np-body" id="np_body"></div>
-  </div>
 </div>
 
 <div id="docbox">
@@ -322,34 +323,7 @@ table.sheet td .edit-in{width:100%;border:1.5px solid var(--focus);padding:1px 5
       </div>
 
       <div class="groupbox">
-        <span class="gtitle">سطر الفاتورة (النموذج)</span>
-        <div class="grid6">
-          <div class="field"><label>ترتيب</label><input class="i num" id="e_ord" readonly></div>
-          <div class="field" style="grid-column:span 2"><label>المادة (F3 / F4 للبحث — Esc لتعديل الاسم)</label><div class="ctl"><input class="i" id="e_mat" autocomplete="off"><div class="combo-list" id="e_mat_list"></div></div></div>
-          <div class="field"><label>الشركة (نقر مزدوج للتعديل)</label><div class="ctl"><input class="i" id="e_comp" readonly></div></div>
-          <div class="field"><label>رمز الباركود (Esc للتعديل)</label><div class="ctl"><input class="i" id="e_bar" readonly></div></div>
-          <div class="field"><label>الكمية (Enter = حاسبة)</label><input class="i num" id="e_qty"></div>
-          <div class="field"><label>المجاني</label><input class="i num" id="e_free"></div>
-          <div class="field"><label>سعر الشراء (Enter/نقر مزدوج = حاسبة)</label><input class="i num" id="e_price"></div>
-          <div class="field"><label>حسم %</label><input class="i num" id="e_disc"></div>
-          <div class="field"><label>قيمة الحسم</label><input class="i num" id="e_discval"></div>
-          <div class="field"><label>الإجمالي قبل الحسم</label><input class="i num" id="e_before" readonly></div>
-          <div class="field"><label>الإجمالي بعد الحسم</label><input class="i num" id="e_after" readonly></div>
-          <div class="field"><label>إجمالي الكمية</label><input class="i num" id="e_totqty" readonly></div>
-          <div class="field"><label>سعر العميل</label><input class="i num" id="e_custprice" readonly></div>
-          <div class="field"><label>السعر الأساسي</label><input class="i num" id="e_base"></div>
-          <div class="field"><label>عموم معتمد (نقر مزدوج للتعديل)</label><input class="i num" id="e_pub"></div>
-          <div class="field"><label>أساس العرض</label><input class="i num" id="e_obase"></div>
-          <div class="field"><label>مجاني العرض</label><input class="i num" id="e_ofree"></div>
-          <div class="field"><label>حسم العرض</label><input class="i num" id="e_odisc"></div>
-          <div class="field"><label>السعر الصافي بعد العرض</label><input class="i num" id="e_net" readonly></div>
-          <div class="field"><label>رقم الطبخة (نقر مزدوج = ترقيم الفجوات)</label><input class="i num" id="e_batch"></div>
-          <div class="field"><label>تاريخ الصنع</label><input class="i" id="e_make" type="date"></div>
-          <div class="field"><label>شهر</label><input class="i num" id="e_month"></div>
-          <div class="field"><label>سنة</label><input class="i num" id="e_year"></div>
-          <div class="field"><label>تاريخ انتهاء الفعالية</label><input class="i" id="e_exp" type="date"></div>
-          <div class="field" style="grid-column:span 2"><label>ملاحظات</label><input class="i" id="e_note"></div>
-        </div>
+        <span class="gtitle">أدوات سطر الفاتورة</span>
         <div class="row mt6" style="align-items:center">
           <div class="field" style="max-width:210px"><label>حاسبة (Eval)</label><input class="i num calc-res" id="e_calc" placeholder="3*5+2 ثم Enter"></div>
           <div class="field" style="max-width:220px"><label>نمط البحث (إطار446)</label>
@@ -369,7 +343,7 @@ table.sheet td .edit-in{width:100%;border:1.5px solid var(--focus);padding:1px 5
 
       <div class="section-title" style="display:flex;align-items:center;gap:10px">
         <span>أصناف الفاتورة الحالية (ورقة البيانات)</span>
-        <span class="hint">نقر مزدوج على «ترتيب» = إعادة الترقيم | نقر على السطر = تحميله للأعلى | نقر مزدوج على الخلية = تحرير</span>
+        <span class="hint">انقر «＋ سجل جديد» ثم حرّر الخلايا مباشرة: نقر مزدوج على الخلية = تحرير | «الشركة/رمز الباركود/عموم معتمد» تُحدَّث في جميع الجداول عبر نقر مزدوج</span>
         <span class="flex1"></span>
         <button class="tbtn" data-split="1700" style="padding:2px 10px;font-size:11px">تسمية48 — تصغير</button>
         <button class="tbtn" data-split="2700" style="padding:2px 10px;font-size:11px">تسمية51 — متوسط</button>
@@ -955,7 +929,8 @@ function rowFromEntry(r) {
   if (!r) return;
   for (const [id, f] of Object.entries(E_FIELDS)) {
     if (['ترتيب','الشركة','رمز الباركود','الإجمالي قبل الحسم','الإجمالي بعد الحسم','إجمالي الكمية','سعر العميل','السعر الصافي بعد العرض','عموم معتمد'].includes(f)) continue;
-    let v = $(id).value;
+    const el = $(id); if (!el) continue;
+    let v = el.value;
     if (E_DATE_FIELDS.includes(id)) v = inputToArDate(v);
     if (['الكمية','المجاني','سعر الشراء','حسم %','قيمة الحسم','السعر الأساسي','أساس العرض','مجاني العرض','حسم العرض','رقم الطبخة','شهر','سنة'].includes(f)) {
       v = v === '' ? null : parseFloat(v);
@@ -966,9 +941,28 @@ function rowFromEntry(r) {
 
 /* ---------- عرض ورقة بيانات الفاتورة ---------- */
 const FATORA_COLS = ['ترتيب','المادة','الشركة','رمز الباركود','الكمية','المجاني','سعر الشراء','حسم %','قيمة الحسم','الإجمالي قبل الحسم','الإجمالي بعد الحسم','إجمالي الكمية','سعر العميل','السعر الأساسي','عموم معتمد','أساس العرض','مجاني العرض','حسم العرض','السعر الصافي بعد العرض','رقم الطبخة','تاريخ الصنع','تاريخ انتهاء الفعالية','ملاحظات'];
-function renderFatoraSheet() {
+function renderFatoraSheet(page = 0) {
   renderSheet($('fatora_sheet'), {
+    page,
     cols: FATORA_COLS,
+    editableCols: ['ترتيب','المادة','الكمية','المجاني','سعر الشراء','حسم %','قيمة الحسم','السعر الأساسي','أساس العرض','مجاني العرض','حسم العرض','رقم الطبخة','تاريخ الصنع','تاريخ انتهاء الفعالية','ملاحظات','شهر','سنة'],
+    onCellCommit: (r, c) => {
+      if (c === 'المادة') {
+        APP.currentMaterial = r['المادة'] ?? '';
+        $('st_mat').textContent = r['المادة'] || '—';
+        const card = cardByMaterial(r['المادة']);
+        if (card) {          /* إحضار بيانات المادة من البطاقات (كما في المادة_AfterUpdate) */
+          r['سعر الشراء'] = card['السعر الأساسي'];
+          r['السعر الأساسي'] = card['السعر الأساسي'];
+          r['عموم معتمد'] = card['عموم معتمد'];
+          r['الشركة'] = card['الشركة'];
+          r['رمز الباركود'] = card['رمز الباركود'];
+        }
+      }
+      if ((c === 'شهر' || c === 'سنة') && r['شهر'] && r['سنة'])
+        r['تاريخ انتهاء الفعالية'] = `${r['سنة']}-${String(r['شهر']).padStart(2, '0')}-01`;
+      qiyamMotaghayyera(r); netAfterOffer(r); saveDB();
+    },
     rows: DB.invoice,
     curRow: APP.curRow,
     numericCols: ['ترتيب','الكمية','المجاني','سعر الشراء','حسم %','قيمة الحسم','الإجمالي قبل الحسم','الإجمالي بعد الحسم','إجمالي الكمية','سعر العميل','السعر الأساسي','عموم معتمد','أساس العرض','مجاني العرض','حسم العرض','السعر الصافي بعد العرض','رقم الطبخة'],
@@ -1393,40 +1387,27 @@ function buildTabs() {
   });
 }
 
-/* ---------- اللوحة الجانبية: تفتح بالتعويم أو النقر (مع تثبيت اختياري) وتدفع المحتوى مثل أكسس ---------- */
-const navRail = $('navrail');
-let navTimer = null, navPinned = false;
+/* ---------- اللوحة الجانبية: تُفتح وتُغلق بالنقر فقط، وتنزلق من أساس الشريط الأحمر الذي يبقى ظاهرًا بجانبها ---------- */
+const navRail = $('navrail'), navPane = $('objtabs');
 function openNav() {
-  clearTimeout(navTimer);
   navRail.classList.add('open');
   document.body.classList.add('nav-open');
 }
-function closeNav(now) {
-  clearTimeout(navTimer);
-  const doClose = () => { navRail.classList.remove('open'); document.body.classList.remove('nav-open'); };
-  if (now) doClose();
-  else navTimer = setTimeout(doClose, 220);
+function closeNav() {
+  navRail.classList.remove('open');
+  document.body.classList.remove('nav-open');
 }
 $('navburger').addEventListener('click', e => {
   e.stopPropagation();
-  navPinned = !navPinned;
-  navRail.classList.toggle('pinned', navPinned);
-  if (navPinned) openNav(); else closeNav(true);
+  document.body.classList.contains('nav-open') ? closeNav() : openNav();
 });
 $('np_shut').addEventListener('click', e => {
   e.stopPropagation();
-  navPinned = false;
-  navRail.classList.remove('pinned');
-  closeNav(true);
+  closeNav();
 });
-/* التعويم فوق الشريط الأحمر أو اللوحة يفتحهما، وفقدان التعويم يغلقهما إن لم تكن مثبتة */
-[navRail, $('objtabs')].forEach(el => {
-  el.addEventListener('mouseenter', openNav);
-  el.addEventListener('mouseleave', () => { if (!navPinned) closeNav(false); });
-});
-/* النقر خارج اللوحة يغلقها إن لم تكن مثبتة */
+/* النقر خارج الشريط أو اللوحة يغلق القائمة */
 document.addEventListener('click', e => {
-  if (!navPinned && !navRail.contains(e.target)) closeNav(true);
+  if (!navRail.contains(e.target) && !navPane.contains(e.target)) closeNav();
 });
 
 /* ================= نموذج مشتريات ================= */
@@ -1718,99 +1699,19 @@ function bindEvents() {
   };
   $('btn-neg').onclick = salib;
 
-  /* --- سطر الإدخال --- */
-  $('e_mat').addEventListener('input', () => {
-    clearTimeout(matSearchTimer);
-    matSearchTimer = setTimeout(() => materialSearch($('e_mat').value), 180);
-  });
-  $('e_mat').addEventListener('keydown', e => {
-    if (e.key === 'F3') { e.preventDefault(); $('e_searchmode').value = '1'; materialSearch($('e_mat').value); }
-    else if (e.key === 'F4') { e.preventDefault(); $('e_searchmode').value = '2'; materialSearch($('e_mat').value); }
-    else if (e.key === 'Enter') {
-      e.preventDefault();
-      // أول نتيجة
-      const first = $('e_mat_list').querySelector('.opt');
-      if (first) first.click();
-      else if ($('e_mat').value.trim()) materialAfterUpdate();
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      const r = curInvoiceRow();
-      if (r) editMaterialName(r);
-    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      const opts = [...$('e_mat_list').querySelectorAll('.opt')];
-      if (opts.length) {
-        e.preventDefault();
-        let i = opts.findIndex(o => o.classList.contains('hl'));
-        if (i >= 0) opts[i].classList.remove('hl');
-        i = e.key === 'ArrowDown' ? Math.min(i + 1, opts.length - 1) : Math.max(i - 1, 0);
-        opts[i].classList.add('hl');
-        opts[i].scrollIntoView({block: 'nearest'});
-      }
-    }
-  });
-  $('e_mat').addEventListener('blur', () => setTimeout(() => $('e_mat_list').style.display = 'none', 200));
-  $('e_mat').addEventListener('focus', () => { if ($('e_mat').value) materialSearch($('e_mat').value); });
-
-  // القيم المتغيرة عند التعديل
-  const recalcIds = ['e_qty', 'e_free', 'e_price', 'e_disc', 'e_discval', 'e_base', 'e_obase', 'e_ofree', 'e_odisc'];
-  recalcIds.forEach(id => $(id).addEventListener('change', () => {
-    let r = curInvoiceRow();
-    if (!r) return;
-    rowFromEntry(r);
-    if (id === 'e_discval') {
-      // قيمة_الحسم_AfterUpdate: [حسم %] = قيمة الحسم / (الكمية*سعر الشراء) * 100
-      r['حسم %'] = (nz(r['الكمية']) * nz(r['سعر الشراء'])) ? nz(r['قيمة الحسم']) / (nz(r['الكمية']) * nz(r['سعر الشراء'])) * 100 : 0;
-    }
-    qiyamMotaghayyera(r);
-    netAfterOffer(r);
-    entryFromRow(r);
-    renderFatoraSheet();
+  /* --- أدوات سطر الفاتورة (الإدخال والتحرير المباشر في ورقة البيانات) --- */
+  $('btn-newrow').onclick = () => {
+    const r = newInvoiceRow();
+    r['ترتيب'] = DB.invoice.reduce((m, x) => Math.max(m, nz(x['ترتيب'])), 0) + 1;
+    r['الكمية'] = 1; r['المجاني'] = 0; r['حسم %'] = 0;
+    const d = new Date(); d.setFullYear(d.getFullYear() - 1);
+    r['تاريخ الصنع'] = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+    DB.invoice.push(r);
+    APP.curRow = DB.invoice.length - 1;
+    renderFatoraSheet(Math.floor((DB.invoice.length - 1) / 200));
     saveDB();
-  }));
-  // شهر/سنة → تاريخ انتهاء الفعالية
-  ['e_month', 'e_year'].forEach(id => $(id).addEventListener('change', () => {
-    const r = curInvoiceRow(); if (!r) return;
-    rowFromEntry(r);
-    if (r['شهر'] && r['سنة']) r['تاريخ انتهاء الفعالية'] = `${r['سنة']}-${String(r['شهر']).padStart(2, '0')}-01`;
-    entryFromEntryDates(r);
-    renderFatoraSheet(); saveDB();
-  }));
-  $('e_make').addEventListener('change', () => { const r = curInvoiceRow(); if (r) { rowFromEntry(r); renderFatoraSheet(); saveDB(); } });
-  $('e_exp').addEventListener('change', () => { const r = curInvoiceRow(); if (r) { rowFromEntry(r); renderFatoraSheet(); saveDB(); } });
-  $('e_note').addEventListener('change', () => { const r = curInvoiceRow(); if (r) { r['ملاحظات'] = $('e_note').value; renderFatoraSheet(); saveDB(); } });
-  $('e_batch').addEventListener('change', () => { const r = curInvoiceRow(); if (r) { r['رقم الطبخة'] = $('e_batch').value; renderFatoraSheet(); saveDB(); } });
-  $('e_qty').addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      // الكمية_KeyPress: Enter = Eval
-      e.preventDefault();
-      const v = evalExpr($('e_qty').value);
-      const r = curInvoiceRow();
-      if (r) {
-        r['الكمية'] = v !== null ? v : 1;
-        qiyamMotaghayyera(r); entryFromRow(r); renderFatoraSheet(); saveDB();
-      }
-    } else if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-      const r = curInvoiceRow(); if (r) { rowFromEntry(r); qiyamMotaghayyera(r); entryFromRow(r); renderFatoraSheet(); saveDB(); }
-    }
-  });
-  $('e_price').addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const v = evalExpr($('e_price').value);
-      const r = curInvoiceRow();
-      if (r) { r['سعر الشراء'] = v ?? nz(r['سعر الشراء']); qiyamMotaghayyera(r); entryFromRow(r); renderFatoraSheet(); saveDB(); }
-    }
-  });
-  $('e_price').addEventListener('dblclick', () => {
-    const v = evalExpr($('e_price').value);
-    const r = curInvoiceRow();
-    if (r && v !== null) { r['سعر الشراء'] = v; qiyamMotaghayyera(r); entryFromRow(r); renderFatoraSheet(); saveDB(); }
-  });
-  $('e_comp').addEventListener('dblclick', () => { const r = curInvoiceRow(); if (r) editCompany(r); });
-  $('e_bar').addEventListener('keydown', e => {
-    if (e.key === 'Escape') { e.preventDefault(); const r = curInvoiceRow(); if (r) editBarcode(r); }
-  });
-  $('e_pub').addEventListener('dblclick', () => { const r = curInvoiceRow(); if (r) editPub(r); });
+    toast('أُضيف سجل جديد — انقر مزدوجًا على خلية «المادة» واكتب اسمها', 'ok');
+  };
   $('e_calc').addEventListener('keydown', e => {
     if (e.key === 'Enter') {
       // حاسبة_AfterUpdate: حاسبة = Eval(حاسبة)
@@ -1819,13 +1720,6 @@ function bindEvents() {
       if (v !== null) $('e_calc').value = v;
     }
   });
-  $('btn-newrow').onclick = () => {
-    APP.curRow = -1;
-    ['e_ord','e_mat','e_comp','e_bar','e_qty','e_free','e_price','e_disc','e_discval','e_before','e_after','e_totqty','e_custprice','e_pub','e_batch','e_month','e_year','e_note'].forEach(id => $(id).value = '');
-    $('e_obase').value = 10; $('e_ofree').value = 0; $('e_odisc').value = 0;
-    $('e_mat').focus();
-    toast('سجل جديد — اختر المادة', 'ok');
-  };
   $('btn-delrow').onclick = () => {
     if (APP.curRow < 0) return;
     DB.invoice.splice(APP.curRow, 1);
