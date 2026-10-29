@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>فاتورة مشتريات — نسخة HTML</title>
+<title>فاتورة مشتريات</title>
 <style>
 :root{
   --acc:#a4373a;            /* لون Access */
@@ -28,50 +28,75 @@ body{
   font-family:"Segoe UI","Tahoma","Noto Naskh Arabic",Arial,sans-serif;
   font-size:13px;color:var(--txt);background:var(--chrome2);
   display:flex;flex-direction:column;overflow:hidden;padding-left:36px;
+  transition:padding-left .22s ease;
 }
-/* ===== شريط العنوان ===== */
-#titlebar{
-  background:linear-gradient(180deg,#b13a3e,var(--acc));
-  color:#fff;height:34px;display:flex;align-items:center;padding:0 12px;gap:10px;flex:none;
-  user-select:none;
-}
-#titlebar .appicon{width:18px;height:18px;background:#fff;border-radius:3px;display:grid;place-items:center;color:var(--acc);font-weight:700;font-size:11px}
-#titlebar .ttl{font-size:13px;font-weight:600;opacity:.95}
-#titlebar .spacer{flex:1}
-#titlebar .dbtag{font-size:11px;background:rgba(255,255,255,.18);padding:2px 10px;border-radius:10px}
-/* ===== الشريط الجانبي للقائمة (يسار الصفحة) ===== */
+body.nav-open{padding-left:276px}
+/* ===== الشريط الجانبي الأحمر + لوحة الكائنات (تفتحان كوحدة واحدة وتدفعان المحتوى مثل أكسس) ===== */
 #navrail{
   position:fixed;top:0;left:0;bottom:0;width:36px;z-index:90;
   background:linear-gradient(180deg,#a03437,#7c2325);
   display:flex;flex-direction:column;align-items:center;
-  user-select:none;box-shadow:2px 0 6px rgba(0,0,0,.18);
+  user-select:none;box-shadow:2px 0 8px rgba(0,0,0,.22);
 }
 #navburger{
   width:36px;height:34px;flex:none;display:grid;place-items:center;
   color:#fff;font-size:16px;cursor:pointer;background:rgba(255,255,255,.10);
   transition:background .15s;
 }
-#navrail.open #navburger,#navburger:hover{background:rgba(255,255,255,.26)}
+#navrail.pinned #navburger,#navburger:hover{background:rgba(255,255,255,.30)}
 #objtabs{
-  position:absolute;top:34px;left:36px;width:238px;max-height:calc(100vh - 46px);
-  overflow-y:auto;background:#f6f5f3;border:1px solid #b5b2ac;border-radius:0 6px 6px 0;
-  padding:6px;display:flex;flex-direction:column;gap:3px;
-  box-shadow:4px 4px 16px rgba(0,0,0,.25);
-  opacity:0;transform:translateX(-10px);visibility:hidden;pointer-events:none;
-  transition:opacity .16s ease,transform .16s ease,visibility .16s;
+  position:fixed;top:0;left:36px;bottom:0;width:240px;z-index:89;
+  background:#f6f5f3;border-left:1px solid #b0ada7;
+  box-shadow:3px 0 14px rgba(0,0,0,.18);display:flex;flex-direction:column;
+  transform:translateX(-100%);transition:transform .22s ease;
 }
-#navrail.open #objtabs{opacity:1;transform:translateX(0);visibility:visible;pointer-events:auto}
-#objtabs .tab{
-  display:flex;align-items:center;gap:8px;
-  padding:8px 10px;background:transparent;border:1px solid transparent;border-radius:4px;
-  cursor:pointer;white-space:nowrap;font-size:12.5px;color:#3c3c3c;
+#navrail.open #objtabs{transform:none}
+/* رأس لوحة الكائنات */
+.np-head{
+  flex:none;display:flex;align-items:center;gap:8px;padding:8px 10px;
+  background:linear-gradient(180deg,#efedea,#e2dfda);border-bottom:1px solid #c6c3bd;
+  font-weight:700;font-size:12.5px;color:#5a4a4b;
 }
-#objtabs .tab:hover{background:#e8e5e0;border-color:#c9c6c0}
-#objtabs .tab.active{
-  background:#fbfaf9;border-color:#d9b8b9;color:var(--acc-dark);font-weight:600;
-  box-shadow:inset 3px 0 0 var(--acc);
+.np-head .np-shut{
+  margin-inline-start:auto;width:22px;height:22px;display:grid;place-items:center;
+  border-radius:4px;cursor:pointer;color:#6a6762;font-size:14px;border:1px solid transparent;
 }
-#objtabs .tab .ico{margin-inline-end:0;opacity:.8}
+.np-head .np-shut:hover{background:#fff;border-color:#c6c3bd;color:var(--acc)}
+/* البحث داخل اللوحة */
+.np-search{flex:none;position:relative;padding:8px 10px;border-bottom:1px solid #e3e0da}
+.np-search input{
+  width:100%;border:1px solid #a6a29b;border-radius:12px;background:#fff;
+  padding:4px 28px 4px 10px;font-family:inherit;font-size:12px;outline:none;
+}
+.np-search input:focus{border-color:var(--focus);box-shadow:0 0 0 1.5px rgba(43,87,154,.2)}
+.np-search .np-mag{position:absolute;top:50%;right:18px;transform:translateY(-55%);font-size:11px;color:#8a8781;pointer-events:none}
+/* جسم اللوحة: مجموعات وكائنات */
+.np-body{flex:1;overflow-y:auto;padding:4px 8px 12px}
+.np-body::-webkit-scrollbar{width:9px}
+.np-body::-webkit-scrollbar-thumb{background:#c9c6c0;border-radius:5px;border:2px solid #f6f5f3}
+.np-body::-webkit-scrollbar-track{background:transparent}
+.ngrp-h{
+  display:flex;align-items:center;gap:6px;padding:7px 6px 5px;margin-top:4px;
+  font-size:11.5px;font-weight:700;color:#7c2325;cursor:pointer;user-select:none;
+  border-bottom:1px solid #e0ddd8;
+}
+.ngrp-h:hover{color:var(--acc)}
+.ngrp-h .chev{font-size:9px;transition:transform .15s;color:#8a8781}
+.ngrp.collapsed .ngrp-h .chev{transform:rotate(-90deg)}
+.ngrp-h .gcount{margin-inline-start:auto;font-weight:400;color:#8a8781}
+.ngrp-body{padding:3px 0 2px}
+.ngrp.collapsed .ngrp-body{display:none}
+.nitem{
+  display:flex;align-items:center;gap:8px;padding:6px 9px;margin:1px 0;
+  border-radius:4px;cursor:pointer;font-size:12.5px;color:#333;
+  border:1px solid transparent;white-space:nowrap;overflow:hidden;
+}
+.nitem .ico{flex:none;width:18px;text-align:center;font-size:13px;opacity:.85}
+.nitem .nlabel{overflow:hidden;text-overflow:ellipsis}
+.nitem .odot{flex:none;width:7px;height:7px;border-radius:50%;background:var(--acc);margin-inline-start:auto;opacity:0;transition:opacity .15s}
+.nitem:hover{background:#e9e7e3;border-color:#d0cdc7}
+.nitem.open .odot{opacity:1}
+.nitem.active{background:var(--sel);border-color:#a8c4e0;color:#173a5e;font-weight:600}
 /* ===== شريط الأدوات ===== */
 #toolbar{
   background:linear-gradient(180deg,#f7f6f4,#e9e7e3);border-bottom:1px solid #c4c1bb;
@@ -90,40 +115,52 @@ body{
 .tbtn.warn{background:linear-gradient(180deg,#f0b429,#e0a413);border-color:#b07c07;color:#3d2c00;font-weight:600}
 .tbtn small{display:block;font-size:9.5px;opacity:.75;font-weight:400}
 .tsep{width:1px;height:22px;background:#c2bfba;margin:0 3px}
-/* ===== منطقة النماذج ===== */
-#stage{flex:1;overflow:auto;background:#eef0f2;padding:12px;position:relative}
+/* ===== صندوق المستندات الواحد + تبويباته العلوية (سلوك أكسس: Tabbed Documents) ===== */
+#docbox{
+  flex:1;display:flex;flex-direction:column;min-height:0;
+  margin:8px;border:1px solid #a8a5a0;border-radius:4px;background:#fff;
+  box-shadow:0 2px 12px rgba(0,0,0,.14);overflow:hidden;
+}
+#doctabs{
+  flex:none;display:flex;align-items:flex-end;gap:3px;padding:5px 8px 0;
+  background:linear-gradient(180deg,#e8e6e3,#dedbd6);border-bottom:1px solid #a8a5a0;
+  overflow-x:auto;user-select:none;min-height:31px;scrollbar-width:thin;
+}
+#doctabs:empty{height:0;min-height:0;padding:0;border-bottom:none;visibility:hidden}
+#doctabs .dtab{
+  display:flex;align-items:center;gap:7px;padding:5px 12px;flex:none;max-width:250px;
+  background:linear-gradient(180deg,#f4f2ef,#e4e1dc);border:1px solid #bfbcb6;border-bottom:none;
+  border-radius:6px 6px 0 0;cursor:pointer;font-size:12px;color:#4a4a4a;white-space:nowrap;
+}
+#doctabs .dtab:hover{background:linear-gradient(180deg,#faf9f7,#eceae6)}
+#doctabs .dtab.active{
+  background:#fdfcfb;border-color:#8f8c86;color:var(--acc-dark);font-weight:700;
+  box-shadow:inset 0 3px 0 var(--acc);
+}
+#doctabs .dtab .dname{overflow:hidden;text-overflow:ellipsis}
+#doctabs .dtab .dx{
+  display:grid;place-items:center;width:16px;height:16px;flex:none;border-radius:3px;
+  font-size:10px;color:#8a8781;
+}
+#doctabs .dtab .dx:hover{background:var(--acc);color:#fff}
+#doctabs .dtab.active .dx{color:#9a3336}
+/* ===== منطقة النماذج: كل كائن يملأ الصندوق ===== */
+#stage{flex:1;overflow:auto;background:#f4f3f1;position:relative}
 .window{
-  background:#f4f3f1;border:1px solid #b5b2ac;border-radius:4px;
-  box-shadow:0 6px 22px rgba(0,0,0,.20);display:flex;flex-direction:column;
-  position:absolute;left:8px;right:8px;bottom:8px;overflow:hidden;
+  background:#f4f3f1;display:flex;flex-direction:column;
+  position:absolute;inset:0;overflow:hidden;
 }
-.window .win-head{
-  background:linear-gradient(180deg,#e3e0dc,#d3d0ca);border-bottom:1px solid #b5b2ac;
-  padding:5px 12px;font-weight:600;color:#4a4a4a;display:flex;align-items:center;gap:8px;border-radius:4px 4px 0 0;
-}
-.window .win-head .dot{width:9px;height:9px;border-radius:50%;background:var(--acc)}
+.window .win-head{display:none}
 .window .win-body{padding:10px 12px;display:flex;flex-direction:column;gap:10px;flex:1;overflow:auto}
-.window .win-head .wx{
-  margin-inline-start:auto;display:grid;place-items:center;width:20px;height:20px;flex:none;
-  border-radius:4px;cursor:pointer;font-size:11px;color:#7c2325;background:rgba(0,0,0,.06);
+/* الحالة الفارغة حين لا يوجد كائن مفتوح */
+#emptystate{
+  position:absolute;inset:0;display:flex;flex-direction:column;gap:10px;
+  align-items:center;justify-content:center;color:#8a8781;text-align:center;padding:20px;
 }
-.window .win-head .wx:hover{background:var(--acc);color:#fff}
-/* ===== شريط النوافذ المفتوحة (قصاصة من فوق) ===== */
-#winbar{
-  background:var(--chrome);border-bottom:1px solid #bbb8b2;flex:none;
-  padding:4px 8px;display:flex;gap:4px;align-items:center;overflow-x:auto;user-select:none;
-}
-#winbar:empty{display:none}
-#winbar .wchip{
-  display:flex;align-items:center;gap:6px;padding:4px 8px;flex:none;max-width:240px;
-  background:linear-gradient(180deg,#efece8,#e0ddd8);border:1px solid #b9b6b0;border-radius:4px;
-  cursor:pointer;font-size:12px;color:#3c3c3c;white-space:nowrap;
-}
-#winbar .wchip:hover{background:#e8e5e0}
-#winbar .wchip.active{background:#fbfaf9;border-color:#d9b8b9;color:var(--acc-dark);font-weight:600;box-shadow:inset 0 -2px 0 var(--acc)}
-#winbar .wchip .wname{overflow:hidden;text-overflow:ellipsis}
-#winbar .wchip .wx{display:grid;place-items:center;width:16px;height:16px;border-radius:3px;font-size:10px;color:#777;flex:none}
-#winbar .wchip .wx:hover{background:var(--acc);color:#fff}
+#emptystate .es-ico{font-size:46px;opacity:.55}
+#emptystate .es-t{font-size:16px;font-weight:700;color:#6a6762}
+#emptystate .es-h{font-size:12px;max-width:430px;line-height:1.9}
+
 /* ===== حقول ===== */
 .field{display:flex;flex-direction:column;gap:3px;min-width:0}
 .field>label{font-size:11.5px;color:var(--label);font-weight:600}
@@ -236,21 +273,23 @@ table.sheet td .edit-in{width:100%;border:1.5px solid var(--focus);padding:1px 5
 </head>
 
 <body>
-<div id="titlebar">
-  <span class="appicon">A</span>
-  <span class="ttl">فاتورة مشتريات — نسخة HTML</span>
-  <span class="spacer"></span>
-  <span class="dbtag">تحويل من Microsoft Access</span>
-</div>
-
-<div id="winbar"></div>
-
 <div id="navrail">
-  <div id="navburger" title="القائمة — مرّر أو انقر للفتح">☰</div>
-  <div id="objtabs"></div>
+  <div id="navburger" title="القائمة — مرّر لفتحها أو انقر للتثبيت">☰</div>
+  <div id="objtabs">
+    <div class="np-head"><span>كائنات البرنامج</span><span class="np-shut" id="np_shut" title="إغلاق القائمة">«</span></div>
+    <div class="np-search"><input id="np_search" placeholder="بحث في الكائنات..." autocomplete="off"><span class="np-mag">🔍</span></div>
+    <div class="np-body" id="np_body"></div>
+  </div>
 </div>
 
+<div id="docbox">
+<div id="doctabs"></div>
 <div id="stage">
+  <div id="emptystate" class="hidden">
+    <div class="es-ico">🗂️</div>
+    <div class="es-t">لا توجد كائنات مفتوحة</div>
+    <div class="es-h">اختر كائناً من القائمة الجانبية اليسرى ليُفتح هنا ضمن تبويبات المستندات — تماماً كسلوك Microsoft Access</div>
+  </div>
 
   <!-- ================= فاتورة مشتريات ================= -->
   <div class="window" id="win-fatora">
@@ -454,6 +493,7 @@ table.sheet td .edit-in{width:100%;border:1.5px solid var(--focus);padding:1px 5
     </div>
   </div>
 
+</div>
 </div>
 
 <div id="statusbar">
@@ -1238,79 +1278,78 @@ function materialSearch(q) {
    تعديل العروض، نسخة من مشتريات + التهيئة والاختصارات
    ===================================================================== */
 
-/* ---------- التبويبات ---------- */
+/* ---------- الكائنات = تبويبات مستندات داخل الصندوق (سلوك أكسس: Tabbed Documents) ---------- */
 const WINDOWS = [
-  {id: 'win-fatora', name: 'فاتورة مشتريات', ico: '🧾'},
-  {id: 'win-purchases', name: 'مشتريات', ico: '📦'},
-  {id: 'win-cards', name: 'بطاقات المواد', ico: '🗂️'},
-  {id: 'win-sales', name: 'مبيعات', ico: '🛒'},
-  {id: 'win-balance', name: 'الرصيد', ico: '⚖️'},
-  {id: 'win-offers', name: 'نموذج حساب العروض', ico: '🧮'},
-  {id: 'win-editoffers', name: 'تعديل العروض في فاتورة المشتريات', ico: '✏️'},
-  {id: 'win-copypurch', name: 'نسخة من مشتريات', ico: '🗃️'},
+  {id: 'win-fatora', name: 'فاتورة مشتريات', ico: '🧾', grp: 'الفواتير'},
+  {id: 'win-purchases', name: 'مشتريات', ico: '📦', grp: 'الجداول'},
+  {id: 'win-cards', name: 'بطاقات المواد', ico: '🗂️', grp: 'الجداول'},
+  {id: 'win-sales', name: 'مبيعات', ico: '🛒', grp: 'الجداول'},
+  {id: 'win-balance', name: 'الرصيد', ico: '⚖️', grp: 'الجداول'},
+  {id: 'win-copypurch', name: 'نسخة من مشتريات', ico: '🗃️', grp: 'الجداول'},
+  {id: 'win-offers', name: 'نموذج حساب العروض', ico: '🧮', grp: 'العروض والحسابات'},
+  {id: 'win-editoffers', name: 'تعديل العروض في فاتورة المشتريات', ico: '✏️', grp: 'العروض والحسابات'},
 ];
-let zTop = 10;
-/* تدرّج القصاصات: النافذة الأمامية أخفض، ورؤوس الخلفيات تظهر فوقها كقصاصات */
-function relayoutCascade() {
-  const open = WINDOWS.map(w => $('' + w.id)).filter(el => !el.classList.contains('hidden'));
-  open.sort((a, b) => (+a.style.zIndex || 0) - (+b.style.zIndex || 0));
-  open.forEach((el, i) => { el.style.top = (8 + Math.min(i, 6) * 30) + 'px'; });
+let openDocs = [];      /* الكائنات المفتوحة بترتيب فتحها */
+let activeDoc = null;   /* الكائن المعروض حالياً في الصندوق */
+function updateEmpty() {
+  $('emptystate').classList.toggle('hidden', openDocs.length > 0);
 }
 function setActiveWin(id) {
-  document.querySelectorAll('#objtabs .tab').forEach(t => t.classList.toggle('active', t.dataset.win === id));
+  document.querySelectorAll('#np_body .nitem').forEach(t => {
+    t.classList.toggle('active', t.dataset.win === id);
+    t.classList.toggle('open', openDocs.includes(t.dataset.win));
+  });
+}
+function buildDocTabs() {
+  const bar = $('doctabs');
+  bar.innerHTML = '';
+  openDocs.forEach(id => {
+    const w = WINDOWS.find(x => x.id === id);
+    if (!w) return;
+    const t = document.createElement('div');
+    t.className = 'dtab' + (id === activeDoc ? ' active' : '');
+    t.dataset.win = id;
+    t.title = w.name + ' — انقر للعرض، ✕ للإغلاق';
+    t.innerHTML = `<span class="ico">${w.ico}</span><span class="dname">${w.name}</span><span class="dx" title="إغلاق هذا الكائن">✕</span>`;
+    t.onclick = e => {
+      if (e.target.classList.contains('dx')) closeWindow(id);
+      else openWindow(id);
+    };
+    bar.appendChild(t);
+  });
+  updateEmpty();
+}
+function activateDoc(id) {
+  activeDoc = id;
+  WINDOWS.forEach(w => $('' + w.id).classList.toggle('hidden', w.id !== id));
+  buildDocTabs();
+  setActiveWin(id);
 }
 function openWindow(id) {
-  const el = $('' + id);
-  el.classList.remove('hidden');          /* لا تُخفَ النوافذ الأخرى — تبقى مكدّسة تحتها */
-  el.style.zIndex = ++zTop;
-  relayoutCascade();
-  setActiveWin(id);
-  buildWinbar(id);
+  if (!openDocs.includes(id)) openDocs.push(id);
+  activateDoc(id);
   if (id === 'win-purchases') renderPurchases();
   if (id === 'win-cards') renderCards();
   if (id === 'win-sales') renderSales();
   if (id === 'win-editoffers') renderOffersSheet();
   if (id === 'win-copypurch') renderCopyPurch();
 }
-/* ---------- إغلاق النوافذ + شريط النوافذ المفتوحة ---------- */
+/* ---------- إغلاق كائن: يزيل تبويبه ويعرض الكائن المفتوح تحته ---------- */
 function closeWindow(id) {
+  const i = openDocs.indexOf(id);
+  if (i > -1) openDocs.splice(i, 1);
   $('' + id).classList.add('hidden');
-  const open = WINDOWS.map(w => $('' + w.id)).filter(x => !x.classList.contains('hidden'));
-  open.sort((a, b) => (+b.style.zIndex || 0) - (+a.style.zIndex || 0));
-  const top = open[0];
-  if (top) top.style.zIndex = ++zTop;
-  relayoutCascade();
-  setActiveWin(top ? top.id : '');
-  buildWinbar(top ? top.id : '');
-}
-function buildWinbar(activeId) {
-  const bar = $('winbar');
-  bar.innerHTML = '';
-  WINDOWS.forEach(w => {
-    const el = $('' + w.id);
-    if (el.classList.contains('hidden')) return;
-    const c = document.createElement('div');
-    c.className = 'wchip' + (w.id === activeId ? ' active' : '');
-    c.dataset.win = w.id;
-    c.title = w.name;
-    c.innerHTML = `<span class="ico">${w.ico}</span><span class="wname">${w.name}</span><span class="wx" title="إغلاق هذه النافذة">✕</span>`;
-    c.onclick = e => {
-      if (e.target.classList.contains('wx')) closeWindow(w.id);
-      else openWindow(w.id);
-    };
-    bar.appendChild(c);
-  });
-}
-/* النقر على أي جزء ظاهر من نافذة خلفية (رأسها القصاصة) يرفعها للأمام */
-document.addEventListener('mousedown', e => {
-  const win = e.target.closest('.window');
-  if (win && !win.classList.contains('hidden') && +win.style.zIndex !== zTop) {
-    win.style.zIndex = ++zTop;
-    relayoutCascade();
-    setActiveWin(win.id);
-    buildWinbar(win.id);
+  if (activeDoc === id) {
+    const next = openDocs[openDocs.length - 1] || null;
+    if (next) { activateDoc(next); return; }
+    activeDoc = null;
+    buildDocTabs();
+    setActiveWin('');
+  } else {
+    buildDocTabs();
   }
-}, true);
+  updateEmpty();
+}
 /* زر إغلاق (✕) في رأس كل نافذة */
 WINDOWS.forEach(w => {
   const head = $('' + w.id).querySelector('.win-head');
@@ -1323,36 +1362,72 @@ WINDOWS.forEach(w => {
     head.appendChild(x);
   }
 });
+/* بناء لوحة الكائنات: مجموعات قابلة للطي مثل لوحة كائنات أكسس */
+const GRP_ORDER = ['الفواتير', 'الجداول', 'العروض والحسابات'];
 function buildTabs() {
-  const bar = $('objtabs');
-  bar.innerHTML = '';
-  WINDOWS.forEach(w => {
-    const t = document.createElement('div');
-    t.className = 'tab';
-    t.dataset.win = w.id;
-    t.innerHTML = `<span class="ico">${w.ico}</span>${w.name}`;
-    t.onclick = () => { openWindow(w.id); closeNav(true); };
-    bar.appendChild(t);
+  const body = $('np_body');
+  body.innerHTML = '';
+  GRP_ORDER.forEach(g => {
+    const items = WINDOWS.filter(w => w.grp === g);
+    if (!items.length) return;
+    const grp = document.createElement('div');
+    grp.className = 'ngrp';
+    const h = document.createElement('div');
+    h.className = 'ngrp-h';
+    h.innerHTML = `<span class="chev">▼</span><span>${g}</span><span class="gcount">${items.length}</span>`;
+    h.onclick = () => grp.classList.toggle('collapsed');
+    const bd = document.createElement('div');
+    bd.className = 'ngrp-body';
+    items.forEach(w => {
+      const t = document.createElement('div');
+      t.className = 'nitem';
+      t.dataset.win = w.id;
+      t.title = w.name;
+      t.innerHTML = `<span class="ico">${w.ico}</span><span class="nlabel">${w.name}</span><span class="odot" title="مفتوح الآن"></span>`;
+      t.onclick = () => openWindow(w.id);
+      bd.appendChild(t);
+    });
+    grp.appendChild(h);
+    grp.appendChild(bd);
+    body.appendChild(grp);
   });
 }
 
-/* ---------- الشريط الجانبي: فتح بالتعويم أو النقر، إغلاق بفقدانه أو النقر ---------- */
+/* ---------- اللوحة الجانبية: تفتح بالتعويم أو النقر (مع تثبيت اختياري) وتدفع المحتوى مثل أكسس ---------- */
 const navRail = $('navrail');
-let navTimer = null;
-function openNav() { clearTimeout(navTimer); navRail.classList.add('open'); }
+let navTimer = null, navPinned = false;
+function openNav() {
+  clearTimeout(navTimer);
+  navRail.classList.add('open');
+  document.body.classList.add('nav-open');
+}
 function closeNav(now) {
   clearTimeout(navTimer);
-  if (now) navRail.classList.remove('open');
-  else navTimer = setTimeout(() => navRail.classList.remove('open'), 220);
+  const doClose = () => { navRail.classList.remove('open'); document.body.classList.remove('nav-open'); };
+  if (now) doClose();
+  else navTimer = setTimeout(doClose, 220);
 }
 $('navburger').addEventListener('click', e => {
   e.stopPropagation();
-  navRail.classList.toggle('open');
-  clearTimeout(navTimer);
+  navPinned = !navPinned;
+  navRail.classList.toggle('pinned', navPinned);
+  if (navPinned) openNav(); else closeNav(true);
 });
-navRail.addEventListener('mouseenter', openNav);
-navRail.addEventListener('mouseleave', () => closeNav(false));
-document.addEventListener('click', e => { if (!navRail.contains(e.target)) closeNav(true); });
+$('np_shut').addEventListener('click', e => {
+  e.stopPropagation();
+  navPinned = false;
+  navRail.classList.remove('pinned');
+  closeNav(true);
+});
+/* التعويم فوق الشريط الأحمر أو اللوحة يفتحهما، وفقدان التعويم يغلقهما إن لم تكن مثبتة */
+[navRail, $('objtabs')].forEach(el => {
+  el.addEventListener('mouseenter', openNav);
+  el.addEventListener('mouseleave', () => { if (!navPinned) closeNav(false); });
+});
+/* النقر خارج اللوحة يغلقها إن لم تكن مثبتة */
+document.addEventListener('click', e => {
+  if (!navPinned && !navRail.contains(e.target)) closeNav(true);
+});
 
 /* ================= نموذج مشتريات ================= */
 const PURCH_COLS = ['رقم الفاتورة','ترتيب','المادة','الشركة','رمز الباركود','الكمية','المجاني','سعر الشراء','حسم %','قيمة الحسم','الإجمالي قبل الحسم','الإجمالي بعد الحسم','إجمالي الكمية','سعر العميل','السعر الأساسي','عموم معتمد','أساس العرض','مجاني العرض','حسم العرض','السعر الصافي بعد العرض','رقم الطبخة','تاريخ الصنع','تاريخ انتهاء الفعالية','التاريخ','الوقت','المستخدم','من','إلى','ملاحظات'];
