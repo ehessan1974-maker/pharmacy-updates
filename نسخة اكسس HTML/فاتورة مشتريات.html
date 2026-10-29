@@ -75,6 +75,27 @@ body.nav-open #objtabs{transform:none}
 .np-body::-webkit-scrollbar{width:9px}
 .np-body::-webkit-scrollbar-thumb{background:#c9c6c0;border-radius:5px;border:2px solid #f6f5f3}
 .np-body::-webkit-scrollbar-track{background:transparent}
+/* الحاسبة السريعة أسفل لوحة الكائنات */
+#sidecalc{
+  flex:none;border-top:1px solid #c6c3bd;background:linear-gradient(180deg,#efedea,#e6e3de);
+  padding:7px 8px 9px;display:flex;flex-direction:column;gap:6px;
+}
+#sidecalc .sc-t{font-size:11.5px;font-weight:700;color:#5a4a4b}
+#sidecalc .sc-disp{
+  width:100%;direction:ltr;text-align:center;font-family:Consolas,monospace;font-size:14px;
+  border:1px solid #a6a29b;border-radius:3px;padding:4px 7px;background:#fffbe8;outline:none;
+}
+#sidecalc .sc-disp:focus{border-color:var(--focus);box-shadow:0 0 0 1.5px rgba(43,87,154,.2)}
+.sc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.sc-grid button{
+  height:26px;border:1px solid #b5b2ac;border-radius:3px;background:linear-gradient(180deg,#fdfcfa,#eceae6);
+  font-family:inherit;font-size:12.5px;cursor:pointer;color:#333;padding:0;user-select:none;
+}
+.sc-grid button:hover{background:#fff}
+.sc-grid button:active{background:#e0ddd8}
+.sc-grid button.op{color:#7c2325;font-weight:700}
+.sc-grid button.eq{background:linear-gradient(180deg,#c2484c,#a4373a);border-color:#7c2325;color:#fff;font-weight:700}
+.sc-grid button.cl{background:linear-gradient(180deg,#f0b429,#e0a413);border-color:#b07c07;color:#3d2c00;font-weight:700}
 .ngrp-h{
   display:flex;align-items:center;gap:6px;padding:7px 6px 5px;margin-top:4px;
   font-size:11.5px;font-weight:700;color:#7c2325;cursor:pointer;user-select:none;
@@ -173,7 +194,6 @@ input.i,select.i,textarea.i{
 input.i:focus,select.i:focus,textarea.i:focus{border-color:var(--focus);box-shadow:0 0 0 1.5px rgba(43,87,154,.25)}
 input.i[readonly]{background:#f4f4f2;color:#555}
 input.num{text-align:center;direction:ltr}
-input.calc-res{background:#fffbe8}
 .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 14px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 14px}
 .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px 14px}
@@ -287,6 +307,32 @@ table.sheet td .edit-in{width:100%;border:1.5px solid var(--focus);padding:1px 5
     <div class="np-head"><span>كائنات البرنامج</span><span class="np-shut" id="np_shut" title="إغلاق القائمة">«</span></div>
     <div class="np-search"><input id="np_search" placeholder="بحث في الكائنات..." autocomplete="off"><span class="np-mag">🔍</span></div>
     <div class="np-body" id="np_body"></div>
+    <div id="sidecalc">
+      <div class="sc-t">حاسبة سريعة</div>
+      <input class="sc-disp" id="sc_disp" placeholder="0" autocomplete="off" spellcheck="false">
+      <div class="sc-grid" id="sc_grid">
+        <button class="cl" data-k="C">C</button>
+        <button data-k="(">(</button>
+        <button data-k=")">)</button>
+        <button class="op" data-k="/">÷</button>
+        <button data-k="7">7</button>
+        <button data-k="8">8</button>
+        <button data-k="9">9</button>
+        <button class="op" data-k="*">×</button>
+        <button data-k="4">4</button>
+        <button data-k="5">5</button>
+        <button data-k="6">6</button>
+        <button class="op" data-k="-">−</button>
+        <button data-k="1">1</button>
+        <button data-k="2">2</button>
+        <button data-k="3">3</button>
+        <button class="op" data-k="+">+</button>
+        <button data-k="0">0</button>
+        <button data-k=".">.</button>
+        <button data-k="B">⌫</button>
+        <button class="eq" data-k="=">=</button>
+      </div>
+    </div>
 </div>
 
 <div id="docbox">
@@ -311,13 +357,6 @@ table.sheet td .edit-in{width:100%;border:1.5px solid var(--focus);padding:1px 5
           <div class="field"><label>إلى (نص_إلى)</label><div class="ctl"><input class="i" id="f_to" list="dl_to"></div><datalist id="dl_to"></datalist></div>
           <div class="field"><label>الوقت</label><div class="ctl"><input class="i" id="f_time" type="time" step="1"></div></div>
           <div class="field"><label>رقم الفاتورة (نص_رقم_الفاتورة) — <span class="kbd">Alt+↓</span> للبحث</label><div class="ctl"><input class="i" id="f_invoiceno" list="dl_invoices" placeholder="مستودع ... التاريخ الوقت"><datalist id="dl_invoices"></datalist></div></div>
-        </div>
-      </div>
-
-      <div class="groupbox">
-        <span class="gtitle">أدوات سطر الفاتورة</span>
-        <div class="row mt6" style="align-items:center">
-          <div class="field" style="max-width:210px"><label>حاسبة (Eval)</label><input class="i num calc-res" id="e_calc" placeholder="3*5+2 ثم Enter"></div>
         </div>
       </div>
 
@@ -1658,13 +1697,25 @@ function bindEvents() {
     saveDB();
     toast('أُضيف سجل جديد — انقر مزدوجًا على خلية «المادة» واكتب اسمها', 'ok');
   };
-  $('e_calc').addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      // حاسبة_AfterUpdate: حاسبة = Eval(حاسبة)
-      e.preventDefault();
-      const v = evalExpr($('e_calc').value);
-      if (v !== null) $('e_calc').value = v;
-    }
+  /* --- الحاسبة السريعة في القائمة الجانبية (بديل حاسبة Eval بالنموذج) --- */
+  const scDisp = $('sc_disp');
+  const scEval = () => {
+    const v = evalExpr(scDisp.value);
+    scDisp.value = (v === null) ? 'خطأ' : String(Number(v.toPrecision(12)));
+  };
+  document.querySelectorAll('#sc_grid button').forEach(b => {
+    b.addEventListener('click', () => {
+      const k = b.dataset.k;
+      if (scDisp.value === 'خطأ') scDisp.value = '';
+      if (k === 'C') { scDisp.value = ''; return; }
+      if (k === 'B') { scDisp.value = scDisp.value.slice(0, -1); return; }
+      if (k === '=') { scEval(); return; }
+      scDisp.value += k;
+      scDisp.focus();
+    });
+  });
+  scDisp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); scEval(); }
   });
   $('btn-delrow').onclick = () => {
     if (APP.curRow < 0) return;
