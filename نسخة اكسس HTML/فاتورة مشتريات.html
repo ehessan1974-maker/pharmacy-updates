@@ -204,6 +204,8 @@ input.num{text-align:center;direction:ltr}
 }
 /* ===== جدول ورقة البيانات ===== */
 .sheetwrap{border:1px solid #b0ada7;border-radius:3px;overflow:auto;background:var(--sheet);position:relative}
+/* ورقة بيانات الفاتورة تملأ المساحة الفارغة المتبقية في النافذة */
+#win-fatora #fatora_sheet{flex:1 1 auto;min-height:140px;max-height:none}
 table.sheet{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;font-size:12.5px}
 table.sheet th,table.sheet td{
   border-inline-end:1px solid var(--grid);border-bottom:1px solid var(--grid);
@@ -379,7 +381,7 @@ table.sheet td .edit-in{width:100%;border:1.5px solid var(--focus);padding:1px 5
         </div>
       </div>
 
-      <div class="sheetwrap" id="fatora_sheet" style="max-height:var(--split,300px)"></div>
+      <div class="sheetwrap" id="fatora_sheet"></div>
     </div>
   </div>
 
@@ -1690,7 +1692,6 @@ function renderCopyPurch() {
 function tathbitAlnamaz() {
   APP.sortDir = APP.sortDir === 'ASC' ? 'DESC' : 'ASC';
   DB.invoice.sort((a, b) => APP.sortDir === 'ASC' ? nz(a['ترتيب']) - nz(b['ترتيب']) : nz(b['ترتيب']) - nz(a['ترتيب']));
-  $('fatora_sheet').style.setProperty('--split', '340px');
   renderFatoraSheet();
   toast('اتجاه الترتيب: ' + APP.sortDir, 'ok');
 }
