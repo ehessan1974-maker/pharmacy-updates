@@ -27,7 +27,7 @@ html,body{height:100%}
 body{
   font-family:"Segoe UI","Tahoma","Noto Naskh Arabic",Arial,sans-serif;
   font-size:13px;color:var(--txt);background:var(--chrome2);
-  display:flex;flex-direction:column;overflow:hidden;
+  display:flex;flex-direction:column;overflow:hidden;padding-left:36px;
 }
 /* ===== شريط العنوان ===== */
 #titlebar{
@@ -39,22 +39,39 @@ body{
 #titlebar .ttl{font-size:13px;font-weight:600;opacity:.95}
 #titlebar .spacer{flex:1}
 #titlebar .dbtag{font-size:11px;background:rgba(255,255,255,.18);padding:2px 10px;border-radius:10px}
-/* ===== شريط تبويبات الكائنات ===== */
+/* ===== الشريط الجانبي للقائمة (يسار الصفحة) ===== */
+#navrail{
+  position:fixed;top:0;left:0;bottom:0;width:36px;z-index:90;
+  background:linear-gradient(180deg,#a03437,#7c2325);
+  display:flex;flex-direction:column;align-items:center;
+  user-select:none;box-shadow:2px 0 6px rgba(0,0,0,.18);
+}
+#navburger{
+  width:36px;height:34px;flex:none;display:grid;place-items:center;
+  color:#fff;font-size:16px;cursor:pointer;background:rgba(255,255,255,.10);
+  transition:background .15s;
+}
+#navrail.open #navburger,#navburger:hover{background:rgba(255,255,255,.26)}
 #objtabs{
-  background:var(--chrome);border-bottom:1px solid #bbb8b2;display:flex;align-items:flex-end;
-  padding:6px 8px 0;gap:2px;flex:none;overflow-x:auto;user-select:none;
+  position:absolute;top:34px;left:36px;width:238px;max-height:calc(100vh - 46px);
+  overflow-y:auto;background:#f6f5f3;border:1px solid #b5b2ac;border-radius:0 6px 6px 0;
+  padding:6px;display:flex;flex-direction:column;gap:3px;
+  box-shadow:4px 4px 16px rgba(0,0,0,.25);
+  opacity:0;transform:translateX(-10px);visibility:hidden;pointer-events:none;
+  transition:opacity .16s ease,transform .16s ease,visibility .16s;
 }
+#navrail.open #objtabs{opacity:1;transform:translateX(0);visibility:visible;pointer-events:auto}
 #objtabs .tab{
-  padding:6px 14px 7px;background:linear-gradient(180deg,#efece8,#e0ddd8);
-  border:1px solid #b9b6b0;border-bottom:none;border-radius:5px 5px 0 0;
-  cursor:pointer;white-space:nowrap;font-size:12.5px;color:#3c3c3c;position:relative;top:1px;
+  display:flex;align-items:center;gap:8px;
+  padding:8px 10px;background:transparent;border:1px solid transparent;border-radius:4px;
+  cursor:pointer;white-space:nowrap;font-size:12.5px;color:#3c3c3c;
 }
-#objtabs .tab:hover{background:#e8e5e0}
+#objtabs .tab:hover{background:#e8e5e0;border-color:#c9c6c0}
 #objtabs .tab.active{
-  background:#fbfaf9;border-color:#b9b6b0;color:var(--acc-dark);font-weight:600;
-  border-bottom:1px solid #fbfaf9;
+  background:#fbfaf9;border-color:#d9b8b9;color:var(--acc-dark);font-weight:600;
+  box-shadow:inset 3px 0 0 var(--acc);
 }
-#objtabs .tab .ico{margin-inline-end:6px;opacity:.75}
+#objtabs .tab .ico{margin-inline-end:0;opacity:.8}
 /* ===== شريط الأدوات ===== */
 #toolbar{
   background:linear-gradient(180deg,#f7f6f4,#e9e7e3);border-bottom:1px solid #c4c1bb;
@@ -205,7 +222,10 @@ table.sheet td .edit-in{width:100%;border:1.5px solid var(--focus);padding:1px 5
   <span class="dbtag">تحويل من Microsoft Access</span>
 </div>
 
-<div id="objtabs"></div>
+<div id="navrail">
+  <div id="navburger" title="القائمة — مرّر أو انقر للفتح">☰</div>
+  <div id="objtabs"></div>
+</div>
 
 <div id="stage">
 
@@ -1223,10 +1243,28 @@ function buildTabs() {
     t.className = 'tab';
     t.dataset.win = w.id;
     t.innerHTML = `<span class="ico">${w.ico}</span>${w.name}`;
-    t.onclick = () => openWindow(w.id);
+    t.onclick = () => { openWindow(w.id); closeNav(true); };
     bar.appendChild(t);
   });
 }
+
+/* ---------- الشريط الجانبي: فتح بالتعويم أو النقر، إغلاق بفقدانه أو النقر ---------- */
+const navRail = $('navrail');
+let navTimer = null;
+function openNav() { clearTimeout(navTimer); navRail.classList.add('open'); }
+function closeNav(now) {
+  clearTimeout(navTimer);
+  if (now) navRail.classList.remove('open');
+  else navTimer = setTimeout(() => navRail.classList.remove('open'), 220);
+}
+$('navburger').addEventListener('click', e => {
+  e.stopPropagation();
+  navRail.classList.toggle('open');
+  clearTimeout(navTimer);
+});
+navRail.addEventListener('mouseenter', openNav);
+navRail.addEventListener('mouseleave', () => closeNav(false));
+document.addEventListener('click', e => { if (!navRail.contains(e.target)) closeNav(true); });
 
 /* ================= نموذج مشتريات ================= */
 const PURCH_COLS = ['رقم الفاتورة','ترتيب','المادة','الشركة','رمز الباركود','الكمية','المجاني','سعر الشراء','حسم %','قيمة الحسم','الإجمالي قبل الحسم','الإجمالي بعد الحسم','إجمالي الكمية','سعر العميل','السعر الأساسي','عموم معتمد','أساس العرض','مجاني العرض','حسم العرض','السعر الصافي بعد العرض','رقم الطبخة','تاريخ الصنع','تاريخ انتهاء الفعالية','التاريخ','الوقت','المستخدم','من','إلى','ملاحظات'];
