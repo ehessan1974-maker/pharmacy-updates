@@ -312,26 +312,12 @@ table.sheet td .edit-in{width:100%;border:1.5px solid var(--focus);padding:1px 5
           <div class="field"><label>الوقت</label><div class="ctl"><input class="i" id="f_time" type="time" step="1"></div></div>
           <div class="field"><label>رقم الفاتورة (نص_رقم_الفاتورة) — <span class="kbd">Alt+↓</span> للبحث</label><div class="ctl"><input class="i" id="f_invoiceno" list="dl_invoices" placeholder="مستودع ... التاريخ الوقت"><datalist id="dl_invoices"></datalist></div></div>
         </div>
-        <div class="row mt6">
-          <div class="field" style="max-width:300px"><label>تحميل جميع مشتريات مستودع</label><div class="ctl"><input class="i" id="f_loadwh" list="dl_warehouse" placeholder="اختر المستودع + التاريخ"><datalist id="dl_warehouse"></datalist></div></div>
-          <div class="totalbox flex1">
-            <span class="lb">إجمالي الفاتورة بعد حسم الفاتورة:</span>
-            <input class="i num" id="f_total" placeholder="أدخل الإجمالي لإعادة توزيع الحسم">
-            <span class="hint">يحسب حسم % لكل الأصناف تلقائيًا</span>
-          </div>
-        </div>
       </div>
 
       <div class="groupbox">
         <span class="gtitle">أدوات سطر الفاتورة</span>
         <div class="row mt6" style="align-items:center">
           <div class="field" style="max-width:210px"><label>حاسبة (Eval)</label><input class="i num calc-res" id="e_calc" placeholder="3*5+2 ثم Enter"></div>
-          <div class="field" style="max-width:220px"><label>نمط البحث (إطار446)</label>
-            <select class="i" id="e_searchmode">
-              <option value="1">1 — بحث شامل (مادة + رمز + باركود)</option>
-              <option value="2">2 — بحث بأسماء المواد فقط</option>
-            </select>
-          </div>
         </div>
       </div>
 
@@ -1047,25 +1033,6 @@ function renameMaterialEverywhere(oldName, newName) {
   toast(`تمت إعادة تسمية المادة في جميع الجداول: ${newName}`, 'ok');
 }
 
-/* ---------- حسم لكامل الفاتورة — إجمالي_الفاتورة_بعد_حسم_الفاتورة_AfterUpdate ---------- */
-function hasmLikamilAlfatoora() {
-  const total = nz($('f_total').value);
-  const sumBefore = DB.invoice.reduce((s, r) => s + nz(r['الإجمالي قبل الحسم']), 0);
-  if (!sumBefore) { MsgBox('لا توجد أصناف في الفاتورة', 'warn'); return; }
-  const discPct = 100 - (total * 100 / sumBefore);
-  DB.invoice.forEach(r => {
-    r['حسم %'] = discPct;
-    r['قيمة الحسم'] = nz(r['الكمية']) * nz(r['سعر الشراء']) * nz(r['حسم %']) / 100;
-    r['الإجمالي قبل الحسم'] = nz(r['الكمية']) * nz(r['سعر الشراء']);
-    r['الإجمالي بعد الحسم'] = nz(r['الإجمالي قبل الحسم']) - nz(r['قيمة الحسم']);
-    r['إجمالي الكمية'] = nz(r['الكمية']) + nz(r['المجاني']);
-    r['سعر العميل'] = nz(r['إجمالي الكمية']) ? r['الإجمالي بعد الحسم'] / r['إجمالي الكمية'] : 0;
-    r['عموم 20 %'] = nz(r['سعر الشراء']) * 100 / 80;
-  });
-  renderFatoraSheet(); entryFromRow(curInvoiceRow()); saveDB();
-  toast('تم توزيع الحسم على كامل الفاتورة', 'ok');
-}
-
 /* ---------- فاتورة جديدة ---------- */
 async function fatooraJadida() {
   // UPDATE مشتريات SET رقم الفاتورة = من & التاريخ & الوقت
@@ -1080,7 +1047,6 @@ async function fatooraJadida() {
   if (!$('f_user').value) $('f_user').value = 'مدير';
   if (!$('f_to').value) $('f_to').value = 'صيدلية إحسان العبد الله';
   rebuildInvoiceNo();
-  $('f_total').value = '';
   entryFromRow(null);
   renderFatoraSheet();
   saveDB();
@@ -1175,27 +1141,6 @@ function loadInvoiceByNo(rno) {
   renderFatoraSheet();
 }
 
-/* ---------- تحميل جميع مشتريات مستودع — تحميل_جميع_مشتريات_مستودع_AfterUpdate ---------- */
-function loadWarehouse(fromKey) {
-  // fromKey = "من | yyyy-mm-dd"
-  const [from, date] = fromKey.split(' | ');
-  DB.invoice = [];
-  const src = DB.purchases.filter(p => p['من'] === from && arDateToInput(p['التاريخ']) === date);
-  src.forEach(p => DB.invoice.push({...p, _committed: true}));
-  APP.curRow = DB.invoice.length ? 0 : -1;
-  $('f_total').value = '';
-  $('f_user').value = 'مدير';
-  $('f_from').value = from;
-  $('f_to').value = 'صيدلية إحسان العبد الله';
-  $('f_date').value = today();
-  $('f_time').value = nowTime();
-  rebuildInvoiceNo();
-  entryFromRow(curInvoiceRow());
-  renderFatoraSheet();
-  saveDB();
-  toast(`تم تحميل ${src.length} صنفًا من مستودع «${from}»`, 'ok');
-}
-
 /* ---------- تحديث ما يتعلق بالمشتريات — تحديث_ما_يتعلق_بالمشتريات_Click ---------- */
 async function updateRelatedPurchases() {
   const ss = await vbYesNoCancel('هل تريد تحديث ما يتعلق بالمشتريات؟', 'تحديث المشتريات');
@@ -1246,7 +1191,7 @@ function materialSearch(q) {
   q = q.trim();
   const list = $('e_mat_list');
   if (!q) { list.style.display = 'none'; return; }
-  const mode = $('e_searchmode').value; // 1 شامل / 2 أسماء فقط
+  const mode = '1'; // البحث الشامل هو الافتراضي
   let results;
   if (mode === '2') {
     results = DB.cards.filter(c => String(c['المادة'] ?? '').includes(q)).slice(0, 60);
@@ -1691,12 +1636,6 @@ function bindEvents() {
   });
   $('f_invoiceno').addEventListener('change', () => {
     loadInvoiceByNo($('f_invoiceno').value.trim());
-    $('f_total').value = '';
-  });
-  $('f_total').addEventListener('change', hasmLikamilAlfatoora);
-  $('f_loadwh').addEventListener('change', () => {
-    const v = $('f_loadwh').value;
-    if (v) loadWarehouse(v);
   });
   $('btn-updtime').onclick = () => { $('f_time').value = nowTime(); $('f_date').value = today(); rebuildInvoiceNo(); };
   $('btn-save').onclick = saveFatoora;
@@ -1859,8 +1798,6 @@ function fillDatalists() {
   // الفواتير
   const invs = purchaseInvoices().slice(0, 800);
   $('dl_invoices').innerHTML = invs.map(v => `<option value="${escHtml(v.no)}">${escHtml(v.from)} — ${fmt(v.total)}</option>`).join('');
-  // المستودعات (من + تاريخ)
-  $('dl_warehouse').innerHTML = warehouses().map(w => `<option value="${escHtml(w.from)} | ${arDateToInput(w.date)}">`).join('');
   // بطاقات المواد
   $('dl_cards_all').innerHTML = DB.cards.slice(0, 5000).map(c => `<option value="${escHtml(c['المادة'])}">`).join('');
   // شركات بطاقات المواد
