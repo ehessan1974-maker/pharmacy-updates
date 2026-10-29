@@ -264,6 +264,12 @@ table.sheet td .edit-in{width:100%;border:1.5px solid var(--focus);padding:1px 5
 .subnote{font-size:11px;color:#8a8781;margin-top:2px}
 .kbd{background:#eceae6;border:1px solid #c2bfba;border-bottom-width:2px;border-radius:3px;padding:0 5px;font-size:10.5px;font-family:Consolas,monospace;color:#333}
 .section-title{font-size:12.5px;font-weight:700;color:var(--acc-dark);border-bottom:1px dashed #c9c6c0;padding-bottom:4px;margin-bottom:2px}
+/* شريط الأزرار أسفل ورقة البيانات (تذييل النموذج كأكسس) */
+.btmbar{
+  flex:none;display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+  border-top:1px solid #c9c6c0;padding-top:8px;
+}
+.btmbar .bsep{flex:none;width:1px;height:22px;background:#c9c6c0;margin:0 4px}
 .pager{display:flex;gap:6px;align-items:center;font-size:12px;color:#555}
 .pager button{padding:2px 10px}
 .flex1{flex:1}
@@ -308,12 +314,6 @@ table.sheet td .edit-in{width:100%;border:1.5px solid var(--focus);padding:1px 5
         </div>
         <div class="row mt6">
           <div class="field" style="max-width:300px"><label>تحميل جميع مشتريات مستودع</label><div class="ctl"><input class="i" id="f_loadwh" list="dl_warehouse" placeholder="اختر المستودع + التاريخ"><datalist id="dl_warehouse"></datalist></div></div>
-          <div style="display:flex;gap:6px">
-            <button class="tbtn" id="btn-updtime" title="تحديث الوقت والتاريخ ورقم الفاتورة">تحديث الوقت</button>
-            <button class="tbtn primary" id="btn-save">حفظ الفاتورة</button>
-            <button class="tbtn" id="btn-newinvoice" title="مسح الفاتورة الحالية وبدء فاتورة جديدة">فاتورة جديدة</button>
-            <button class="tbtn warn" id="btn-neg">سالب</button>
-          </div>
           <div class="totalbox flex1">
             <span class="lb">إجمالي الفاتورة بعد حسم الفاتورة:</span>
             <input class="i num" id="f_total" placeholder="أدخل الإجمالي لإعادة توزيع الحسم">
@@ -332,24 +332,31 @@ table.sheet td .edit-in{width:100%;border:1.5px solid var(--focus);padding:1px 5
               <option value="2">2 — بحث بأسماء المواد فقط</option>
             </select>
           </div>
-          <button class="tbtn" id="btn-newrow">＋ سجل جديد</button>
-          <button class="tbtn" id="btn-delrow">✖ حذف السطر الحالي</button>
-          <button class="tbtn" id="btn-clearbatch" title="أمر157 — تفريغ حقل رقم الطبخة في فاتورة مشتريات">تفريغ رقم الطبخة</button>
-          <button class="tbtn" id="btn-updrelated" title="تحديث نسب الربح والأسعار من المشتريات">تحديث ما يتعلق بالمشتريات</button>
-          <button class="tbtn" id="btn-editoffers">تعديل العروض في فاتورة المشتريات</button>
-          <button class="tbtn" id="btn-freemerge" title="ضم المجاني إلى الكمية">ضم المجاني إلى الكمية</button>
         </div>
       </div>
 
       <div class="section-title" style="display:flex;align-items:center;gap:10px">
         <span>أصناف الفاتورة الحالية (ورقة البيانات)</span>
         <span class="hint">انقر «＋ سجل جديد» ثم حرّر الخلايا مباشرة: نقر مزدوج على الخلية = تحرير | «الشركة/رمز الباركود/عموم معتمد» تُحدَّث في جميع الجداول عبر نقر مزدوج</span>
-        <span class="flex1"></span>
+      </div>
+      <div class="sheetwrap" id="fatora_sheet" style="max-height:var(--split,300px)"></div>
+      <div class="btmbar" id="fatora_btnbar">
+        <button class="tbtn" id="btn-newrow">＋ سجل جديد</button>
+        <button class="tbtn" id="btn-delrow">✖ حذف السطر الحالي</button>
+        <button class="tbtn" id="btn-clearbatch" title="أمر157 — تفريغ حقل رقم الطبخة في فاتورة مشتريات">تفريغ رقم الطبخة</button>
+        <button class="tbtn" id="btn-updrelated" title="تحديث نسب الربح والأسعار من المشتريات">تحديث ما يتعلق بالمشتريات</button>
+        <button class="tbtn" id="btn-editoffers">تعديل العروض في فاتورة المشتريات</button>
+        <button class="tbtn" id="btn-freemerge" title="ضم المجاني إلى الكمية">ضم المجاني إلى الكمية</button>
+        <span class="bsep"></span>
         <button class="tbtn" data-split="1700" style="padding:2px 10px;font-size:11px">تسمية48 — تصغير</button>
         <button class="tbtn" data-split="2700" style="padding:2px 10px;font-size:11px">تسمية51 — متوسط</button>
         <button class="tbtn" data-split="6746" style="padding:2px 10px;font-size:11px">تسمية49 — تكبير</button>
+        <span class="flex1"></span>
+        <button class="tbtn" id="btn-updtime" title="تحديث الوقت والتاريخ ورقم الفاتورة">تحديث الوقت</button>
+        <button class="tbtn warn" id="btn-neg">سالب</button>
+        <button class="tbtn" id="btn-newinvoice" title="مسح الفاتورة الحالية وبدء فاتورة جديدة">فاتورة جديدة</button>
+        <button class="tbtn primary" id="btn-save">حفظ الفاتورة</button>
       </div>
-      <div class="sheetwrap" id="fatora_sheet" style="max-height:var(--split,300px)"></div>
     </div>
   </div>
 
