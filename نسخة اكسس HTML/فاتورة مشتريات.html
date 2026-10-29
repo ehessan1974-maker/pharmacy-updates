@@ -279,12 +279,16 @@ table.sheet td .edit-in{width:100%;border:1.5px solid var(--focus);padding:1px 5
 .subnote{font-size:11px;color:#8a8781;margin-top:2px}
 .kbd{background:#eceae6;border:1px solid #c2bfba;border-bottom-width:2px;border-radius:3px;padding:0 5px;font-size:10.5px;font-family:Consolas,monospace;color:#333}
 .section-title{font-size:12.5px;font-weight:700;color:var(--acc-dark);border-bottom:1px dashed #c9c6c0;padding-bottom:4px;margin-bottom:2px}
-/* شريط الأزرار أسفل ورقة البيانات (تذييل النموذج كأكسس) */
-.btmbar{
-  flex:none;display:flex;flex-wrap:wrap;gap:6px;align-items:center;
-  border-top:1px solid #c9c6c0;padding-top:8px;
+/* قسم التحكم في القائمة الجانبية: يمدد ويتقلص بالنقر على عنوانه */
+#ctrlgrp{flex:none;margin:4px 8px 0}
+#ctrlgrp .ngrp-body{
+  display:grid;grid-template-columns:1fr;gap:5px;padding:6px 2px 8px;
+  max-height:44vh;overflow-y:auto;
 }
-.btmbar .bsep{flex:none;width:1px;height:22px;background:#c9c6c0;margin:0 4px}
+#ctrlgrp .ngrp-body .tbtn{width:100%;padding:6px 8px;font-size:12px}
+#ctrlgrp.collapsed .ngrp-body{display:none}
+#ctrlgrp .ctrl-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px}
+#ctrlgrp .ctrl-row3 .tbtn{padding:3px 2px;font-size:10.5px;white-space:normal;line-height:1.25}
 .pager{display:flex;gap:6px;align-items:center;font-size:12px;color:#555}
 .pager button{padding:2px 10px}
 .flex1{flex:1}
@@ -301,6 +305,26 @@ table.sheet td .edit-in{width:100%;border:1.5px solid var(--focus);padding:1px 5
 <div id="objtabs">
     <div class="np-head"><span>كائنات البرنامج</span></div>
     <div class="np-search"><input id="np_search" placeholder="بحث في الكائنات..." autocomplete="off"><span class="np-mag">🔍</span></div>
+    <div id="ctrlgrp" class="ngrp collapsed">
+      <div class="ngrp-h" title="انقر لتمديد أو تقليص أدوات التحكم"><span class="chev">▼</span><span>التحكم</span><span class="gcount">13</span></div>
+      <div class="ngrp-body ctrl-body">
+        <button class="tbtn" id="btn-newrow">＋ سجل جديد</button>
+        <button class="tbtn" id="btn-delrow">✖ حذف السطر الحالي</button>
+        <button class="tbtn" id="btn-clearbatch" title="أمر157 — تفريغ حقل رقم الطبخة في فاتورة مشتريات">تفريغ رقم الطبخة</button>
+        <button class="tbtn" id="btn-updrelated" title="تحديث نسب الربح والأسعار من المشتريات">تحديث ما يتعلق بالمشتريات</button>
+        <button class="tbtn" id="btn-editoffers">تعديل العروض في فاتورة المشتريات</button>
+        <button class="tbtn" id="btn-freemerge" title="ضم المجاني إلى الكمية">ضم المجاني إلى الكمية</button>
+        <div class="ctrl-row3">
+          <button class="tbtn" data-split="1700" title="تصغير ورقة البيانات">تسمية48 — تصغير</button>
+          <button class="tbtn" data-split="2700" title="ارتفاع متوسط لورقة البيانات">تسمية51 — متوسط</button>
+          <button class="tbtn" data-split="6746" title="تكبير ورقة البيانات">تسمية49 — تكبير</button>
+        </div>
+        <button class="tbtn" id="btn-updtime" title="تحديث الوقت والتاريخ ورقم الفاتورة">تحديث الوقت</button>
+        <button class="tbtn warn" id="btn-neg">سالب</button>
+        <button class="tbtn" id="btn-newinvoice" title="مسح الفاتورة الحالية وبدء فاتورة جديدة">فاتورة جديدة</button>
+        <button class="tbtn primary" id="btn-save">حفظ الفاتورة</button>
+      </div>
+    </div>
     <div class="np-body" id="np_body"></div>
     <div id="sidecalc">
       <div class="sc-t">حاسبة سريعة</div>
@@ -360,23 +384,6 @@ table.sheet td .edit-in{width:100%;border:1.5px solid var(--focus);padding:1px 5
         <span class="hint">انقر «＋ سجل جديد» ثم حرّر الخلايا مباشرة: نقر مزدوج على الخلية = تحرير | «الشركة/رمز الباركود/عموم معتمد» تُحدَّث في جميع الجداول عبر نقر مزدوج</span>
       </div>
       <div class="sheetwrap" id="fatora_sheet" style="max-height:var(--split,300px)"></div>
-      <div class="btmbar" id="fatora_btnbar">
-        <button class="tbtn" id="btn-newrow">＋ سجل جديد</button>
-        <button class="tbtn" id="btn-delrow">✖ حذف السطر الحالي</button>
-        <button class="tbtn" id="btn-clearbatch" title="أمر157 — تفريغ حقل رقم الطبخة في فاتورة مشتريات">تفريغ رقم الطبخة</button>
-        <button class="tbtn" id="btn-updrelated" title="تحديث نسب الربح والأسعار من المشتريات">تحديث ما يتعلق بالمشتريات</button>
-        <button class="tbtn" id="btn-editoffers">تعديل العروض في فاتورة المشتريات</button>
-        <button class="tbtn" id="btn-freemerge" title="ضم المجاني إلى الكمية">ضم المجاني إلى الكمية</button>
-        <span class="bsep"></span>
-        <button class="tbtn" data-split="1700" style="padding:2px 10px;font-size:11px">تسمية48 — تصغير</button>
-        <button class="tbtn" data-split="2700" style="padding:2px 10px;font-size:11px">تسمية51 — متوسط</button>
-        <button class="tbtn" data-split="6746" style="padding:2px 10px;font-size:11px">تسمية49 — تكبير</button>
-        <span class="flex1"></span>
-        <button class="tbtn" id="btn-updtime" title="تحديث الوقت والتاريخ ورقم الفاتورة">تحديث الوقت</button>
-        <button class="tbtn warn" id="btn-neg">سالب</button>
-        <button class="tbtn" id="btn-newinvoice" title="مسح الفاتورة الحالية وبدء فاتورة جديدة">فاتورة جديدة</button>
-        <button class="tbtn primary" id="btn-save">حفظ الفاتورة</button>
-      </div>
     </div>
   </div>
 
@@ -1372,6 +1379,8 @@ function buildTabs() {
     body.appendChild(grp);
   });
 }
+/* قسم التحكم في القائمة الجانبية: تمديد/تقليص بالنقر على العنوان */
+$('ctrlgrp').querySelector('.ngrp-h').addEventListener('click', () => $('ctrlgrp').classList.toggle('collapsed'));
 
 /* ---------- اللوحة الجانبية: تُفتح وتُغلق بالنقر فقط، وتنزلق من أساس الشريط الأحمر الذي يبقى ظاهرًا بجانبها ---------- */
 const navRail = $('navrail'), navPane = $('objtabs');
