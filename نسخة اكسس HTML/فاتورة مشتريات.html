@@ -57,11 +57,6 @@ body.nav-open #objtabs{transform:none}
   background:linear-gradient(180deg,#efedea,#e2dfda);border-bottom:1px solid #c6c3bd;
   font-weight:700;font-size:12.5px;color:#5a4a4b;
 }
-.np-head .np-shut{
-  margin-inline-start:auto;width:22px;height:22px;display:grid;place-items:center;
-  border-radius:4px;cursor:pointer;color:#6a6762;font-size:14px;border:1px solid transparent;
-}
-.np-head .np-shut:hover{background:#fff;border-color:#c6c3bd;color:var(--acc)}
 /* البحث داخل اللوحة */
 .np-search{flex:none;position:relative;padding:8px 10px;border-bottom:1px solid #e3e0da}
 .np-search input{
@@ -304,7 +299,7 @@ table.sheet td .edit-in{width:100%;border:1.5px solid var(--focus);padding:1px 5
 </div>
 
 <div id="objtabs">
-    <div class="np-head"><span>كائنات البرنامج</span><span class="np-shut" id="np_shut" title="إغلاق القائمة">«</span></div>
+    <div class="np-head"><span>كائنات البرنامج</span></div>
     <div class="np-search"><input id="np_search" placeholder="بحث في الكائنات..." autocomplete="off"><span class="np-mag">🔍</span></div>
     <div class="np-body" id="np_body"></div>
     <div id="sidecalc">
@@ -1391,10 +1386,6 @@ function closeNav() {
 $('navburger').addEventListener('click', e => {
   e.stopPropagation();
   document.body.classList.contains('nav-open') ? closeNav() : openNav();
-});
-$('np_shut').addEventListener('click', e => {
-  e.stopPropagation();
-  closeNav();
 });
 /* النقر خارج الشريط أو اللوحة يغلق القائمة */
 document.addEventListener('click', e => {
