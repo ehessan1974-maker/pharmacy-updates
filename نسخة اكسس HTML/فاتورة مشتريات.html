@@ -788,6 +788,7 @@ function renderSheet(container, opts) {
     cols, rows, curRow = -1, rowHead = true, onCellDblClick, onRowClick, onCellCommit,
     numericCols = [], editableCols = [], page = 0, pageSize = 200, onSelectHeader = null,
     totalsCols = [], newRecord = null, onCellClick = null, onDeleteRow = null,
+    onHeaderDblClick = null, headerDblTips = null,
   } = opts;
   opts._editColsShown = cols.filter(c => editableCols.includes(c));   /* أعمدة قابلة للتحرير معروضة فعلًا */
   container.innerHTML = '';
@@ -807,6 +808,12 @@ function renderSheet(container, opts) {
     th.dataset.col = c;
     if (widths[c]) { th.style.width = widths[c] + 'px'; th.style.minWidth = widths[c] + 'px'; }
     if (onSelectHeader) th.onclick = () => onSelectHeader(c);
+    /* نقر مزدوج على رأس العمود — مثل أحداث DblClick في أكسس (الترتيب: إعادة ترقيم 1..n) */
+    if (onHeaderDblClick) {
+      th.ondblclick = e => { e.preventDefault(); e.stopPropagation(); onHeaderDblClick(c); };
+      th.style.cursor = 'pointer';
+      if (headerDblTips && headerDblTips[c]) th.title = headerDblTips[c];
+    }
     /* مقبض تغيير عرض العمود — مثل أكسس */
     const rs = document.createElement('span');
     rs.className = 'col-rsz';
@@ -1243,6 +1250,12 @@ function renderFatoraSheet(page) {
     cols: FATORA_COLS,
     editableCols: ['ترتيب','المادة','الكمية','المجاني','سعر الشراء','حسم %','قيمة الحسم','السعر الأساسي','أساس العرض','مجاني العرض','حسم العرض','رقم الطبخة','تاريخ الصنع','تاريخ انتهاء الفعالية','ملاحظات','شهر','سنة'],
     onCellCommit: (r, c) => {
+      if (c === 'قيمة الحسم') {
+        /* قيمة_الحسم_AfterUpdate — عكس الاتجاه: اشتقاق حسم% من قيمة الحسم ثم إعادة الحساب */
+        const discBase = nz(r['الكمية']) * nz(r['سعر الشراء']);
+        if (discBase) r['حسم %'] = nz(r['قيمة الحسم']) / discBase * 100;
+        else if (nz(r['قيمة الحسم'])) toast('لا يمكن اشتقاق حسم % — الكمية × سعر الشراء = 0', 'warn');
+      }
       if (c === 'المادة') {
         APP.currentMaterial = r['المادة'] ?? '';
         $('st_mat').textContent = r['المادة'] || '—';
@@ -1261,6 +1274,16 @@ function renderFatoraSheet(page) {
     },
     rows: DB.invoice,
     curRow: APP.curRow,
+    onHeaderDblClick: c => {
+      /* ترتيب_DblClick — إعادة ترقيم كل السطور 1..n (RecordsetClone في أكسس) */
+      if (c !== 'ترتيب') return;
+      renumberOrder();
+      APP.curRow = Math.min(Math.max(APP.curRow, 0), DB.invoice.length - 1);
+      entryFromRow(curInvoiceRow());
+      renderFatoraSheet(); saveDB();
+      toast(`تمت إعادة ترقيم السطور 1..${DB.invoice.length}`, 'ok');
+    },
+    headerDblTips: { 'ترتيب': 'نقر مزدوج: إعادة ترقيم السطور 1..n (كما في أكسس)' },
     numericCols: ['ترتيب','الكمية','المجاني','سعر الشراء','حسم %','قيمة الحسم','الإجمالي قبل الحسم','الإجمالي بعد الحسم','إجمالي الكمية','سعر العميل','السعر الأساسي','عموم معتمد','أساس العرض','مجاني العرض','حسم العرض','السعر الصافي بعد العرض','رقم الطبخة'],
     totalsCols: ['الكمية','المجاني','قيمة الحسم','الإجمالي قبل الحسم','الإجمالي بعد الحسم','إجمالي الكمية'],
     newRecord: {
