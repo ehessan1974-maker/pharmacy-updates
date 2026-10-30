@@ -217,7 +217,7 @@ table.sheet th{
   border-bottom:1px solid #a8a5a0;cursor:default;
 }
 table.sheet th.rowh,table.sheet td.rowh{
-  position:sticky;inset-inline-end:0;z-index:2;background:#efeecd;color:#7a6a00;
+  position:sticky;right:0;z-index:2;background:#efeecd;color:#7a6a00;
   font-size:10.5px;min-width:26px;text-align:center;cursor:pointer;
 }
 table.sheet th.rowh{z-index:4}
@@ -228,6 +228,30 @@ table.sheet tr.cur td.rowh{background:#e3c93f}
 table.sheet td.num{direction:ltr;text-align:center;font-variant-numeric:tabular-nums}
 table.sheet td.neg{color:#b02020}
 table.sheet td .edit-in{width:100%;border:1.5px solid var(--focus);padding:1px 5px;font-family:inherit;font-size:12.5px;outline:none}
+/* ===== سلوك أكسس: تحرير مباشر + سجل جديد (*) + سطر الإجمالي + تغيير عرض الأعمدة ===== */
+table.sheet td.editable{cursor:cell}
+table.sheet td.editable:hover{box-shadow:inset 0 0 0 1.5px #6ba4d8}
+.col-rsz{position:absolute;top:0;inset-inline-end:-4px;width:9px;height:100%;cursor:col-resize;z-index:6;user-select:none;touch-action:none}
+.col-rsz::after{content:'';position:absolute;top:20%;height:60%;left:3px;width:2px;background:transparent}
+.col-rsz:hover::after,.col-rsz.on::after{background:#6ba4d8}
+body.colresizing{cursor:col-resize!important;user-select:none!important}
+body.colresizing *{cursor:col-resize!important}
+table.sheet tr.newrec td{background:#fffef5;color:#a0987a}
+table.sheet tr.newrec td.editable:hover{background:#fff7d6;box-shadow:inset 0 0 0 1.5px #d9c66b}
+table.sheet tr.newrec td.rowh{color:#8a7a00;font-weight:800;font-size:13px}
+table.sheet tfoot td{
+  position:sticky;bottom:0;z-index:2;
+  background:linear-gradient(180deg,#f6f4ef,#e7e4de);
+  font-weight:700;color:#5d4a00;border-top:2px solid #a8a5a0;
+  font-variant-numeric:tabular-nums;
+}
+table.sheet tfoot td.rowh{color:#7a6a00;font-size:12px}
+table.sheet td.rowh .delx{
+  display:none;position:absolute;right:1px;top:50%;transform:translateY(-50%);
+  color:#a4373a;font-size:10px;cursor:pointer;padding:0 2px;line-height:1;
+}
+table.sheet td.rowh:hover .delx{display:inline}
+table.sheet td.rowh .delx:hover{color:#fff;background:#a4373a;border-radius:2px}
 .hint{font-size:11px;color:#777}
 /* مربع إجمالي */
 .totalbox{
@@ -508,7 +532,7 @@ table.sheet td .edit-in{width:100%;border:1.5px solid var(--focus);padding:1px 5
   <span class="st">المادة الحالية: <b id="st_mat">—</b></span>
   <span class="st flex1"></span>
   <span class="st" style="cursor:pointer;text-decoration:underline" onclick="resetAll()" title="حذف البيانات المحفوظة محليًا والعودة للبيانات الأصلية من قاعدة Access">⟲ استعادة البيانات الأصلية</span>
-  <span class="st">اختصارات: <span class="kbd">Ctrl+2</span> مراجعة الفاتورة | <span class="kbd">Ctrl+3</span> مشتريات | <span class="kbd">F3/F4</span> بحث</span>
+  <span class="st">اختصارات: <span class="kbd">Enter</span> سطر جديد | <span class="kbd">Del</span> حذف السطر | <span class="kbd">Ctrl+2</span> مراجعة الفاتورة | <span class="kbd">Ctrl+3</span> مشتريات</span>
 </div>
 
 <div id="modal-back"><div class="dialog" id="dialog"></div></div>
@@ -760,8 +784,18 @@ function fillBatchGaps() {
    محرك أوراق البيانات (Datasheets) — جدول عام قابل للتحرير
    ===================================================================== */
 function renderSheet(container, opts) {
-  const {cols, rows, curRow = -1, rowHead = true, onCellDblClick, onRowClick, onCellCommit, numericCols = [], editableCols = [], page = 0, pageSize = 200, onSelectHeader = null} = opts;
+  const {
+    cols, rows, curRow = -1, rowHead = true, onCellDblClick, onRowClick, onCellCommit,
+    numericCols = [], editableCols = [], page = 0, pageSize = 200, onSelectHeader = null,
+    totalsCols = [], newRecord = null, onCellClick = null, onDeleteRow = null,
+  } = opts;
+  opts._editColsShown = cols.filter(c => editableCols.includes(c));   /* أعمدة قابلة للتحرير معروضة فعلًا */
   container.innerHTML = '';
+  const allWidths = loadColWidths();
+  const widths = allWidths[container.id] || {};
+  const openEditor = (td, r, c, absIdx, seed = '', isNew = false) =>
+    startCellEditor(container, opts, td, r, c, absIdx, seed, isNew);
+
   const tbl = document.createElement('table');
   tbl.className = 'sheet';
   const thead = document.createElement('thead');
@@ -770,24 +804,51 @@ function renderSheet(container, opts) {
   cols.forEach(c => {
     const th = document.createElement('th');
     th.textContent = c;
+    th.dataset.col = c;
+    if (widths[c]) { th.style.width = widths[c] + 'px'; th.style.minWidth = widths[c] + 'px'; }
     if (onSelectHeader) th.onclick = () => onSelectHeader(c);
+    /* مقبض تغيير عرض العمود — مثل أكسس */
+    const rs = document.createElement('span');
+    rs.className = 'col-rsz';
+    rs.title = 'اسحب لتغيير عرض العمود — نقر مزدوج لإعادة الافتراضي';
+    rs.addEventListener('mousedown', ev => startColResize(ev, container, tbl, th, c));
+    rs.addEventListener('dblclick', ev => {
+      ev.preventDefault(); ev.stopPropagation();
+      const m = loadColWidths();
+      if (m[container.id]) { delete m[container.id][c]; saveColWidths(m); }
+      renderSheet(container, opts);
+    });
+    th.appendChild(rs);
     hr.appendChild(th);
   });
   thead.appendChild(hr); tbl.appendChild(thead);
   const tbody = document.createElement('tbody');
   const slice = rows.slice(page * pageSize, page * pageSize + pageSize);
   slice.forEach((r, idx) => {
+    const absIdx = page * pageSize + idx;
     const tr = document.createElement('tr');
+    if (absIdx === curRow) tr.classList.add('cur');
     if (rowHead) {
       const tdh = document.createElement('td');
       tdh.className = 'rowh';
-      tdh.textContent = page * pageSize + idx + 1;
-      if (page * pageSize + idx === curRow) tr.classList.add('cur');
-      tdh.onclick = () => onRowClick && onRowClick(page * pageSize + idx);
+      const no = document.createElement('span');
+      no.textContent = absIdx + 1;
+      tdh.appendChild(no);
+      if (onDeleteRow) {
+        const x = document.createElement('span');
+        x.className = 'delx'; x.textContent = '✕';
+        x.title = 'حذف هذا السطر';
+        x.onclick = e => { e.stopPropagation(); onDeleteRow(absIdx); };
+        tdh.appendChild(x);
+        tdh.oncontextmenu = e => { e.preventDefault(); e.stopPropagation(); onDeleteRow(absIdx); };
+        tdh.title = 'انقر لتحديد السطر — ✕ أو النقر الأيمن للحذف';
+      }
+      tdh.onclick = () => onRowClick && onRowClick(absIdx);
       tr.appendChild(tdh);
     }
     cols.forEach(c => {
       const td = document.createElement('td');
+      td.dataset.col = c; td.dataset.row = absIdx;
       let v = r[c];
       if (numericCols.includes(c)) {
         td.classList.add('num');
@@ -799,41 +860,243 @@ function renderSheet(container, opts) {
       }
       if (editableCols.includes(c)) {
         td.classList.add('editable');
-        td.title = 'نقر مزدوج للتحرير';
-        td.ondblclick = e => {
+        td.title = 'انقر للتحرير المباشر — Enter للسطر التالي';
+        td.onclick = e => {
           e.stopPropagation();
-          const old = r[c] ?? '';
-          td.innerHTML = '';
-          const inp = document.createElement('input');
-          inp.className = 'edit-in';
-          inp.value = old;
-          td.appendChild(inp);
-          inp.focus(); inp.select();
-          const commit = () => {
-            let nv = inp.value;
-            if (numericCols.includes(c)) { const n = parseFloat(nv); nv = isNaN(n) ? null : n; }
-            r[c] = nv === '' ? null : nv;
-            onCellCommit && onCellCommit(r, c, nv, old);
-            renderSheet(container, opts);
-          };
-          inp.onblur = commit;
-          inp.onkeydown = e => { if (e.key === 'Enter') inp.blur(); if (e.key === 'Escape') { inp.onblur = null; renderSheet(container, opts); } };
+          const open = container.querySelector('.edit-in');
+          if (open) { requestSheetNav(container.id, absIdx, c); open.blur(); return; }
+          if (onCellClick) onCellClick(absIdx, c, tr, td);
+          openEditor(td, r, c, absIdx, '');
         };
+        td.ondblclick = e => { e.stopPropagation(); openEditor(td, r, c, absIdx, ''); };
+      } else if (onCellDblClick) {
+        td.ondblclick = e => { e.stopPropagation(); onCellDblClick(r, c, absIdx); };
       }
-      if (onCellDblClick && !editableCols.includes(c)) td.ondblclick = e => { e.stopPropagation(); onCellDblClick(r, c, page * pageSize + idx); };
       tr.appendChild(td);
     });
-    tr.onclick = () => onRowClick && onRowClick(page * pageSize + idx);
+    tr.onclick = () => onRowClick && onRowClick(absIdx);
     tbody.appendChild(tr);
   });
+  /* ---- سطر السجل الجديد (*) — دائمًا جاهز للكتابة مثل أكسس ---- */
+  if (newRecord) {
+    const trn = document.createElement('tr');
+    trn.className = 'newrec';
+    if (rowHead) {
+      const tdh = document.createElement('td');
+      tdh.className = 'rowh';
+      tdh.textContent = '*';
+      tdh.title = 'سجل جديد — انقر لبدء الإدخال مباشرة';
+      tdh.onclick = e => {
+        e.stopPropagation();
+        const open = container.querySelector('.edit-in');
+        if (open) { open.blur(); return; }
+        if (newRecord.make) {
+          /* مثل أكسس: السجل لا يُنشأ إلا عند بدء الكتابة — نفتح المحرر في سطر (*) فقط */
+          requestSheetNav(container.id, 0, 'المادة', '', true);
+          renderSheet(container, opts);
+        }
+      };
+      trn.appendChild(tdh);
+    }
+    cols.forEach(c => {
+      const td = document.createElement('td');
+      td.dataset.col = c; td.dataset.row = 'new';
+      if (editableCols.includes(c)) {
+        td.classList.add('editable');
+        td.title = 'اكتب هنا لإضافة سجل جديد فورًا';
+        td.onclick = e => {
+          e.stopPropagation();
+          const open = container.querySelector('.edit-in');
+          if (open) { requestSheetNav(container.id, 0, c, '', true); open.blur(); return; }
+          openEditor(td, {}, c, -1, '', true);
+        };
+      }
+      trn.appendChild(td);
+    });
+    tbody.appendChild(trn);
+  }
   tbl.appendChild(tbody);
   container.appendChild(tbl);
-  if (!slice.length) {
+  /* ---- سطر الإجمالي (Σ) المثبت في الأسفل — مثل صف الإجمالي في أكسس ---- */
+  if (totalsCols && totalsCols.length) {
+    const tfoot = document.createElement('tfoot');
+    const trf = document.createElement('tr');
+    const tdh = document.createElement('td');
+    tdh.className = 'rowh';
+    tdh.textContent = 'Σ';
+    tdh.title = 'سطر الإجمالي — مجموع الأعمدة الرقمية';
+    trf.appendChild(tdh);
+    cols.forEach(c => {
+      const td = document.createElement('td');
+      if (totalsCols.includes(c)) {
+        td.classList.add('num');
+        const s = rows.reduce((acc, r) => acc + (parseFloat(r[c]) || 0), 0);
+        td.textContent = fmt(s);
+        td.title = 'الإجمالي: ' + c;
+      }
+      trf.appendChild(td);
+    });
+    tfoot.appendChild(trf);
+    tbl.appendChild(tfoot);
+  }
+  if (!slice.length && !newRecord) {
     const d = document.createElement('div');
     d.style.cssText = 'padding:18px;text-align:center;color:#888';
     d.textContent = 'لا توجد سجلات';
     container.appendChild(d);
   }
+  /* ---- تنفيذ التنقل المؤجل بعد إعادة البناء (Enter / Tab / الأسهم) ---- */
+  if (sheetPendingNav && sheetPendingNav.containerId === container.id) {
+    const nav = sheetPendingNav;
+    sheetPendingNav = null;
+    if (nav.newRec && newRecord) {
+      const td = tbody.querySelector('tr.newrec td[data-col="' + nav.col + '"]');
+      if (td) { td.scrollIntoView({block: 'nearest', inline: 'nearest'}); openEditor(td, {}, nav.col, -1, nav.seed || '', true); }
+    } else if (!nav.newRec && nav.row >= 0 && nav.row < rows.length) {
+      const td = tbody.querySelector('td[data-row="' + nav.row + '"][data-col="' + nav.col + '"]');
+      if (td) {
+        td.scrollIntoView({block: 'nearest', inline: 'nearest'});
+        if (onCellClick) onCellClick(nav.row, nav.col, td.closest('tr'), td);
+        openEditor(td, rows[nav.row], nav.col, nav.row, nav.seed || '', false);
+      }
+    }
+  }
+}
+
+/* ---------- عرض الأعمدة المحفوظة (تغيير عرض الأعمدة بالسحب — مثل أكسس) ---------- */
+const COLW_KEY = 'fatora_mushtariat_colwidths_v1';
+function loadColWidths() {
+  try { return JSON.parse(localStorage.getItem(COLW_KEY)) || {}; } catch (e) { return {}; }
+}
+function saveColWidths(map) {
+  try { localStorage.setItem(COLW_KEY, JSON.stringify(map)); } catch (e) {}
+}
+/* التنقل بين الخلايا بعد إعادة بناء الجدول (Enter/Tab/الأسهم — مثل أكسس) */
+let sheetPendingNav = null;   /* {containerId, row, col, seed, newRec} */
+function requestSheetNav(containerId, row, col, seed = '', newRec = false) {
+  sheetPendingNav = {containerId, row, col, seed, newRec};
+}
+/* سحب مقبض عرض العمود */
+function startColResize(ev, container, tbl, th, col) {
+  ev.preventDefault(); ev.stopPropagation();
+  const rs = ev.target;
+  rs.classList.add('on');
+  document.body.classList.add('colresizing');
+  const startX = ev.clientX;
+  const startW = th.getBoundingClientRect().width;
+  const dir = document.documentElement.getAttribute('dir') === 'rtl' ? -1 : 1;
+  const cells = [...tbl.querySelectorAll('td[data-col]')].filter(td => td.dataset.col === col);
+  let lastW = startW;
+  const move = e => {
+    lastW = Math.max(36, Math.min(900, startW + dir * (e.clientX - startX)));
+    th.style.width = lastW + 'px'; th.style.minWidth = lastW + 'px';
+    cells.forEach(td => { td.style.width = lastW + 'px'; });
+  };
+  const up = () => {
+    document.removeEventListener('mousemove', move);
+    document.removeEventListener('mouseup', up);
+    rs.classList.remove('on');
+    document.body.classList.remove('colresizing');
+    const m = loadColWidths();
+    m[container.id] = m[container.id] || {};
+    m[container.id][col] = Math.round(lastW);
+    saveColWidths(m);
+  };
+  document.addEventListener('mousemove', move);
+  document.addEventListener('mouseup', up);
+}
+/* محرر الخلية المباشر + التنقل بمفاتيح أكسس (Enter للأسفل، Tab يمينًا، الأسهم) */
+function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = false) {
+  if (td.querySelector('.edit-in')) return;
+  let row = r, idx = absIdx, fresh = isNew;   /* fresh: سطر (*) لم يتحول إلى سجل بعد */
+  const old = isNew ? '' : (r[c] ?? '');
+  const ec = (opts._editColsShown && opts._editColsShown.length) ? opts._editColsShown : [c];
+  td.innerHTML = '';
+  const inp = document.createElement('input');
+  inp.className = 'edit-in';
+  inp.value = seed !== '' ? seed : old;
+  td.appendChild(inp);
+  inp.focus();
+  if (seed === '') inp.select();
+  else inp.setSelectionRange(inp.value.length, inp.value.length);
+  /* مثل أكسس: يتحول سطر (*) إلى سجل حقيقي فور بدء الكتابة */
+  const materialize = () => {
+    if (!fresh) return;
+    fresh = false;
+    if (opts.newRecord && opts.newRecord.make) {
+      row = opts.newRecord.make(c, inp.value) || row;
+      idx = opts.rows.length - 1;
+    }
+  };
+  inp.addEventListener('input', materialize);
+  const commit = () => {
+    if (!inp.onblur) return;
+    inp.onblur = null;
+    const hadValue = String(inp.value).trim() !== '';
+    if (fresh) {
+      if (!hadValue) { renderSheet(container, opts); return; }
+      materialize();
+    }
+    let nv = inp.value;
+    if (opts.numericCols.includes(c)) { const n = parseFloat(nv); nv = isNaN(n) ? null : n; }
+    /* سجل جديد لم تُدخل فيه أي قيمة على الإطلاق — يُلغى تلقائيًا كما في أكسس */
+    if (row._newPending && !hadValue && !row._dirty && opts.newRecord && opts.newRecord.undo) {
+      opts.newRecord.undo(row);
+      renderSheet(container, opts);
+      return;
+    }
+    if (hadValue) row._dirty = true;
+    row[c] = nv === '' ? null : nv;
+    if (row._newPending) row._newPending = false;
+    opts.onCellCommit && opts.onCellCommit(row, c, nv, old);
+    renderSheet(container, opts);
+  };
+  const cancel = () => {
+    inp.onblur = null;
+    if (!fresh && row && row._newPending && !row._dirty && opts.newRecord && opts.newRecord.undo)
+      opts.newRecord.undo(row);          /* Esc يلغي السجل الجديد الذي لم يُدخل فيه شيء — كما في أكسس */
+    renderSheet(container, opts);
+  };
+  inp.onblur = commit;
+  inp.onkeydown = e => {
+    const last = opts.rows.length - 1;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (!fresh && idx + 1 < opts.rows.length) requestSheetNav(container.id, idx + 1, c);
+      else if (opts.newRecord) requestSheetNav(container.id, 0, c, '', true);
+      else return;
+      inp.blur();
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      const j = ec.indexOf(c);
+      if (e.shiftKey) {
+        if (fresh) { if (last >= 0) { requestSheetNav(container.id, last, ec[ec.length - 1]); cancel(); } return; }
+        if (j > 0) requestSheetNav(container.id, idx, ec[j - 1]);
+        else if (idx > 0) requestSheetNav(container.id, idx - 1, ec[ec.length - 1]);
+        else return;
+        inp.blur();
+      } else {
+        if (fresh) { requestSheetNav(container.id, 0, ec[j + 1] || ec[0], '', true); inp.blur(); return; }
+        if (j < ec.length - 1) requestSheetNav(container.id, idx, ec[j + 1]);
+        else if (idx + 1 < opts.rows.length) requestSheetNav(container.id, idx + 1, ec[0]);
+        else if (opts.newRecord) { requestSheetNav(container.id, 0, ec[0], '', true); inp.blur(); return; }
+        else return;
+        inp.blur();
+      }
+    } else if (e.key === 'ArrowDown' && !e.shiftKey) {
+      e.preventDefault();
+      if (fresh) return;
+      if (idx + 1 < opts.rows.length) { requestSheetNav(container.id, idx + 1, c); inp.blur(); }
+      else if (opts.newRecord) { requestSheetNav(container.id, 0, c, '', true); inp.blur(); }
+    } else if (e.key === 'ArrowUp' && !e.shiftKey) {
+      e.preventDefault();
+      if (fresh) { if (last >= 0) { requestSheetNav(container.id, last, c); cancel(); } return; }
+      if (idx - 1 >= 0) { requestSheetNav(container.id, idx - 1, c); inp.blur(); }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancel();
+    }
+  };
 }
 
 /* ---------- حالة التطبيق ---------- */
@@ -973,7 +1236,8 @@ function rowFromEntry(r) {
 
 /* ---------- عرض ورقة بيانات الفاتورة ---------- */
 const FATORA_COLS = ['ترتيب','المادة','الشركة','رمز الباركود','الكمية','المجاني','سعر الشراء','حسم %','قيمة الحسم','الإجمالي قبل الحسم','الإجمالي بعد الحسم','إجمالي الكمية','سعر العميل','السعر الأساسي','عموم معتمد','أساس العرض','مجاني العرض','حسم العرض','السعر الصافي بعد العرض','رقم الطبخة','تاريخ الصنع','تاريخ انتهاء الفعالية','ملاحظات'];
-function renderFatoraSheet(page = 0) {
+function renderFatoraSheet(page) {
+  if (page === undefined) page = APP.curRow >= 0 ? Math.floor(APP.curRow / 200) : 0;
   renderSheet($('fatora_sheet'), {
     page,
     cols: FATORA_COLS,
@@ -998,6 +1262,35 @@ function renderFatoraSheet(page = 0) {
     rows: DB.invoice,
     curRow: APP.curRow,
     numericCols: ['ترتيب','الكمية','المجاني','سعر الشراء','حسم %','قيمة الحسم','الإجمالي قبل الحسم','الإجمالي بعد الحسم','إجمالي الكمية','سعر العميل','السعر الأساسي','عموم معتمد','أساس العرض','مجاني العرض','حسم العرض','السعر الصافي بعد العرض','رقم الطبخة'],
+    totalsCols: ['الكمية','المجاني','قيمة الحسم','الإجمالي قبل الحسم','الإجمالي بعد الحسم','إجمالي الكمية'],
+    newRecord: {
+      make: c => {
+        const r = newInvoiceRow();
+        r['ترتيب'] = DB.invoice.reduce((m, x) => Math.max(m, nz(x['ترتيب'])), 0) + 1;
+        r['الكمية'] = 1; r['المجاني'] = 0; r['حسم %'] = 0;
+        const d = new Date(); d.setFullYear(d.getFullYear() - 1);
+        r['تاريخ الصنع'] = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+        r._newPending = true;
+        DB.invoice.push(r);
+        APP.curRow = DB.invoice.length - 1;
+        return r;
+      },
+      undo: () => {
+        /* حذف في المكان — لا نستبدل مرجع المصفوفة كي تبقى opts.rows صالحة */
+        for (let i = DB.invoice.length - 1; i >= 0; i--)
+          if (DB.invoice[i]._newPending) DB.invoice.splice(i, 1);
+        APP.curRow = DB.invoice.length - 1;
+        entryFromRow(curInvoiceRow());
+      },
+    },
+    onCellClick: (i, c, tr) => {
+      APP.curRow = i;
+      $('st_cur').textContent = i + 1;
+      $('fatora_sheet').querySelectorAll('tr.cur').forEach(x => x.classList.remove('cur'));
+      if (tr) tr.classList.add('cur');
+      entryFromRow(DB.invoice[i]);
+    },
+    onDeleteRow: i => deleteInvoiceRow(i),
     onRowClick: i => { APP.curRow = i; entryFromRow(DB.invoice[i]); renderFatoraSheet(); },
     onCellDblClick: async (r, c) => {
       // نقر مزدوج على الخلايا الخاصة
@@ -1015,6 +1308,20 @@ function renderFatoraSheet(page = 0) {
   });
   $('st_count').textContent = DB.invoice.length;
   $('st_cur').textContent = APP.curRow >= 0 ? (APP.curRow + 1) : '—';
+}
+
+/* ---------- حذف سطر من الفاتورة مع تأكيد — مثل حذف سجل في أكسس ---------- */
+async function deleteInvoiceRow(i) {
+  const r = DB.invoice[i];
+  if (!r) return;
+  const ok = await vbYesNoCancel(`سيتم حذف السطر رقم ${i + 1}${r['المادة'] ? ' — ' + r['المادة'] : ''}\nهل أنت متأكد؟`, 'حذف سجل');
+  if (ok !== 'yes') return;
+  DB.invoice.splice(i, 1);
+  APP.curRow = Math.min(i, DB.invoice.length - 1);
+  entryFromRow(curInvoiceRow());
+  renderFatoraSheet();
+  saveDB();
+  toast('تم حذف السطر', 'ok');
 }
 
 /* ---------- تعديلات عبر InputBox (كما في Access) ---------- */
@@ -1666,8 +1973,10 @@ function renderOffersSheet() {
   renderSheet($('offers_sheet'), {
     cols: OFFERS_COLS, rows: DB.invoice,
     curRow: APP.curRow,
+    editableCols: OFFERS_COLS.filter(c => c !== 'ترتيب'),
     numericCols: ['ترتيب','السعر الأساسي','أساس العرض','مجاني العرض','حسم العرض','السعر الصافي بعد العرض'],
     onCellCommit: r => { netAfterOffer(r); renderOffersSheet(); renderFatoraSheet(); entryFromRow(curInvoiceRow()); saveDB(); },
+    onCellClick: i => { APP.curRow = i; entryFromRow(DB.invoice[i]); },
     onRowClick: i => { APP.curRow = i; entryFromRow(DB.invoice[i]); renderFatoraSheet(); },
   });
 }
@@ -1724,7 +2033,7 @@ function bindEvents() {
     APP.curRow = DB.invoice.length - 1;
     renderFatoraSheet(Math.floor((DB.invoice.length - 1) / 200));
     saveDB();
-    toast('أُضيف سجل جديد — انقر مزدوجًا على خلية «المادة» واكتب اسمها', 'ok');
+    toast('أُضيف سجل جديد — أو اكتب مباشرة في السطر (*) بالأسفل', 'ok');
   };
   /* --- الحاسبة السريعة في القائمة الجانبية (بديل حاسبة Eval بالنموذج) --- */
   const scDisp = $('sc_disp');
@@ -1828,6 +2137,15 @@ function bindEvents() {
   document.addEventListener('keydown', e => {
     if (e.ctrlKey && e.key === '2') { e.preventDefault(); tathbitAlnamaz(); openWindow('win-purchases'); }
     else if (e.ctrlKey && e.key === '3') { e.preventDefault(); openWindow('win-purchases'); }
+  });
+  /* --- حذف السطر الحالي بمفتاح Delete (كما في أكسس — خارج حقول الإدخال) --- */
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Delete') return;
+    if (activeDoc !== 'win-fatora' || APP.curRow < 0) return;
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+    e.preventDefault();
+    deleteInvoiceRow(APP.curRow);
   });
 }
 
