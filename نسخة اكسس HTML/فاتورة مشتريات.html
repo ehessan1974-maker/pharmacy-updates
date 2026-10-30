@@ -180,6 +180,8 @@ body.nav-open #objtabs{transform:none}
 /* ===== حقول ===== */
 .field{display:flex;flex-direction:column;gap:3px;min-width:0}
 .field>label{font-size:11.5px;color:var(--label);font-weight:600}
+/* تسميات رأس الفاتورة مائلة قليلًا مثل أكسس — ميل عربي: قمة الحرف لليسار (متل الزحليطة) */
+#win-fatora .fatora-head .field>label{font-style:oblique -12deg}
 .field .ctl{position:relative}
 input.i,select.i,textarea.i{
   width:100%;border:1px solid #a6a29b;background:#fff;border-radius:2px;
@@ -391,15 +393,15 @@ table.sheet td.rowh .delx:hover{color:#fff;background:#a4373a;border-radius:2px}
   <div class="window" id="win-fatora">
     <div class="win-head"><span class="dot"></span>فاتورة مشتريات</div>
     <div class="win-body">
-      <div class="groupbox" style="margin-top:6px">
+      <div class="groupbox fatora-head" style="margin-top:6px">
         <span class="gtitle">بيانات الفاتورة</span>
         <div class="grid3">
-          <div class="field"><label>من (نص_من)</label><div class="ctl"><input class="i" id="f_from" list="dl_from"></div><datalist id="dl_from"></datalist></div>
+          <div class="field"><label>من</label><div class="ctl"><input class="i" id="f_from" list="dl_from"></div><datalist id="dl_from"></datalist></div>
           <div class="field"><label>التاريخ</label><div class="ctl"><input class="i" id="f_date" type="date"></div></div>
-          <div class="field"><label>المستخدم (نص_المستخدم)</label><div class="ctl"><input class="i" id="f_user" list="dl_users"></div><datalist id="dl_users"></datalist></div>
-          <div class="field"><label>إلى (نص_إلى)</label><div class="ctl"><input class="i" id="f_to" list="dl_to"></div><datalist id="dl_to"></datalist></div>
+          <div class="field"><label>المستخدم</label><div class="ctl"><input class="i" id="f_user" list="dl_users"></div><datalist id="dl_users"></datalist></div>
+          <div class="field"><label>إلى</label><div class="ctl"><input class="i" id="f_to" list="dl_to"></div><datalist id="dl_to"></datalist></div>
           <div class="field"><label>الوقت</label><div class="ctl"><input class="i" id="f_time" type="time" step="1"></div></div>
-          <div class="field"><label>رقم الفاتورة (نص_رقم_الفاتورة) — <span class="kbd">Alt+↓</span> للبحث</label><div class="ctl"><input class="i" id="f_invoiceno" list="dl_invoices" placeholder="مستودع ... التاريخ الوقت"><datalist id="dl_invoices"></datalist></div></div>
+          <div class="field"><label>رقم الفاتورة</label><div class="ctl"><input class="i" id="f_invoiceno" list="dl_invoices" placeholder="مستودع ... التاريخ الوقت"><datalist id="dl_invoices"></datalist></div></div>
         </div>
       </div>
 
