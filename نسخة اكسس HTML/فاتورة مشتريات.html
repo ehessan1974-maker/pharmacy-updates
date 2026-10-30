@@ -70,12 +70,14 @@ body.nav-open #objtabs{transform:none}
 .np-body::-webkit-scrollbar{width:9px}
 .np-body::-webkit-scrollbar-thumb{background:#c9c6c0;border-radius:5px;border:2px solid #f6f5f3}
 .np-body::-webkit-scrollbar-track{background:transparent}
-/* الحاسبة السريعة أسفل لوحة الكائنات */
+/* الحاسبة السريعة أسفل لوحة الكائنات — تُظهر/تُخفى من عنوانها مثل مجموعات الكائنات */
 #sidecalc{
   flex:none;border-top:1px solid #c6c3bd;background:linear-gradient(180deg,#efedea,#e6e3de);
-  padding:7px 8px 9px;display:flex;flex-direction:column;gap:6px;
+  padding:0 8px 9px;
 }
-#sidecalc .sc-t{font-size:11.5px;font-weight:700;color:#5a4a4b}
+#sidecalc .ngrp-h{margin-top:2px;border-bottom-color:#d5d2cc}
+#sidecalc .sc-body{display:flex;flex-direction:column;gap:6px;padding:7px 0 2px}
+#sidecalc.collapsed .sc-body{display:none}
 #sidecalc .sc-disp{
   width:100%;direction:ltr;text-align:center;font-family:Consolas,monospace;font-size:14px;
   border:1px solid #a6a29b;border-radius:3px;padding:4px 7px;background:#fffbe8;outline:none;
@@ -352,8 +354,9 @@ table.sheet td.rowh .delx:hover{color:#fff;background:#a4373a;border-radius:2px}
       </div>
     </div>
     <div class="np-body" id="np_body"></div>
-    <div id="sidecalc">
-      <div class="sc-t">حاسبة سريعة</div>
+    <div id="sidecalc" class="ngrp">
+      <div class="ngrp-h" id="sc_head" title="انقر لإظهار أو إخفاء الحاسبة — مثل مجموعات الكائنات"><span class="chev">▼</span><span>حاسبة سريعة</span></div>
+      <div class="ngrp-body sc-body">
       <input class="sc-disp" id="sc_disp" placeholder="0" autocomplete="off" spellcheck="false">
       <div class="sc-grid" id="sc_grid">
         <button class="cl" data-k="C">C</button>
@@ -376,6 +379,7 @@ table.sheet td.rowh .delx:hover{color:#fff;background:#a4373a;border-radius:2px}
         <button data-k=".">.</button>
         <button data-k="B">⌫</button>
         <button class="eq" data-k="=">=</button>
+      </div>
       </div>
     </div>
 </div>
@@ -1718,6 +1722,11 @@ $('ctrlgrp').querySelector('.ngrp-h').addEventListener('click', () => {
   const c = $('ctrlgrp').classList.toggle('collapsed');
   saveUIPrefs({ ctrlCollapsed: c });
 });
+/* الحاسبة السريعة: إظهار/إخفاء بالنقر على عنوانها — مثل مجموعات الكائنات */
+$('sc_head').addEventListener('click', () => {
+  const c = $('sidecalc').classList.toggle('collapsed');
+  saveUIPrefs({ calcCollapsed: c });
+});
 
 /* ---------- حفظ واستعادة خيارات المستخدم في القائمة الجانبية وعناصرها ---------- */
 const UI_KEY = 'fatora_mushtariat_uiprefs_v1';
@@ -1738,6 +1747,8 @@ function restoreUIPrefs() {
         grp.classList.toggle('collapsed', p.groups[grp.dataset.grp]);
     });
   if (typeof p.calc === 'string') $('sc_disp').value = p.calc;      /* الحاسبة السريعة */
+  if (typeof p.calcCollapsed === 'boolean')                         /* الحاسبة: مخفية/ظاهرة */
+    $('sidecalc').classList.toggle('collapsed', p.calcCollapsed);
 }
 
 /* ---------- اللوحة الجانبية: تُفتح وتُغلق بالنقر فقط، وتنزلق من أساس الشريط الأحمر الذي يبقى ظاهرًا بجانبها ---------- */
