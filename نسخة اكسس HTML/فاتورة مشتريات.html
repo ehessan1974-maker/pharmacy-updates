@@ -332,10 +332,8 @@ table.sheet td.rowh .delx:hover{color:#fff;background:#a4373a;border-radius:2px}
     <div class="np-head"><span>كائنات البرنامج</span></div>
     <div class="np-search"><input id="np_search" placeholder="بحث في الكائنات..." autocomplete="off"><span class="np-mag">🔍</span></div>
     <div id="ctrlgrp" class="ngrp collapsed">
-      <div class="ngrp-h" title="انقر لتمديد أو تقليص أدوات التحكم"><span class="chev">▼</span><span>التحكم</span><span class="gcount">13</span></div>
+      <div class="ngrp-h" title="انقر لتمديد أو تقليص أدوات التحكم"><span class="chev">▼</span><span>التحكم</span><span class="gcount">11</span></div>
       <div class="ngrp-body ctrl-body">
-        <button class="tbtn" id="btn-newrow">＋ سجل جديد</button>
-        <button class="tbtn" id="btn-delrow">✖ حذف السطر الحالي</button>
         <button class="tbtn" id="btn-clearbatch" title="أمر157 — تفريغ حقل رقم الطبخة في فاتورة مشتريات">تفريغ رقم الطبخة</button>
         <button class="tbtn" id="btn-updrelated" title="تحديث نسب الربح والأسعار من المشتريات">تحديث ما يتعلق بالمشتريات</button>
         <button class="tbtn" id="btn-editoffers">تعديل العروض في فاتورة المشتريات</button>
@@ -2022,19 +2020,6 @@ function bindEvents() {
   };
   $('btn-neg').onclick = salib;
 
-  /* --- أدوات سطر الفاتورة (الإدخال والتحرير المباشر في ورقة البيانات) --- */
-  $('btn-newrow').onclick = () => {
-    const r = newInvoiceRow();
-    r['ترتيب'] = DB.invoice.reduce((m, x) => Math.max(m, nz(x['ترتيب'])), 0) + 1;
-    r['الكمية'] = 1; r['المجاني'] = 0; r['حسم %'] = 0;
-    const d = new Date(); d.setFullYear(d.getFullYear() - 1);
-    r['تاريخ الصنع'] = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
-    DB.invoice.push(r);
-    APP.curRow = DB.invoice.length - 1;
-    renderFatoraSheet(Math.floor((DB.invoice.length - 1) / 200));
-    saveDB();
-    toast('أُضيف سجل جديد — أو اكتب مباشرة في السطر (*) بالأسفل', 'ok');
-  };
   /* --- الحاسبة السريعة في القائمة الجانبية (بديل حاسبة Eval بالنموذج) --- */
   const scDisp = $('sc_disp');
   const scPersist = () => saveUIPrefs({ calc: scDisp.value });
@@ -2059,13 +2044,6 @@ function bindEvents() {
   scDisp.addEventListener('keydown', e => {
     if (e.key === 'Enter') { e.preventDefault(); scEval(); }
   });
-  $('btn-delrow').onclick = () => {
-    if (APP.curRow < 0) return;
-    DB.invoice.splice(APP.curRow, 1);
-    APP.curRow = Math.min(APP.curRow, DB.invoice.length - 1);
-    entryFromRow(curInvoiceRow());
-    renderFatoraSheet(); saveDB();
-  };
   $('btn-clearbatch').onclick = () => {
     DB.invoice.forEach(r => r['رقم الطبخة'] = null);
     renderFatoraSheet(); saveDB(); toast('تم تفريغ حقل رقم الطبخة', 'ok');
