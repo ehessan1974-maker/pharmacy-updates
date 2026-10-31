@@ -337,6 +337,8 @@ table.sheet td.rowh .delx:hover{color:#fff;background:#a4373a;border-radius:2px}
 .combo-list.mat-list .opt{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .combo-list.mat-list .mname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .combo-list.mat-list .mcomp{flex:none;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#8a8781}
+.combo-list.mat-list .mprice{flex:none;font-size:11px;color:#4a4a46;font-variant-numeric:tabular-nums}
+.combo-list.mat-list .mhint{padding:3px 9px;font-size:10.5px;color:#8a8781;background:#f6f5f2;border-bottom:1px solid #eceae6;position:sticky;top:0}
 .subnote{font-size:11px;color:#8a8781;margin-top:2px}
 .kbd{background:#eceae6;border:1px solid #c2bfba;border-bottom-width:2px;border-radius:3px;padding:0 5px;font-size:10.5px;font-family:Consolas,monospace;color:#333}
 .section-title{font-size:12.5px;font-weight:700;color:var(--acc-dark);border-bottom:1px dashed #c9c6c0;padding-bottom:4px;margin-bottom:2px}
@@ -1194,8 +1196,8 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
     const closeMatList = () => { if (mlist) { mlist.remove(); mlist = null; } mhl = -1; };
     const hlMat = () => {
       if (!mlist) return;
-      [...mlist.children].forEach((el, i) => el.classList.toggle('hl', i === mhl));
-      if (mlist.children[mhl]) mlist.children[mhl].scrollIntoView({ block: 'nearest' });
+      [...mlist.querySelectorAll('.opt')].forEach((el, i) => el.classList.toggle('hl', i === mhl));
+      if (mlist.querySelectorAll('.opt')[mhl]) mlist.querySelectorAll('.opt')[mhl].scrollIntoView({ block: 'nearest' });
     };
     const pickMat = i => {
       const cd = mitems[i];
@@ -1205,16 +1207,19 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
       if (fresh) materialize();
       commit();
     };
-    const buildMatList = () => {
+    const buildMatList = mode => {
       closeMatList();
       const q = String(inp.value).trim();
-      if (!q) return;
+      const forced = mode === 'f3' || mode === 'f4';
+      if (!q && !forced) return;   /* F3/F4 بنص فارغ = كل المواد كما في LIKE '*' في أكسس */
       const rx = accLike('*' + q + '*');   /* المادة ورمز الباركود: Like '*نص*' — مع دعم * و ? داخل النص */
       const qL = q.toLowerCase();
       const seen = new Set();
       mitems = DB.cards
         .filter(cd => {
           const m = String(cd['المادة'] ?? '');
+          /* المادة_KeyDown F4 (س186): WHERE المادة LIKE '*نص*' — بالاسم فقط */
+          if (mode === 'f4') return rx.test(m);
           const rc = String(cd['الرمز'] ?? '');
           const bc = String(cd['رمز الباركود'] ?? '');
           /* الرمز = 'نص' مطابقة تامة بلا أحرف بدل — كما في HAVING في أكسس */
@@ -1225,14 +1230,24 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
           const k = cd['المادة'] + '||' + cd['الشركة'];
           if (seen.has(k)) return false; seen.add(k); return true;
         })
-        .slice(0, 30);
+        .slice(0, 200);
       if (!mitems.length) return;
       mlist = document.createElement('div');
       mlist.className = 'combo-list mat-list';
+      if (forced) {   /* شريط تلميح يوضح وضع البحث الحالي كما في إطار446 */
+        const h = document.createElement('div');
+        h.className = 'mhint';
+        h.textContent = mode === 'f4'
+          ? 'F4 — بطاقة تفصيلية: بحث بالاسم فقط (المادة Like \'*نص*\')'
+          : 'F3 — بحث موسع: المادة / الرمز (مطابقة تامة) / رمز الباركود';
+        mlist.appendChild(h);
+      }
       mitems.forEach((cd, i) => {
         const o = document.createElement('div');
         o.className = 'opt';
-        o.innerHTML = `<span class="mname">${escHtml(cd['المادة'])}</span><span class="mcomp">${escHtml(cd['الشركة'] ?? '')}</span>`;
+        o.innerHTML = mode === 'f4'
+          ? `<span class="mname">${escHtml(cd['المادة'])}</span><span class="mprice">${escHtml(cd['السعر الأساسي'] == null ? '' : cd['السعر الأساسي'])}</span><span class="mcomp">${escHtml(cd['الشركة'] ?? '')}</span>`
+          : `<span class="mname">${escHtml(cd['المادة'])}</span><span class="mcomp">${escHtml(cd['الشركة'] ?? '')}</span>`;
         o.addEventListener('mousedown', ev => { ev.preventDefault(); ev.stopPropagation(); pickMat(i); });
         mlist.appendChild(o);
       });
@@ -1245,15 +1260,21 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
       mlist.style.left = Math.max(4, rect.right - w) + 'px';   /* RTL: من نهاية الخلية */
       mhl = 0; hlMat();
     };
-    inp.addEventListener('input', buildMatList);
+    inp.addEventListener('input', () => buildMatList());
     const matKeydown = inp.onkeydown;
     inp.onkeydown = e => {
-      if (mlist) {
+      if (mlist && !e.altKey) {
         if (e.key === 'ArrowDown') { e.preventDefault(); if (mhl < mitems.length - 1) { mhl++; hlMat(); } return; }
         if (e.key === 'ArrowUp') { e.preventDefault(); if (mhl > 0) { mhl--; hlMat(); } return; }
         if (e.key === 'Enter') { e.preventDefault(); pickMat(mhl >= 0 ? mhl : 0); return; }
-        if (e.key === 'Escape') { e.preventDefault(); closeMatList(); return; }  /* Esc أول: إغلاق القائمة — Esc ثانٍ: إلغاء التحرير */
+        if (e.key === 'Escape') { e.preventDefault(); closeMatList(); return; }  /* Esc أول: إغلاق القائمة */
       }
+      /* المادة_KeyDown Case 115 (F4): إطار446=1 — قائمة تفصيلية ببيانات البطاقة، بحث بالاسم فقط */
+      if (e.key === 'F4') { e.preventDefault(); buildMatList('f4'); return; }
+      /* المادة_KeyDown Case 114 (F3): إطار446=2 — قائمة بحث موسع (اسم/رمز/باركود) ثم Dropdown */
+      if (e.key === 'F3') { e.preventDefault(); buildMatList('f3'); return; }
+      /* المادة_KeyDown Case 40 مع Alt (وإطار446=2): Alt+سهم أسفل = إعادة استعلام القائمة وفتحها */
+      if (e.key === 'ArrowDown' && e.altKey) { e.preventDefault(); buildMatList('f3'); return; }
       if (e.key === 'Enter' && !mlist) {
         /* المادة_KeyDown Case 13 (Enter) — استعلام التطابق نفسه:
            وجدت نتائج ← أول نتيجة ORDER BY المادة (rs.MoveFirst) — لا نتائج ← Me.المادة = "" */
@@ -1266,6 +1287,12 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
             || rx.test(String(cd['رمز الباركود'] ?? '')))
           .sort((a, b) => String(a['المادة'] ?? '').localeCompare(String(b['المادة'] ?? ''), 'ar'));
         inp.value = hits.length ? (hits[0]['المادة'] ?? '') : '';
+      }
+      /* المادة_KeyUp Case 27 (Esc): التراجع عن التعديل ثم حوار إعادة تسمية المادة والباركود
+         (Me.المادة = القيمة المحفوظة — إذا كانت فارغة يخرج بلا شيء) */
+      if (e.key === 'Escape') {
+        const orig = String(row && row[c] != null ? row[c] : '').trim();
+        if (orig) { cancel(); editMaterialName(row); return; }
       }
       matKeydown && matKeydown(e);
     };
