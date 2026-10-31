@@ -1189,6 +1189,7 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
      المادة Like '*نص*' OR الرمز = نص OR رمز الباركود Like '*نص*'
      GROUP BY المادة/الشركة — ORDER BY المادة — وعرض عمودين (المادة + الشركة) */
   if (opts.materialCombo && c === 'المادة') {
+    document.querySelectorAll('.mat-list').forEach(x => x.remove());   /* إزالة أي قوائم يتيمة */
     let mlist = null, mhl = -1, mitems = [];
     const closeMatList = () => { if (mlist) { mlist.remove(); mlist = null; } mhl = -1; };
     const hlMat = () => {
@@ -1206,15 +1207,18 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
     };
     const buildMatList = () => {
       closeMatList();
-      const q = String(inp.value).trim().toLowerCase();
+      const q = String(inp.value).trim();
       if (!q) return;
+      const rx = accLike('*' + q + '*');   /* المادة ورمز الباركود: Like '*نص*' — مع دعم * و ? داخل النص */
+      const qL = q.toLowerCase();
       const seen = new Set();
       mitems = DB.cards
         .filter(cd => {
-          const m = String(cd['المادة'] ?? '').toLowerCase();
-          const rc = String(cd['الرمز'] ?? '').toLowerCase();
-          const bc = String(cd['رمز الباركود'] ?? '').toLowerCase();
-          return m.includes(q) || (rc && rc === q) || bc.includes(q);
+          const m = String(cd['المادة'] ?? '');
+          const rc = String(cd['الرمز'] ?? '');
+          const bc = String(cd['رمز الباركود'] ?? '');
+          /* الرمز = 'نص' مطابقة تامة بلا أحرف بدل — كما في HAVING في أكسس */
+          return rx.test(m) || (rc && rc.toLowerCase() === qL) || rx.test(bc);
         })
         .sort((a, b) => String(a['المادة'] ?? '').localeCompare(String(b['المادة'] ?? ''), 'ar'))
         .filter(cd => {
@@ -1250,11 +1254,45 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
         if (e.key === 'Enter') { e.preventDefault(); pickMat(mhl >= 0 ? mhl : 0); return; }
         if (e.key === 'Escape') { e.preventDefault(); closeMatList(); return; }  /* Esc أول: إغلاق القائمة — Esc ثانٍ: إلغاء التحرير */
       }
+      if (e.key === 'Enter' && !mlist) {
+        /* المادة_KeyDown Case 13 (Enter) — استعلام التطابق نفسه:
+           وجدت نتائج ← أول نتيجة ORDER BY المادة (rs.MoveFirst) — لا نتائج ← Me.المادة = "" */
+        const q = String(inp.value).trim();
+        const rx = accLike('*' + q + '*');
+        const qL = q.toLowerCase();
+        const hits = DB.cards
+          .filter(cd => rx.test(String(cd['المادة'] ?? ''))
+            || String(cd['الرمز'] ?? '').toLowerCase() === qL
+            || rx.test(String(cd['رمز الباركود'] ?? '')))
+          .sort((a, b) => String(a['المادة'] ?? '').localeCompare(String(b['المادة'] ?? ''), 'ar'));
+        inp.value = hits.length ? (hits[0]['المادة'] ?? '') : '';
+      }
       matKeydown && matKeydown(e);
     };
     const matBlur = inp.onblur;
-    inp.onblur = () => { closeMatList(); matBlur && matBlur(); };
+    inp.onblur = () => {
+      closeMatList();
+      /* ShowOnlyRowSourceValues=True: لا تُقبل قيمة خارج بطاقات المواد — استعادة القيمة السابقة كما في أكسس */
+      const q = String(inp.value).trim();
+      const orig = String(row[c] ?? '').trim();
+      if (q && q !== orig && !DB.cards.some(cd => String(cd['المادة'] ?? '') === q)) {
+        inp.value = orig;
+        toast('المادة غير موجودة في بطاقات المواد — استُعيدت القيمة السابقة (ShowOnlyRowSourceValues)', 'warn');
+      }
+      matBlur && matBlur();
+    };
   }
+}
+
+/* تحويل نمط Like في أكسس إلى Regex — * أي سلسلة، ? حرف واحد، غير حساس لحالة الأحرف (Option Compare Database) */
+function accLike(pat) {
+  let re = '';
+  for (const ch of String(pat ?? '')) {
+    if (ch === '*') re += '.*';
+    else if (ch === '?') re += '.';
+    else re += ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+  return new RegExp(re, 'i');
 }
 
 /* ---------- حالة التطبيق ---------- */
