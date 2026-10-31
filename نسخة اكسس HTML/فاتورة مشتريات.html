@@ -114,6 +114,12 @@ body.nav-open #objtabs{transform:none}
 #sidecalc .sc-log .it .x{border:none;background:none;color:#b0aca5;font-size:13px;cursor:pointer;padding:0 2px;line-height:1}
 #sidecalc .sc-log .it .x:hover{color:#a4373a}
 #sidecalc .sc-log .empty{padding:8px 6px;text-align:center;color:#a09c95;font-size:10.5px;direction:rtl;font-family:inherit}
+/* إظهار/إخفاء سجل الحاسبة بالنقر على عنوانه — مثل مجموعات الكائنات */
+#sidecalc .sc-log-h{cursor:pointer;user-select:none}
+#sidecalc .sc-log-h .chev{font-size:9px;transition:transform .15s;color:#8a8781}
+#sidecalc.log-collapsed .sc-log-h .chev{transform:rotate(-90deg)}
+#sidecalc.log-collapsed .sc-log{display:none}
+#sidecalc.log-collapsed .sc-log-h button{display:none}
 .ngrp-h{
   display:flex;align-items:center;gap:6px;padding:7px 6px 5px;margin-top:4px;
   font-size:11.5px;font-weight:700;color:#7c2325;cursor:pointer;user-select:none;
@@ -406,7 +412,7 @@ table.sheet td.rowh .delx:hover{color:#fff;background:#a4373a;border-radius:2px}
         <button data-k="B">⌫</button>
         <button class="eq" data-k="=">=</button>
       </div>
-      <div class="sc-log-h"><span>سجل الحاسبة</span><span class="cnt" id="sc_log_cnt"></span><button id="sc_log_clear" title="مسح كل عمليات السجل">مسح</button></div>
+      <div class="sc-log-h" id="sc_log_head" title="انقر لإظهار أو إخفاء سجل الحاسبة"><span class="chev">▼</span><span>سجل الحاسبة</span><span class="cnt" id="sc_log_cnt"></span><button id="sc_log_clear" title="مسح كل عمليات السجل">مسح</button></div>
       <div class="sc-log" id="sc_log"></div>
       </div>
     </div>
@@ -1979,6 +1985,8 @@ function restoreUIPrefs() {
   if (typeof p.calc === 'string') $('sc_disp').value = p.calc;      /* الحاسبة السريعة */
   if (typeof p.calcCollapsed === 'boolean')                         /* الحاسبة: مخفية/ظاهرة */
     $('sidecalc').classList.toggle('collapsed', p.calcCollapsed);
+  if (p.calcLogCollapsed === true)                                  /* سجل الحاسبة: مخفي */
+    $('sidecalc').classList.add('log-collapsed');
 }
 
 /* ---------- اللوحة الجانبية: تُفتح وتُغلق بالنقر فقط، وتنزلق من أساس الشريط الأحمر الذي يبقى ظاهرًا بجانبها ---------- */
@@ -2354,7 +2362,12 @@ function bindEvents() {
     if (SC_LOG.length > 100) SC_LOG.length = 100;
     scLogSave(); scLogRender();
   };
-  $('sc_log_clear').onclick = () => { SC_LOG = []; scLogSave(); scLogRender(); toast('تم مسح سجل الحاسبة', 'ok'); };
+  $('sc_log_clear').onclick = ev => { ev.stopPropagation(); SC_LOG = []; scLogSave(); scLogRender(); toast('تم مسح سجل الحاسبة', 'ok'); };
+  /* إظهار/إخفاء سجل الحاسبة بالنقر على عنوانه — التسجيل مستمر حتى وهو مخفي */
+  $('sc_log_head').addEventListener('click', () => {
+    const c = $('sidecalc').classList.toggle('log-collapsed');
+    saveUIPrefs({ calcLogCollapsed: c });
+  });
   scLogLoad(); scLogRender();
 
   $('btn-clearbatch').onclick = () => {
