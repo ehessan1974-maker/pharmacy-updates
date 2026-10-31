@@ -84,7 +84,7 @@ function extractVer(html){
   return m?m[1]:null;
 }
 function verKey(v){
-  var m=String(v||'').match(/^(\d{4})(\d{2})(\d{2})([a-z]?)$/);
+  var m=String(v||'').match(/^(\d{4})-?(\d{2})-?(\d{2})([a-z]?)$/);
   if(!m)return null;
   return {n:+(m[1]+m[2]+m[3]), s:m[4]||''};
 }
@@ -133,8 +133,9 @@ function runBackup(){
       var cands=results.filter(function(h){return isApp(h);})
         .map(function(h){return {html:h, ver:extractVer(h)};});
       if(!cands.length){runBackup();return;}
-      cands.sort(function(a,b){return newer(b.ver,a.ver)?1:-1;});
+      /* اختيار حتمي: امسح واحتفظ بالأحدث (أأمن من sort بمقارنات تعادل كاملة) */
       var best=cands[0];
+      for(var i=1;i<cands.length;i++) if(newer(cands[i].ver, best.ver)) best=cands[i];
       setMsg('تم ✓ — تشغيل إصدار '+(best.ver||'غير معروف')+' ('+Math.round(best.html.length/1024)+' كب)');
       setTimeout(function(){runApp(best.html,best.ver);},350);
     });
