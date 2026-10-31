@@ -43,17 +43,22 @@ var REL='نسخة اكسس HTML/فاتورة مشتريات.html';
 var K_HTML='__fatoret_last_html';
 var K_VER='__fatoret_last_ver';
 var enc=encodeURIComponent(REL);
+/* إصدار مثبّت بمعرّف commit التطبيق — عنوان غير قابل للتقادم يضمن حداً أدنى مضموناً
+   حتى لو تقادمت كل مرايا الفرع main عند المزوّد. يُحدَّث عند كل نشر. */
+var PIN_SHA='e582b8e85d8a57b6a3fb72e8d1979428b249a2c3';
 
 /* مصادر متعددة — يُجرب كلها معاً ويُشغّل أحدث إصدار (APP_VER) بينها:
    1) raw.githubusercontent (أصلي، مع كاسر كاش)
-   2) gh-proxy مرآة مباشرة لـ raw (تجاوز حجب raw)
-   3) cdn.jsdelivr  4) gcore.jsdelivr (قد تكون مخزنة قديمة — لا تُختار إن وجد أحدث)
-   5) api.github.com (محتوى base64 — دائماً محدث)
-   6) statically.io (مرآة إضافية) */
+   2) jsDelivr مثبّت على PIN_SHA (حد أدنى مضمون — لا يتقادم أبداً)
+   3) gh-proxy مرآة مباشرة لـ raw (تجاوز حجب raw)
+   4) cdn.jsdelivr  5) gcore.jsdelivr (قد تكون مخزنة قديمة — لا تُختار إن وجد أحدث)
+   6) api.github.com (محتوى base64 — دائماً محدث)
+   7) statically.io (مرآة إضافية) */
 function sources(t){
   var B='https://raw.githubusercontent.com/'+USER+'/'+REPO+'/main/'+enc;
   return [
     {u:B+'?t='+t, api:0},
+    {u:'https://cdn.jsdelivr.net/gh/'+USER+'/'+REPO+'@'+PIN_SHA+'/'+enc, api:0},
     {u:'https://gh-proxy.com/'+B+'?t='+t, api:0},
     {u:'https://cdn.jsdelivr.net/gh/'+USER+'/'+REPO+'@main/'+enc, api:0},
     {u:'https://gcore.jsdelivr.net/gh/'+USER+'/'+REPO+'@main/'+enc, api:0},
