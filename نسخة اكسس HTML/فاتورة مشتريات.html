@@ -485,6 +485,7 @@ table.sheet td.rowh .delx:hover{color:#fff;background:#a4373a;border-radius:2px}
         <div class="field" style="max-width:340px"><label>بحث (المادة أو الشركة)</label><input class="i" id="c_search" placeholder="اكتب للبحث..."></div>
         <div class="field" style="max-width:260px"><label>الشركة (قائمة)</label><select class="i" id="c_comp"><option value="">— الكل —</option></select></div>
         <span class="flex1"></span>
+        <button class="tbtn" id="c_import" title="نسخ جدول بطاقات المواد من أكسس ولصقه هنا — أو استيراد ملف CSV/TSV">⬆ استيراد بطاقات المواد (من أكسس)</button>
         <button class="tbtn" id="c_addcard">＋ بطاقة جديدة (إضافة)</button>
         <div class="pager"><button class="tbtn" id="c_prev">◀</button><span id="c_page">1</span><button class="tbtn" id="c_next">▶</button></div>
       </div>
@@ -931,6 +932,11 @@ function renderSheet(container, opts) {
           /* Alt+نقر مزدوج ينفّذ الدالة الخاصة (إعادة تسمية المادة/الشركة الجماعية…)
              بدل فتح المحرر — كما في DblClick بجوار مربع التحرير والسرد في أكسس */
           if (e.altKey && onCellDblClick) { onCellDblClick(r, c, absIdx); return; }
+          /* إن كان هناك محرر مفتوح: الالتزام به ثم فتح المحرر في هذه الخلية بعد إعادة
+             البناء — نفس سلوك النقرة الواحدة، وإلا انفصل المحرر الجديد عن الجدول المُعاد
+             بناؤه أثناء التركيز ولا يعمل (نقرة مزدوجة بعد Enter مثلاً) */
+          const open = container.querySelector('.edit-in');
+          if (open) { requestSheetNav(container.id, absIdx, c); open.blur(); return; }
           openEditor(td, r, c, absIdx, '');
         };
       } else if (onCellDblClick) {
@@ -1286,7 +1292,8 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
             || String(cd['الرمز'] ?? '').toLowerCase() === qL
             || rx.test(String(cd['رمز الباركود'] ?? '')))
           .sort((a, b) => String(a['المادة'] ?? '').localeCompare(String(b['المادة'] ?? ''), 'ar'));
-        inp.value = hits.length ? (hits[0]['المادة'] ?? '') : '';
+        if (hits.length) inp.value = (hits[0]['المادة'] ?? '');
+        else { inp.value = ''; toast('لا يوجد تطابق للبحث — فُرِّغت الخانة (المادة_KeyDown Enter)', 'warn'); }
       }
       /* المادة_KeyUp Case 27 (Esc): التراجع عن التعديل ثم حوار إعادة تسمية المادة والباركود
          (Me.المادة = القيمة المحفوظة — إذا كانت فارغة يخرج بلا شيء) */
@@ -2211,6 +2218,105 @@ function renderCards() {
   });
 }
 
+/* ---------- استيراد بطاقات المواد من برنامج أكسس ----------
+   ملف قاعدة البيانات المرسل لا يحتوي جدول «بطاقات المواد» (جداوله: نسخة من مشتريات /
+   فاتورة مشتريات / جدول رقم الطبخة / أخطاء اللصق فقط)، لذا كانت البطاقات في النسخة HTML
+   بلا رمز ولا باركود ولا شركة — والبحث بالرمز (الرمز='نص' في المادة_Change س160) يبحث في فراغ.
+   الاستيراد: انسخ الجدول من أكسس (فتح الجدول ← Ctrl+A ← Ctrl+C) والصقه في الحوار،
+   أو استورد ملف CSV/TSV مصدَّرًا من أكسس. الدمج بالمطابقة على «المادة»:
+   النصوص (الرمز/الباركود/الشركة/...) تُستبدل بالقيمة المستوردة غير الفارغة،
+   والأرقام (السعر الأساسي/العموم/نسبة الربح/...) تُملأ إن كانت فارغة فقط. */
+function parseDelimited(text) {
+  const s = String(text ?? '').replace(/^\uFEFF/, '');
+  if (!s.trim()) return [];
+  const delim = s.includes('\t') ? '\t' : (s.includes(';') && !s.includes(',') ? ';' : ',');
+  const rows = [];
+  let row = [], cell = '', inQ = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (inQ) {
+      if (ch === '"') { if (s[i + 1] === '"') { cell += '"'; i++; } else inQ = false; }
+      else cell += ch;
+    } else if (ch === '"') inQ = true;
+    else if (ch === delim) { row.push(cell); cell = ''; }
+    else if (ch === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+    else if (ch !== '\r') cell += ch;
+  }
+  if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(r => r.some(c => String(c).trim() !== ''));
+}
+const CARD_IMPORT_TEXT_COLS = ['الشركة','رمز الباركود','الرمز','التصنيف','الاسم اللاتيني','العبوة','الشكل الصيدلاني','التركيب الكيميائي','وحدة العبوة','اسم المستحضر'];
+const CARD_IMPORT_NUM_COLS = ['السعر الأساسي','عموم معتمد','عموم حر','عموم 20 %','نسبة الربح','نيت حر','العيار','تعديل جديد'];
+function importCardsText(text) {
+  const rows = parseDelimited(text);
+  if (!rows.length) { toast('لا توجد بيانات — الصق الجدول من أكسس أو اختر ملفًا', 'warn'); return; }
+  const head = rows[0].map(c => String(c ?? '').trim());
+  if (!head.includes('المادة')) {
+    toast('أول صف يجب أن يكون صف العناوين ويحتوي «المادة» — انسخ من أكسس مع صف العناوين', 'warn');
+    return;
+  }
+  const map = {};
+  ['المادة', ...CARD_IMPORT_TEXT_COLS, ...CARD_IMPORT_NUM_COLS].forEach(f => { map[f] = head.indexOf(f); });
+  let upd = 0, added = 0, skipped = 0, filled = 0;
+  for (let r = 1; r < rows.length; r++) {
+    const cells = rows[r];
+    const name = String(cells[map['المادة']] ?? '').trim();
+    if (!name) { skipped++; continue; }
+    let card = DB.cards.find(c => String(c['المادة'] ?? '').trim() === name);
+    if (!card) {
+      card = {};
+      CARD_FULL_COLS.forEach(k => card[k] = null);
+      card['المادة'] = name;   /* الاسم بعد التصفير — CARD_FULL_COLS يشمل «المادة» */
+      card['نسبة الربح'] = 20;
+      DB.cards.push(card); added++;
+    } else upd++;
+    for (const f of CARD_IMPORT_TEXT_COLS) {
+      if (map[f] < 0) continue;
+      const v = String(cells[map[f]] ?? '').trim();
+      if (!v || v === 'None') continue;
+      if (String(card[f] ?? '') !== v) { card[f] = v; filled++; }
+    }
+    for (const f of CARD_IMPORT_NUM_COLS) {
+      if (map[f] < 0) continue;
+      if (card[f] !== null && card[f] !== undefined && card[f] !== '') continue;   /* الأرقام: لا تُكتب فوق قيمة موجودة */
+      const v = String(cells[map[f]] ?? '').trim();
+      if (!v || v === 'None') continue;
+      const n = parseFloat(v.replace(/[^\d.\-]/g, ''));
+      if (!isNaN(n)) { card[f] = n; filled++; }
+    }
+  }
+  fillDatalists(); renderCards(); renderFatoraSheet(); saveDB();
+  toast(`استيراد بطاقات المواد: ${added} مضاف، ${upd} مطابق، ${filled} خانة مملوءة${skipped ? `، ${skipped} سطر متجاهل` : ''}`, 'ok');
+}
+function importCardsDialog() {
+  showDialog('استيراد بطاقات المواد',
+    `<div style="margin-bottom:6px">انسخ جدول <b>بطاقات المواد</b> من أكسس (افتح الجدول ← Ctrl+A ← Ctrl+C) والصقه هنا، أو اختر ملف CSV/TSV مصدَّرًا من أكسس.<br>الدمج بالمطابقة على «المادة»: النصوص تُستبدل بالقيمة المستوردة، والأرقام تُملأ إن كانت فارغة فقط.</div>
+     <textarea id="imp-cards-text" style="width:100%;height:170px;direction:rtl;border:1px solid #c9c6c0;font-family:inherit" placeholder="الصق جدول بطاقات المواد هنا..."></textarea>
+     <div style="margin-top:6px"><input type="file" id="imp-cards-file" accept=".csv,.tsv,.txt"></div>`,
+    [{t:'استيراد', v:'ok', cls:'default'}, {t:'إلغاء', v:'cancel'}],
+    v => {
+      if (v !== 'ok') return;
+      const txt = ($('imp-cards-text') || {}).value || '';
+      importCardsText(txt);
+    });
+  const f = $('imp-cards-file');
+  if (f) f.onchange = async () => {
+    const file = f.files && f.files[0];
+    if (!file) return;
+    try {
+      const buf = new Uint8Array(await file.arrayBuffer());
+      let txt;
+      if (buf[0] === 0xFF && buf[1] === 0xFE) txt = new TextDecoder('utf-16le').decode(buf);
+      else if (buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) txt = new TextDecoder('utf-8').decode(buf);
+      else {
+        txt = new TextDecoder('utf-8', { fatal: false }).decode(buf);
+        if (txt.includes('\uFFFD')) { try { txt = new TextDecoder('windows-1256').decode(buf); } catch (e) { /* تبقى utf-8 */ } }
+      }
+      $('imp-cards-text').value = txt;
+    } catch (e) { toast('تعذر قراءة الملف', 'warn'); }
+  };
+}
+
 /* ================= مبيعات ================= */
 function renderSales() {
   const q = $('s_search').value.trim();
@@ -2473,6 +2579,7 @@ function bindEvents() {
     DB.cards.push(c);
     renderCards(); saveDB(); toast('تمت إضافة البطاقة', 'ok');
   };
+  $('c_import').onclick = importCardsDialog;
 
   /* --- مبيعات --- */
   $('s_search').addEventListener('input', renderSales);
