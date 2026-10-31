@@ -239,7 +239,10 @@ input.num{text-align:center;direction:ltr}
 #win-fatora #fatora_sheet{flex:1 1 auto;min-height:140px;max-height:none}
 table.sheet{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;font-size:12.5px}
 table.sheet th,table.sheet td{
-  border-inline-end:1px solid var(--grid);border-bottom:1px solid var(--grid);
+  /* حد فيزيائي يسار لا منطقي (inline-end): خلايا الأرقام .num اتجاهها ltr فينقلب
+     border-inline-end إلى الحافة اليمنى ويبقى الفاصل بين العمودين بلا خط —
+     كان يظهر كثقب متحرك في مواضع مختلفة حسب ترتيب الأعمدة (بين 1-2 أو 13-14…) */
+  border-left:1px solid var(--grid);border-bottom:1px solid var(--grid);
   padding:3px 8px;white-space:nowrap;text-align:right;
 }
 table.sheet th{
@@ -337,7 +340,11 @@ table.sheet td.rowh .delx:hover{color:#fff;background:#a4373a;border-radius:2px}
 #statusbar .st{display:flex;gap:5px;align-items:center}
 #statusbar b{color:#222}
 .combo-list{
-  position:absolute;top:100%;inset-inline-start:0;width:100%;max-height:240px;overflow:auto;
+  /* بلا inset-inline-start/width هنا: في RTL تكون inset-inline-start = right:0،
+     ومع width+left يصبح التموضع مقيدًا زيادة فيتجاهل المتصفح left المحسوب من
+     الجافاسكربت وتلتصق القائمة بحافة الشاشة بدل متابعة خانة المادة (خصوصًا بعد
+     تغيير ترتيب الأعمدة بالسحب) — التموضع يتم كليًا من startCellEditor */
+  position:absolute;top:100%;max-height:240px;overflow:auto;
   background:#fff;border:1px solid #8f8c86;z-index:50;box-shadow:0 4px 12px rgba(0,0,0,.22);
   display:none;
 }
@@ -737,7 +744,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 2;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-01b';
+const APP_VER = '2026-11-01c';
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
