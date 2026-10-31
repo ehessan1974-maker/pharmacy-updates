@@ -345,6 +345,7 @@ table.sheet td.rowh .delx:hover{color:#fff;background:#a4373a;border-radius:2px}
         <button class="tbtn" id="btn-clearbatch" title="أمر157 — تفريغ حقل رقم الطبخة في فاتورة مشتريات">تفريغ رقم الطبخة</button>
         <button class="tbtn" id="btn-updrelated" title="تحديث نسب الربح والأسعار من المشتريات">تحديث ما يتعلق بالمشتريات</button>
         <button class="tbtn" id="btn-editoffers">تعديل العروض في فاتورة المشتريات</button>
+        <button class="tbtn" id="btn-editnotes" title="تعديل_الملاحظات_في_فاتورة_مشتريات_Click — OpenQuery">تعديل الملاحظات في فاتورة مشتريات</button>
         <button class="tbtn" id="btn-freemerge" title="ضم المجاني إلى الكمية">ضم المجاني إلى الكمية</button>
         <div class="ctrl-row3">
           <button class="tbtn" data-split="1700" title="تصغير ورقة البيانات">تسمية48 — تصغير</button>
@@ -410,6 +411,8 @@ table.sheet td.rowh .delx:hover{color:#fff;background:#a4373a;border-radius:2px}
           <div class="field"><label>إلى</label><div class="ctl"><input class="i" id="f_to" list="dl_to"></div><datalist id="dl_to"></datalist></div>
           <div class="field"><label>الوقت</label><div class="ctl"><input class="i" id="f_time" type="time" step="1"></div></div>
           <div class="field"><label>رقم الفاتورة</label><div class="ctl"><input class="i" id="f_invoiceno" list="dl_invoices" placeholder="مستودع ... التاريخ الوقت"><datalist id="dl_invoices"></datalist></div></div>
+          <div class="field"><label>تحميل جميع مشتريات مستودع</label><div class="ctl"><select class="i" id="f_loadwh"><option value="">— اختر مستودعًا —</option></select></div></div>
+          <div class="field"><label>إجمالي الفاتورة بعد حسم الفاتورة</label><div class="ctl"><input class="i" id="f_whole_disc" inputmode="decimal" placeholder="أدخل الإجمالي المستهدف..."></div></div>
         </div>
       </div>
 
@@ -515,6 +518,15 @@ table.sheet td.rowh .delx:hover{color:#fff;background:#a4373a;border-radius:2px}
     <div class="win-body">
       <div class="hint">حرّر أساس العرض / مجاني العرض / حسم العرض مباشرة في الجدول — يُعاد حساب «السعر الصافي بعد العرض» فورًا (نفس معادلة النموذج الأصلي).</div>
       <div class="sheetwrap" id="offers_sheet" style="max-height:480px"></div>
+    </div>
+  </div>
+
+  <!-- ================= تعديل الملاحظات في فاتورة مشتريات ================= -->
+  <div class="window hidden" id="win-editnotes">
+    <div class="win-head"><span class="dot"></span>تعديل الملاحظات في فاتورة مشتريات</div>
+    <div class="win-body">
+      <div class="hint">حرّر عمود «ملاحظات» لكل سطور الفاتورة الحالية من مكان واحد — مثل فتح استعلام التعديل في أكسس. يُحفظ فورًا.</div>
+      <div class="sheetwrap" id="notes_sheet" style="max-height:480px"></div>
     </div>
   </div>
 
@@ -883,7 +895,13 @@ function renderSheet(container, opts) {
           if (onCellClick) onCellClick(absIdx, c, tr, td);
           openEditor(td, r, c, absIdx, '');
         };
-        td.ondblclick = e => { e.stopPropagation(); openEditor(td, r, c, absIdx, ''); };
+        td.ondblclick = e => {
+          e.stopPropagation();
+          /* Alt+نقر مزدوج ينفّذ الدالة الخاصة (إعادة تسمية المادة/الشركة الجماعية…)
+             بدل فتح المحرر — كما في DblClick بجوار مربع التحرير والسرد في أكسس */
+          if (e.altKey && onCellDblClick) { onCellDblClick(r, c, absIdx); return; }
+          openEditor(td, r, c, absIdx, '');
+        };
       } else if (onCellDblClick) {
         td.ondblclick = e => { e.stopPropagation(); onCellDblClick(r, c, absIdx); };
       }
@@ -1030,6 +1048,17 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
   const inp = document.createElement('input');
   inp.className = 'edit-in';
   inp.value = seed !== '' ? seed : old;
+  /* قائمة منسدلة داخل محرر الخلية — مثل مربعات التحرير والسرد في أكسس */
+  if (opts.listCols && opts.listCols[c]) {
+    const vals = typeof opts.listCols[c] === 'function' ? opts.listCols[c](row) : opts.listCols[c];
+    if (Array.isArray(vals) && vals.length) {
+      const dl = document.createElement('datalist');
+      dl.id = 'edl_' + Math.random().toString(36).slice(2, 9);
+      dl.innerHTML = vals.slice(0, 300).map(v => `<option value="${escHtml(v)}">`).join('');
+      td.appendChild(dl);
+      inp.setAttribute('list', dl.id);
+    }
+  }
   td.appendChild(inp);
   inp.focus();
   if (seed === '') inp.select();
@@ -1053,7 +1082,22 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
       materialize();
     }
     let nv = inp.value;
-    if (opts.numericCols.includes(c)) { const n = parseFloat(nv); nv = isNaN(n) ? null : n; }
+    if (opts.numericCols.includes(c)) {
+      const s = String(nv).trim();
+      let n;
+      /* Eval كما في أكسس (الكمية_KeyPress س122 / سعر_الشراء_KeyPress س818):
+         «5*3» تُقيَّم 15 — إذا احتوى النص عوامل حسابية قيّمِه تعبيرًا أولًا،
+         لأن parseFloat يقتص الرقم الأول فقط (parseFloat('5*3')=5) */
+      const isExpr = opts.evalCols && opts.evalCols.includes(c)
+        && /^[\d\s+\-*/().,]+$/.test(s) && /[+\-*/]/.test(s.slice(1));
+      if (isExpr) {
+        const e = evalExpr(s);
+        n = e !== null ? e : parseFloat(s);
+      } else {
+        n = parseFloat(s);
+      }
+      nv = isNaN(n) ? null : n;
+    }
     /* سجل جديد لم تُدخل فيه أي قيمة على الإطلاق — يُلغى تلقائيًا كما في أكسس */
     if (row._newPending && !hadValue && !row._dirty && opts.newRecord && opts.newRecord.undo) {
       opts.newRecord.undo(row);
@@ -1326,8 +1370,11 @@ function renderFatoraSheet(page) {
   renderSheet($('fatora_sheet'), {
     page,
     cols: FATORA_COLS,
-    editableCols: ['ترتيب','المادة','الكمية','المجاني','سعر الشراء','حسم %','قيمة الحسم','السعر الأساسي','أساس العرض','مجاني العرض','حسم العرض','رقم الطبخة','تاريخ الصنع','تاريخ انتهاء الفعالية','ملاحظات','شهر','سنة'],
+    editableCols: ['ترتيب','المادة','الشركة','الكمية','المجاني','سعر الشراء','حسم %','قيمة الحسم','السعر الأساسي','أساس العرض','مجاني العرض','حسم العرض','رقم الطبخة','تاريخ الصنع','تاريخ انتهاء الفعالية','ملاحظات','شهر','سنة'],
     materialCombo: true,   /* قائمة بحث المادة أثناء الكتابة — مصدر الصف من أكسس */
+    /* الشركة: مربع تحرير وسرد كما في أكسس — القائمة من بطاقات المواد + المشتريات */
+    listCols: { 'الشركة': () => [...new Set([...DB.cards.map(x => x['الشركة']), ...DB.purchases.map(x => x['الشركة'])].filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'ar')) },
+    evalCols: ['الكمية', 'سعر الشراء'],   /* KeyPress Enter في أكسس: Eval للعملية الحسابية */
     onCellCommit: (r, c) => {
       if (c === 'قيمة الحسم') {
         /* قيمة_الحسم_AfterUpdate — عكس الاتجاه: اشتقاق حسم% من قيمة الحسم ثم إعادة الحساب */
@@ -1491,9 +1538,7 @@ function renameMaterialEverywhere(oldName, newName) {
 /* ---------- فاتورة جديدة ---------- */
 async function fatooraJadida() {
   // UPDATE مشتريات SET رقم الفاتورة = من & التاريخ & الوقت
-  DB.purchases.forEach(p => {
-    p['رقم الفاتورة'] = [p['من'], arDateToInput(p['التاريخ']), arTimeToInput(p['الوقت'])?.slice(0, 8) ?? ''].filter(Boolean).join(' ');
-  });
+  DB.purchases.forEach(p => { p['رقم الفاتورة'] = canonInvoiceNo(p); });
   DB.invoice = [];
   APP.curRow = -1;
   $('f_date').value = today();
@@ -1505,6 +1550,11 @@ async function fatooraJadida() {
   entryFromRow(null);
   renderFatoraSheet();
   saveDB();
+}
+
+/* ---------- رقم الفاتورة المركب القياسي لسجل مشتريات — من & التاريخ & الوقت ---------- */
+function canonInvoiceNo(p) {
+  return [p['من'], arDateToInput(p['التاريخ']), arTimeToInput(p['الوقت'])].filter(Boolean).join(' ');
 }
 
 /* ---------- تحديث رقم الفاتورة المركب ---------- */
@@ -1545,8 +1595,9 @@ async function saveFatoora() {
     await fatooraJadida();
     toast('تم حفظ الفاتورة في جدول المشتريات', 'ok');
   } else if (ss === 'no') {
-    const msg = await MsgBox('سيتم حذف الفاتورة الحالية. هل أنت متأكد؟', 'warn', 'حذف فاتورة');
-    await fatooraJadida();
+    /* vbYesNo ثانٍ كما في أكسس — لا: خروج بلا حذف */
+    const ok = await vbYesNoCancel('سيتم حذف الفاتورة الحالية. هل أنت متأكد؟', 'حذف فاتورة');
+    if (ok === 'yes') await fatooraJadida();
   }
 }
 
@@ -1591,9 +1642,65 @@ function loadInvoiceByNo(rno) {
     const ob = nz(r['أساس العرض']) || 10, of = nz(r['مجاني العرض']), od = nz(r['حسم العرض']), ba = nz(r['السعر الأساسي']);
     r['السعر الصافي بعد العرض'] = (ob + of) ? ((ob * ba) - (ob * ba * od / 100)) / (ob + of) : 0;
   });
+  /* أخذ_القيم_الثابتة_من_المشتريات — تحديث حقول الرأس بقيم الفاتورة المحمّلة */
+  const fr = DB.invoice[0];
+  if (fr) {
+    if (fr['المستخدم']) $('f_user').value = fr['المستخدم'];
+    if (fr['من']) $('f_from').value = fr['من'];
+    if (fr['إلى']) $('f_to').value = fr['إلى'];
+    if (arDateToInput(fr['التاريخ'])) $('f_date').value = arDateToInput(fr['التاريخ']);
+    if (arTimeToInput(fr['الوقت'])) $('f_time').value = arTimeToInput(fr['الوقت']);
+  }
   APP.curRow = DB.invoice.length ? 0 : -1;
   entryFromRow(curInvoiceRow());
   renderFatoraSheet();
+}
+
+/* ---------- تحميل جميع مشتريات مستودع — تحميل_جميع_مشتريات_مستودع_AfterUpdate ---------- */
+function loadWarehouseAll(wh) {
+  if (!wh) return;
+  const rows = DB.purchases.filter(p => p['من'] === wh);
+  if (!rows.length) { MsgBox('لا توجد مشتريات محفوظة لهذا المستودع', 'warn', 'تحميل جميع مشتريات مستودع'); return; }
+  rows.forEach(p => { const r = { ...p }; r._committed = true; DB.invoice.push(r); });
+  /* ضبط الرأس كما في أكسس (س486-490): مدير/المستودع/صيدلية إحسان العبد الله/التاريخ والوقت الآن — وتصفير حسم الفاتورة الكاملة */
+  $('f_user').value = 'مدير';
+  $('f_from').value = wh;
+  $('f_to').value = 'صيدلية إحسان العبد الله';
+  $('f_date').value = today();
+  $('f_time').value = nowTime();
+  $('f_whole_disc').value = '';
+  APP.curRow = DB.invoice.length ? 0 : -1;
+  entryFromRow(curInvoiceRow()); renderFatoraSheet(); saveDB();
+  toast(`تم تحميل ${rows.length} سجلًا من مستودع «${wh}» إلى الفاتورة`, 'ok');
+}
+
+/* ---------- إجمالي الفاتورة بعد حسم الفاتورة — إجمالي_الفاتورة_بعد_حسم_الفاتورة_AfterUpdate / حسم_لكامل_الفاتورة ---------- */
+function hismLilkamilFatoora() {
+  const target = parseFloat($('f_whole_disc').value);
+  if (isNaN(target) || !DB.invoice.length) return;
+  const base = DB.invoice.reduce((s, r) => s + nz(r['الإجمالي قبل الحسم']), 0);
+  if (!base) { toast('لا يمكن اشتقاق حسم% — مجموع الإجمالي قبل الحسم = 0', 'warn'); return; }
+  const pct = 100 - (target * 100 / base);            /* UPDATE a: حسم% = 100 − (الهدف×100 ÷ مجموع قبل الحسم) */
+  DB.invoice.forEach(r => {
+    r['حسم %'] = pct;
+    qiyamMotaghayyera(r);                             /* UPDATE b..f: قيمة الحسم/قبل/بعد/إجمالي الكمية/سعر العميل */
+    r['عموم 20 %'] = nz(r['سعر الشراء']) * 100 / 80;  /* UPDATE g: عموم 20% = سعر الشراء×100÷80 */
+  });
+  renderFatoraSheet(); entryFromRow(curInvoiceRow()); saveDB();
+  toast(`حسم الفاتورة الكاملة: ${Number(pct.toFixed(2))}% على ${DB.invoice.length} سطر`, 'ok');
+}
+
+/* ---------- تعديل الملاحظات في فاتورة مشتريات — تعديل_الملاحظات_في_فاتورة_مشتريات_Click ---------- */
+function renderNotesSheet() {
+  renderSheet($('notes_sheet'), {
+    cols: ['ترتيب', 'المادة', 'ملاحظات'], rows: DB.invoice,
+    curRow: APP.curRow,
+    editableCols: ['ملاحظات'],
+    numericCols: ['ترتيب'],
+    onCellCommit: () => { renderFatoraSheet(); saveDB(); },
+    onCellClick: i => { APP.curRow = i; entryFromRow(DB.invoice[i]); },
+    onRowClick: i => { APP.curRow = i; entryFromRow(DB.invoice[i]); },
+  });
 }
 
 /* ---------- تحديث ما يتعلق بالمشتريات — تحديث_ما_يتعلق_بالمشتريات_Click ---------- */
@@ -1689,6 +1796,7 @@ const WINDOWS = [
   {id: 'win-copypurch', name: 'نسخة من مشتريات', ico: '🗃️', grp: 'الجداول'},
   {id: 'win-offers', name: 'نموذج حساب العروض', ico: '🧮', grp: 'العروض والحسابات'},
   {id: 'win-editoffers', name: 'تعديل العروض في فاتورة المشتريات', ico: '✏️', grp: 'العروض والحسابات'},
+  {id: 'win-editnotes', name: 'تعديل الملاحظات في فاتورة مشتريات', ico: '📝', grp: 'العروض والحسابات'},
 ];
 let openDocs = [];      /* الكائنات المفتوحة بترتيب فتحها */
 let activeDoc = null;   /* الكائن المعروض حالياً في الصندوق */
@@ -1733,6 +1841,7 @@ function openWindow(id) {
   if (id === 'win-cards') renderCards();
   if (id === 'win-sales') renderSales();
   if (id === 'win-editoffers') renderOffersSheet();
+  if (id === 'win-editnotes') renderNotesSheet();
   if (id === 'win-copypurch') renderCopyPurch();
 }
 /* ---------- إغلاق كائن: يزيل تبويبه ويعرض الكائن المفتوح تحته ---------- */
@@ -2127,6 +2236,9 @@ function bindEvents() {
   $('f_invoiceno').addEventListener('change', () => {
     loadInvoiceByNo($('f_invoiceno').value.trim());
   });
+  /* تحميل جميع مشتريات مستودع + إجمالي الفاتورة بعد حسم الفاتورة */
+  $('f_loadwh').addEventListener('change', () => loadWarehouseAll($('f_loadwh').value));
+  $('f_whole_disc').addEventListener('change', hismLilkamilFatoora);
   $('btn-updtime').onclick = () => { $('f_time').value = nowTime(); $('f_date').value = today(); rebuildInvoiceNo(); };
   $('btn-save').onclick = saveFatoora;
   $('btn-newinvoice').onclick = async () => {
@@ -2165,6 +2277,7 @@ function bindEvents() {
   };
   $('btn-updrelated').onclick = updateRelatedPurchases;
   $('btn-editoffers').onclick = () => openWindow('win-editoffers');
+  $('btn-editnotes').onclick = () => openWindow('win-editnotes');
   $('btn-freemerge').onclick = () => {
     DB.invoice.forEach(r => { r['الكمية'] = nz(r['الكمية']) + nz(r['المجاني']); r['المجاني'] = 0; });
     DB.invoice.forEach(r => qiyamMotaghayyera(r));
@@ -2266,6 +2379,8 @@ async function init() {
   }
   const loaded = await loadDB();
   if (!loaded) await saveDB();
+  /* Form_Load — تحديث أرقام فواتير المشتريات: رقم الفاتورة = من & ' ' & التاريخ & ' ' & الوقت */
+  DB.purchases.forEach(p => { p['رقم الفاتورة'] = canonInvoiceNo(p); });
   // تعبئة القوائم
   fillDatalists();
   // autoexec: فتح فاتورة مشتريات
@@ -2282,15 +2397,25 @@ async function init() {
   toast(loaded ? 'تم استعادة بياناتك المحفوظة' : 'تم تحميل البيانات الأولية من قاعدة Access', 'ok');
 }
 function fillDatalists() {
-  // المستخدمون
-  const users = [...new Set(DB.purchases.map(p => p['المستخدم']).filter(Boolean))];
-  $('dl_users').innerHTML = users.map(u => `<option value="${escHtml(u)}">`).join('');
+  /* المستخدمون/من/إلى — مرتبة حسب آخر استخدام كما في مصادر الصف:
+     SELECT المستخدم, Max(التاريخ) FROM مشتريات GROUP BY المستخدم ORDER BY Max(التاريخ) DESC */
+  const lastUse = key => {
+    /* إرجاع [القيمة، آخر تاريخ] مرتبة تنازليًا بالتاريخ — كما في مصادر الصف */
+    const m = new Map();
+    DB.purchases.forEach(p => {
+      const v = p[key]; if (!v) return;
+      const d = arDateToInput(p['التاريخ']) || '';
+      if (!m.has(v) || d > m.get(v)) m.set(v, d);
+    });
+    return [...m.entries()]
+      .sort((a, b) => b[1].localeCompare(a[1]) || String(a[0]).localeCompare(String(b[0]), 'ar'));
+  };
+  /* التاريخ يظهر بجوار القيمة في القائمة المنسدلة كما في أعمدة RowSource بأكسس */
+  $('dl_users').innerHTML = lastUse('المستخدم').map(([u, d]) => `<option value="${escHtml(u)}">${escHtml(d)}</option>`).join('');
   // من
-  const froms = [...new Set(DB.purchases.map(p => p['من']).filter(Boolean))];
-  $('dl_from').innerHTML = froms.map(u => `<option value="${escHtml(u)}">`).join('');
+  $('dl_from').innerHTML = lastUse('من').map(([u, d]) => `<option value="${escHtml(u)}">${escHtml(d)}</option>`).join('');
   // إلى
-  const tos = [...new Set(DB.purchases.map(p => p['إلى']).filter(Boolean))];
-  $('dl_to').innerHTML = tos.map(u => `<option value="${escHtml(u)}">`).join('');
+  $('dl_to').innerHTML = lastUse('إلى').map(([u, d]) => `<option value="${escHtml(u)}">${escHtml(d)}</option>`).join('');
   // الفواتير
   const invs = purchaseInvoices().slice(0, 800);
   $('dl_invoices').innerHTML = invs.map(v => `<option value="${escHtml(v.no)}">${escHtml(v.from)} — ${fmt(v.total)}</option>`).join('');
@@ -2301,6 +2426,8 @@ function fillDatalists() {
   $('c_comp').innerHTML = '<option value="">— الكل —</option>' + comps.map(u => `<option value="${escHtml(u)}">${escHtml(u)}</option>`).join('');
   // مستودعات مشتريات
   $('p_wh').innerHTML = '<option value="">— الكل —</option>' + [...new Set(DB.purchases.map(p => p['من']).filter(Boolean))].map(u => `<option value="${escHtml(u)}">${escHtml(u)}</option>`).join('');
+  // قائمة «تحميل جميع مشتريات مستودع»
+  $('f_loadwh').innerHTML = '<option value="">— اختر مستودعًا —</option>' + [...new Set(DB.purchases.map(p => p['من']).filter(Boolean))].map(u => `<option value="${escHtml(u)}">${escHtml(u)}</option>`).join('');
 }
 function escHtml(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
