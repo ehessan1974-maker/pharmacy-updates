@@ -272,8 +272,11 @@ table.sheet tr.newrec td.editable:hover{background:#fff7d6;box-shadow:inset 0 0 
 /* ===== تغيير ترتيب الأعمدة بالسحب — كما في أكسس (سحب رأس العمود) ===== */
 table.sheet th[draggable="true"]{cursor:grab}
 table.sheet th.dragging{opacity:.35;background:#eee9e2}
-table.sheet th.drop-before{box-shadow:inset 3px 0 0 0 var(--acc)}
-table.sheet th.drop-after{box-shadow:inset -3px 0 0 0 var(--acc)}
+/* الخط الأحمر = مكان هبوط العمود بالضبط (الجهة الفيزيائية في RTL):
+   drop-before: سيُدرج قبل الهدف بالتدفق = على يمين الهدف بصريًا → الخط على حافته اليمنى
+   drop-after : سيُدرج بعد الهدف بالتدفق  = على يسار الهدف بصريًا → الخط على حافته اليسرى */
+table.sheet th.drop-before{box-shadow:inset -3px 0 0 0 var(--acc)}
+table.sheet th.drop-after{box-shadow:inset 3px 0 0 0 var(--acc)}
 body.coldragging{cursor:grabbing!important;user-select:none!important}
 body.coldragging *{cursor:grabbing!important}
 table.sheet tr.newrec td.rowh{color:#8a7a00;font-weight:800;font-size:13px}
@@ -734,7 +737,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 2;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-01';
+const APP_VER = '2026-11-01b';
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
