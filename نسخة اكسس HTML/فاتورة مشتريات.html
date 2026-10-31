@@ -360,7 +360,7 @@ table.sheet td.rowh .delx:hover{color:#fff;background:#a4373a;border-radius:2px}
     </div>
     <div class="np-body" id="np_body"></div>
     <div id="sidecalc" class="ngrp">
-      <div class="ngrp-h" id="sc_head" title="انقر لإظهار أو إخفاء الحاسبة — مثل مجموعات الكائنات"><span class="chev">▼</span><span>حاسبة سريعة</span></div>
+      <div class="ngrp-h" id="sc_head" title="انقر لإظهار أو إخفاء الحاسبة — تُستقبل الكتابة فورًا | Ctrl+4 استدعاء بلوحة المفاتيح"><span class="chev">▼</span><span>حاسبة سريعة</span></div>
       <div class="ngrp-body sc-body">
       <input class="sc-disp" id="sc_disp" placeholder="0" autocomplete="off" spellcheck="false">
       <div class="sc-grid" id="sc_grid">
@@ -552,7 +552,7 @@ table.sheet td.rowh .delx:hover{color:#fff;background:#a4373a;border-radius:2px}
   <span class="st">المادة الحالية: <b id="st_mat">—</b></span>
   <span class="st flex1"></span>
   <span class="st" style="cursor:pointer;text-decoration:underline" onclick="resetAll()" title="حذف البيانات المحفوظة محليًا والعودة للبيانات الأصلية من قاعدة Access">⟲ استعادة البيانات الأصلية</span>
-  <span class="st">اختصارات: <span class="kbd">Enter</span> سطر جديد | <span class="kbd">Del</span> حذف السطر | <span class="kbd">Ctrl+2</span> مراجعة الفاتورة | <span class="kbd">Ctrl+3</span> مشتريات</span>
+  <span class="st">اختصارات: <span class="kbd">Enter</span> سطر جديد | <span class="kbd">Del</span> حذف السطر | <span class="kbd">Ctrl+2</span> مراجعة الفاتورة | <span class="kbd">Ctrl+3</span> مشتريات | <span class="kbd">Ctrl+4</span> الحاسبة</span>
 </div>
 
 <div id="modal-back"><div class="dialog" id="dialog"></div></div>
@@ -1917,7 +1917,23 @@ $('ctrlgrp').querySelector('.ngrp-h').addEventListener('click', () => {
 $('sc_head').addEventListener('click', () => {
   const c = $('sidecalc').classList.toggle('collapsed');
   saveUIPrefs({ calcCollapsed: c });
+  /* فور الإظهار تستقبل الكتابة من لوحة المفاتيح مباشرة */
+  if (!c) { $('sc_disp').focus(); $('sc_disp').select(); }
 });
+/* استدعاء الحاسبة بلوحة المفاتيح (AutoKeys مثل Ctrl+2/Ctrl+3):
+   مخفية ← تظهر وتستقبل الكتابة فورًا | ظاهرة ← تركيز | ظاهرة ومركّز عليها ← إخفاء */
+function invokeCalc() {
+  const sc = $('sidecalc'), d = $('sc_disp');
+  if (!sc.classList.contains('collapsed') && document.activeElement === d) {
+    sc.classList.add('collapsed');
+    saveUIPrefs({ calcCollapsed: true });
+    d.blur();
+    return;
+  }
+  sc.classList.remove('collapsed');
+  saveUIPrefs({ calcCollapsed: false });
+  d.focus(); d.select();
+}
 
 /* ---------- حفظ واستعادة خيارات المستخدم في القائمة الجانبية وعناصرها ---------- */
 const UI_KEY = 'fatora_mushtariat_uiprefs_v1';
@@ -2260,9 +2276,9 @@ function bindEvents() {
     b.addEventListener('click', () => {
       const k = b.dataset.k;
       if (scDisp.value === 'خطأ') scDisp.value = '';
-      if (k === 'C') { scDisp.value = ''; scPersist(); return; }
-      if (k === 'B') { scDisp.value = scDisp.value.slice(0, -1); scPersist(); return; }
-      if (k === '=') { scEval(); return; }
+      if (k === 'C') { scDisp.value = ''; scPersist(); scDisp.focus(); return; }
+      if (k === 'B') { scDisp.value = scDisp.value.slice(0, -1); scPersist(); scDisp.focus(); return; }
+      if (k === '=') { scEval(); scDisp.focus(); return; }
       scDisp.value += k;
       scPersist();
       scDisp.focus();
@@ -2343,6 +2359,7 @@ function bindEvents() {
   document.addEventListener('keydown', e => {
     if (e.ctrlKey && e.key === '2') { e.preventDefault(); tathbitAlnamaz(); openWindow('win-purchases'); }
     else if (e.ctrlKey && e.key === '3') { e.preventDefault(); openWindow('win-purchases'); }
+    else if (e.ctrlKey && e.key === '4') { e.preventDefault(); invokeCalc(); }
   });
   /* --- حذف السطر الحالي بمفتاح Delete (كما في أكسس — خارج حقول الإدخال) --- */
   document.addEventListener('keydown', e => {
