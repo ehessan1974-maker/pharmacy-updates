@@ -93,6 +93,27 @@ body.nav-open #objtabs{transform:none}
 .sc-grid button.op{color:#7c2325;font-weight:700}
 .sc-grid button.eq{background:linear-gradient(180deg,#c2484c,#a4373a);border-color:#7c2325;color:#fff;font-weight:700}
 .sc-grid button.cl{background:linear-gradient(180deg,#f0b429,#e0a413);border-color:#b07c07;color:#3d2c00;font-weight:700}
+/* سجل الحاسبة: كل عملية ناجحة تُسجَّل تلقائيًا — انقر التعبير أو النتيجة لإعادته إلى الشاشة */
+#sidecalc .sc-log-h{display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:#7c2325;border-top:1px dashed #c6c3bd;padding-top:5px;margin-top:-1px}
+#sidecalc .sc-log-h .cnt{font-weight:400;color:#8a8781}
+#sidecalc .sc-log-h button{
+  margin-inline-start:auto;border:1px solid #b07c07;border-radius:3px;background:linear-gradient(180deg,#f0b429,#e0a413);
+  color:#3d2c00;font-family:inherit;font-size:10.5px;font-weight:700;padding:1px 8px;cursor:pointer;
+}
+#sidecalc .sc-log-h button:hover{filter:brightness(1.07)}
+#sidecalc .sc-log-h button:active{background:#e0a413}
+#sidecalc .sc-log{max-height:118px;overflow-y:auto;border:1px solid #b5b2ac;border-radius:3px;background:#fff}
+#sidecalc .sc-log .it{display:flex;align-items:center;gap:7px;padding:3px 6px;border-bottom:1px solid #efece7;font-family:Consolas,monospace;font-size:11.5px;direction:ltr}
+#sidecalc .sc-log .it:last-child{border-bottom:none}
+#sidecalc .sc-log .it:hover{background:#fdf9e8}
+#sidecalc .sc-log .it .e{color:#333;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46%}
+#sidecalc .sc-log .it .e:hover{text-decoration:underline;color:#7c2325}
+#sidecalc .sc-log .it .r{color:#1a5c2e;font-weight:700;cursor:pointer;white-space:nowrap}
+#sidecalc .sc-log .it .r:hover{text-decoration:underline}
+#sidecalc .sc-log .it .t{margin-inline-start:auto;color:#a09c95;font-size:10px}
+#sidecalc .sc-log .it .x{border:none;background:none;color:#b0aca5;font-size:13px;cursor:pointer;padding:0 2px;line-height:1}
+#sidecalc .sc-log .it .x:hover{color:#a4373a}
+#sidecalc .sc-log .empty{padding:8px 6px;text-align:center;color:#a09c95;font-size:10.5px;direction:rtl;font-family:inherit}
 .ngrp-h{
   display:flex;align-items:center;gap:6px;padding:7px 6px 5px;margin-top:4px;
   font-size:11.5px;font-weight:700;color:#7c2325;cursor:pointer;user-select:none;
@@ -362,7 +383,7 @@ table.sheet td.rowh .delx:hover{color:#fff;background:#a4373a;border-radius:2px}
     <div id="sidecalc" class="ngrp">
       <div class="ngrp-h" id="sc_head" title="انقر لإظهار أو إخفاء الحاسبة — تُستقبل الكتابة فورًا | Ctrl+4 استدعاء بلوحة المفاتيح"><span class="chev">▼</span><span>حاسبة سريعة</span></div>
       <div class="ngrp-body sc-body">
-      <input class="sc-disp" id="sc_disp" placeholder="0" autocomplete="off" spellcheck="false">
+      <input class="sc-disp" id="sc_disp" placeholder="0" autocomplete="off" spellcheck="false" title="اكتب العملية ثم Enter أو = للحساب — Esc يصفّر الحاسبة">
       <div class="sc-grid" id="sc_grid">
         <button class="cl" data-k="C">C</button>
         <button data-k="(">(</button>
@@ -385,6 +406,8 @@ table.sheet td.rowh .delx:hover{color:#fff;background:#a4373a;border-radius:2px}
         <button data-k="B">⌫</button>
         <button class="eq" data-k="=">=</button>
       </div>
+      <div class="sc-log-h"><span>سجل الحاسبة</span><span class="cnt" id="sc_log_cnt"></span><button id="sc_log_clear" title="مسح كل عمليات السجل">مسح</button></div>
+      <div class="sc-log" id="sc_log"></div>
       </div>
     </div>
 </div>
@@ -2267,9 +2290,14 @@ function bindEvents() {
   const scDisp = $('sc_disp');
   const scPersist = () => saveUIPrefs({ calc: scDisp.value });
   const scEval = () => {
-    const v = evalExpr(scDisp.value);
-    scDisp.value = (v === null) ? 'خطأ' : String(Number(v.toPrecision(12)));
+    const src = scDisp.value;
+    if (!src.trim() || src === 'خطأ') return;                /* لا يوجد ما يُحسب */
+    const v = evalExpr(src);
+    if (v === null) { scDisp.value = 'خطأ'; scPersist(); return; }
+    const out = String(Number(v.toPrecision(12)));
+    scDisp.value = out;
     scPersist();
+    scLogAdd(src.trim(), out);                               /* كل عملية ناجحة تُسجَّل في السجل */
   };
   scDisp.addEventListener('input', scPersist);
   document.querySelectorAll('#sc_grid button').forEach(b => {
@@ -2286,7 +2314,49 @@ function bindEvents() {
   });
   scDisp.addEventListener('keydown', e => {
     if (e.key === 'Enter') { e.preventDefault(); scEval(); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); scDisp.value = ''; scPersist(); }  /* Esc يصفّر الحاسبة */
   });
+
+  /* --- سجل الحاسبة: آخر 100 عملية تُحفظ في localStorage — انقر التعبير أو النتيجة لإعادته إلى الشاشة، × لحذف سطر، «مسح» لتفريغ السجل --- */
+  const SC_LOG_KEY = 'fatora_mushtariat_calclog_v1';
+  let SC_LOG = [];
+  const scLogSave = () => { try { localStorage.setItem(SC_LOG_KEY, JSON.stringify(SC_LOG.slice(0, 100))); } catch (e) {} };
+  const scLogLoad = () => {
+    try {
+      const a = JSON.parse(localStorage.getItem(SC_LOG_KEY));
+      SC_LOG = Array.isArray(a) ? a.filter(x => x && typeof x.e === 'string' && typeof x.r === 'string') : [];
+    } catch (e) { SC_LOG = []; }
+  };
+  const scLogRender = () => {
+    const box = $('sc_log');
+    box.innerHTML = '';
+    if (!SC_LOG.length) {
+      const d = document.createElement('div');
+      d.className = 'empty'; d.textContent = 'لا توجد عمليات محفوظة';
+      box.appendChild(d);
+    } else SC_LOG.forEach((it, i) => {
+      const row = document.createElement('div'); row.className = 'it';
+      const e1 = document.createElement('span'); e1.className = 'e'; e1.textContent = it.e; e1.title = 'انقر لإعادة التعبير إلى الشاشة';
+      const r1 = document.createElement('span'); r1.className = 'r'; r1.textContent = '= ' + it.r; r1.title = 'انقر لإعادة النتيجة إلى الشاشة';
+      const t1 = document.createElement('span'); t1.className = 't'; t1.textContent = it.t;
+      const x1 = document.createElement('button'); x1.className = 'x'; x1.textContent = '×'; x1.title = 'حذف هذا السطر';
+      e1.onclick = () => { scDisp.value = it.e; scPersist(); scDisp.focus(); };
+      r1.onclick = () => { scDisp.value = it.r; scPersist(); scDisp.focus(); };
+      x1.onclick = ev => { ev.stopPropagation(); SC_LOG.splice(i, 1); scLogSave(); scLogRender(); };
+      row.append(e1, r1, t1, x1);
+      box.appendChild(row);
+    });
+    $('sc_log_cnt').textContent = SC_LOG.length ? '(' + SC_LOG.length + ')' : '';
+  };
+  const scLogAdd = (expr, res) => {
+    const n = new Date();
+    SC_LOG.unshift({ e: expr, r: res, t: String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0') });
+    if (SC_LOG.length > 100) SC_LOG.length = 100;
+    scLogSave(); scLogRender();
+  };
+  $('sc_log_clear').onclick = () => { SC_LOG = []; scLogSave(); scLogRender(); toast('تم مسح سجل الحاسبة', 'ok'); };
+  scLogLoad(); scLogRender();
+
   $('btn-clearbatch').onclick = () => {
     DB.invoice.forEach(r => r['رقم الطبخة'] = null);
     renderFatoraSheet(); saveDB(); toast('تم تفريغ حقل رقم الطبخة', 'ok');
