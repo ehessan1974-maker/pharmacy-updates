@@ -589,6 +589,7 @@ table.sheet td.rowh .delx:hover{color:#fff;background:#a4373a;border-radius:2px}
   <span class="st">السجلات: <b id="st_count">0</b></span>
   <span class="st">السجل الحالي: <b id="st_cur">—</b></span>
   <span class="st">المادة الحالية: <b id="st_mat">—</b></span>
+  <span class="st" id="st_ver" title="إصدار البرنامج — تأكد أنه آخر إصدار عند كل تحديث">الإصدار: <b id="st_ver_num">—</b></span>
   <span class="st flex1"></span>
   <span class="st" style="cursor:pointer;text-decoration:underline" onclick="resetAll()" title="حذف البيانات المحفوظة محليًا والعودة للبيانات الأصلية من قاعدة Access">⟲ استعادة البيانات الأصلية</span>
   <span class="st">اختصارات: <span class="kbd">Enter</span> سطر جديد | <span class="kbd">Del</span> حذف السطر | <span class="kbd">Ctrl+2</span> مراجعة الفاتورة | <span class="kbd">Ctrl+3</span> مشتريات | <span class="kbd">Ctrl+4</span> الحاسبة</span>
@@ -731,6 +732,9 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
    البحث بالرمز (الرمز='نص' في المادة_Change) يبحث في فراغ.
    عند أول فتح بعد التحديث تُرقّى البيانات المحفوظة محليًا تلقائيًا (mergeSeedCards). */
 const CARDS_SEED_V = 2;
+
+/* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
+const APP_VER = '2026-11-01';
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
@@ -2859,7 +2863,8 @@ async function init() {
   entryFromRow(null);
   renderFatoraSheet();
   $('toasts').innerHTML = '';
-  toast(loaded ? 'تم استعادة بياناتك المحفوظة' : 'تم تحميل البيانات الأولية من قاعدة Access', 'ok');
+  $('st_ver_num').textContent = APP_VER;
+  toast((loaded ? 'تم استعادة بياناتك المحفوظة' : 'تم تحميل البيانات الأولية من قاعدة Access') + ' — إصدار ' + APP_VER, 'ok');
   if (mergedCardsMsg) { toast(mergedCardsMsg, 'ok'); mergedCardsMsg = ''; }
 }
 function fillDatalists() {

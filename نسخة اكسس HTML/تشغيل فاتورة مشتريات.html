@@ -20,7 +20,7 @@ body{font-family:"Segoe UI","Tahoma","Noto Naskh Arabic",Arial,sans-serif;backgr
 .sub{font-size:11px;color:#8a8781;margin-top:14px;line-height:1.7}
 button.retry{margin-top:14px;background:linear-gradient(180deg,#c2484c,#a4373a);border:1px solid var(--acc-dark);color:#fff;font-weight:600;font-family:inherit;font-size:13.5px;padding:8px 26px;border-radius:4px;cursor:pointer}
 .err-ico{font-size:34px;margin-bottom:8px}
-.offnote{display:none;background:#fffbe8;border:1px solid #d9c66b;color:#7a6410;font-size:12px;border-radius:4px;padding:6px 10px;margin-top:10px}
+.offnote{display:none;background:#fffbe8;border:1px solid #d9c66b;color:#7a6410;font-size:12px;border-radius:4px;padding:6px 10px;margin-top:10px;line-height:1.7}
 </style>
 </head>
 <body>
@@ -32,7 +32,7 @@ button.retry{margin-top:14px;background:linear-gradient(180deg,#c2484c,#a4373a);
     <div class="bar" id="bar"><span></span></div>
     <div class="offnote" id="offnote">⚠ تعذر الاتصال — تم تشغيل النسخة الاحتياطية المحفوظة محلياً (قد لا تكون آخر تحديث). اتصل بالإنترنت ثم أعد الفتح لتحديثها.</div>
     <button class="retry" id="retry" style="display:none" onclick="location.reload()">إعادة المحاولة</button>
-    <div class="sub">هذا المشغّل يجلب آخر نسخة من المستودع تلقائياً عند كل فتح — لا حاجة لتنزيل أي شيء مرة أخرى.<br>النسخة الاحتياطية تُحفظ محلياً للعمل دون إنترنت.</div>
+    <div class="sub">هذا المشغّل يجلب آخر نسخة من المستودع تلقائياً عند كل فتح — لا حاجة لتنزيل أي شيء مرة أخرى.<br>يجرّب عدة مصادر معاً ويشغّل أحدث إصدار بينها — فلا يؤثر حجب أو تعثر مصدر واحد.</div>
   </div>
 </div>
 
@@ -41,13 +41,24 @@ button.retry{margin-top:14px;background:linear-gradient(180deg,#c2484c,#a4373a);
 var USER='ehessan1974-maker', REPO='pharmacy-updates';
 var REL='نسخة اكسس HTML/فاتورة مشتريات.html';
 var K_HTML='__fatoret_last_html';
+var K_VER='__fatoret_last_ver';
 var enc=encodeURIComponent(REL);
 
+/* مصادر متعددة — يُجرب كلها معاً ويُشغّل أحدث إصدار (APP_VER) بينها:
+   1) raw.githubusercontent (أصلي، مع كاسر كاش)
+   2) gh-proxy مرآة مباشرة لـ raw (تجاوز حجب raw)
+   3) cdn.jsdelivr  4) gcore.jsdelivr (قد تكون مخزنة قديمة — لا تُختار إن وجد أحدث)
+   5) api.github.com (محتوى base64 — دائماً محدث)
+   6) statically.io (مرآة إضافية) */
 function sources(t){
+  var B='https://raw.githubusercontent.com/'+USER+'/'+REPO+'/main/'+enc;
   return [
-    'https://raw.githubusercontent.com/'+USER+'/'+REPO+'/main/'+enc+'?t='+t,
-    'https://cdn.jsdelivr.net/gh/'+USER+'/'+REPO+'@main/'+enc,
-    'https://api.github.com/repos/'+USER+'/'+REPO+'/contents/'+enc+'?ref=main&t='+t
+    {u:B+'?t='+t, api:0},
+    {u:'https://gh-proxy.com/'+B+'?t='+t, api:0},
+    {u:'https://cdn.jsdelivr.net/gh/'+USER+'/'+REPO+'@main/'+enc, api:0},
+    {u:'https://gcore.jsdelivr.net/gh/'+USER+'/'+REPO+'@main/'+enc, api:0},
+    {u:'https://api.github.com/repos/'+USER+'/'+REPO+'/contents/'+enc+'?ref=main&t='+t, api:1},
+    {u:'https://cdn.statically.io/gh/'+USER+'/'+REPO+'/main/'+enc, api:0}
   ];
 }
 function setMsg(s){var m=document.getElementById('msg');if(m)m.textContent=s;}
@@ -62,6 +73,22 @@ function decodeApi(json){
 function isApp(html){
   return html && html.length>50000 && html.indexOf('SEED_B64')>-1 && html.indexOf('فاتورة')>-1;
 }
+/* استخراج إصدار البرنامج من نص الصفحة: APP_VER = '2026-11-01' */
+function extractVer(html){
+  var m=String(html||'').match(/APP_VER\s*=\s*'([0-9]{4}-[0-9]{2}-[0-9]{2}[a-z]?)'/);
+  return m?m[1]:null;
+}
+function verKey(v){
+  var m=String(v||'').match(/^(\d{4})(\d{2})(\d{2})([a-z]?)$/);
+  if(!m)return null;
+  return {n:+(m[1]+m[2]+m[3]), s:m[4]||''};
+}
+/* true إذا كان a أحدث من b */
+function newer(a,b){
+  var ka=verKey(a), kb=verKey(b);
+  if(ka&&kb)return ka.n>kb.n||(ka.n===kb.n&&ka.s>kb.s);
+  return !!ka&&!kb;
+}
 function fetchOne(url,isApi,timeout){
   return new Promise(function(res,rej){
     var ctrl=('AbortController' in window)?new AbortController():null;
@@ -72,8 +99,8 @@ function fetchOne(url,isApi,timeout){
       .catch(function(e){clearTimeout(to);rej(e);});
   });
 }
-function runApp(html){
-  var s=st(); if(s){try{s.setItem(K_HTML,html);}catch(e){}}
+function runApp(html,ver){
+  var s=st(); if(s){try{s.setItem(K_HTML,html);if(ver)s.setItem(K_VER,ver);}catch(e){}}
   document.open(); document.write(html); document.close();
 }
 function fail(){
@@ -81,34 +108,31 @@ function fail(){
   document.getElementById('bar').style.display='none';
   var r=document.getElementById('retry'); if(r)r.style.display='inline-block';
 }
+function runBackup(){
+  var s=st();
+  var cached=s?(function(){try{return s.getItem(K_HTML);}catch(e){return null}})():null;
+  var cachedVer=s?(function(){try{return s.getItem(K_VER);}catch(e){return null}})():null;
+  if(isApp(cached)){
+    document.getElementById('offnote').style.display='block';
+    setMsg('وضع عدم الاتصال — إصدار '+(cachedVer||'غير معروف'));
+    setTimeout(function(){runApp(cached,cachedVer);},900);
+  } else fail();
+}
 
 (function boot(){
-  /* ترتيب ثابت دائماً: raw أولاً (محدّث فوراً مع كاسر الكاش) ثم api.github ثم jsDelivr
-     (jsDelivr آخراً لأن كاشه قد يقدم نسخة قديمة دون فشل ظاهر) */
   var list=sources(Date.now());
-  var order=[list[0],list[2],list[1]];
-  var idx=0;
-
-  function tryNext(){
-    if(idx>=3){
-      var s=st();
-      var cached=s?(function(){try{return s.getItem(K_HTML);}catch(e){return null}})():null;
-      if(isApp(cached)){
-        document.getElementById('offnote').style.display='block';
-        setMsg('وضع عدم الاتصال');
-        setTimeout(function(){runApp(cached);},900);
-      } else fail();
-      return;
-    }
-    var isApi=(idx===1);
-    setMsg('جاري جلب آخر نسخة — المصدر '+(idx+1)+' من 3...');
-    fetchOne(order[idx],isApi,8000).then(function(html){
-      if(!isApp(html))throw new Error('محتوى غير صالح');
-      setMsg('تم ✓ — تشغيل آخر نسخة ('+Math.round(html.length/1024)+' كب)');
-      setTimeout(function(){runApp(html);},350);
-    }).catch(function(){idx++;tryNext();});
-  }
-  tryNext();
+  setMsg('جاري جلب آخر نسخة — تجربة '+list.length+' مصادر معاً...');
+  /* كل المصادر بالتوازي ثم اختيار الأحدث إصداراً بين الاستجابات الصالحة */
+  Promise.all(list.map(function(x){return fetchOne(x.u,x.api,9000).catch(function(){return null;});}))
+    .then(function(results){
+      var cands=results.filter(function(h){return isApp(h);})
+        .map(function(h){return {html:h, ver:extractVer(h)};});
+      if(!cands.length){runBackup();return;}
+      cands.sort(function(a,b){return newer(b.ver,a.ver)?1:-1;});
+      var best=cands[0];
+      setMsg('تم ✓ — تشغيل إصدار '+(best.ver||'غير معروف')+' ('+Math.round(best.html.length/1024)+' كب)');
+      setTimeout(function(){runApp(best.html,best.ver);},350);
+    });
 })();
 </script>
 </body>
