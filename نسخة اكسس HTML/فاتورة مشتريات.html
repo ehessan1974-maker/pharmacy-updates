@@ -269,6 +269,13 @@ body.colresizing{cursor:col-resize!important;user-select:none!important}
 body.colresizing *{cursor:col-resize!important}
 table.sheet tr.newrec td{background:#fffef5;color:#a0987a}
 table.sheet tr.newrec td.editable:hover{background:#fff7d6;box-shadow:inset 0 0 0 1.5px #d9c66b}
+/* ===== تغيير ترتيب الأعمدة بالسحب — كما في أكسس (سحب رأس العمود) ===== */
+table.sheet th[draggable="true"]{cursor:grab}
+table.sheet th.dragging{opacity:.35;background:#eee9e2}
+table.sheet th.drop-before{box-shadow:inset 3px 0 0 0 var(--acc)}
+table.sheet th.drop-after{box-shadow:inset -3px 0 0 0 var(--acc)}
+body.coldragging{cursor:grabbing!important;user-select:none!important}
+body.coldragging *{cursor:grabbing!important}
 table.sheet tr.newrec td.rowh{color:#8a7a00;font-weight:800;font-size:13px}
 table.sheet tfoot td{
   position:sticky;bottom:0;z-index:2;
@@ -453,7 +460,7 @@ table.sheet td.rowh .delx:hover{color:#fff;background:#a4373a;border-radius:2px}
 
   <!-- ================= مشتريات ================= -->
   <div class="window hidden" id="win-purchases">
-    <div class="win-head"><span class="dot"></span>مشتريات — سجل الفواتير السابقة</div>
+    <div class="win-head"><span class="dot"></span>جدول فاتورة مشتريات — سجل الفواتير السابقة (31 عمودًا — اسحب رأس العمود لإعادة الترتيب)</div>
     <div class="win-body">
       <div class="row">
         <div class="field" style="max-width:320px"><label>بحث (المادة / الشركة / الباركود)</label><input class="i" id="p_search" placeholder="اكتب للبحث..."></div>
@@ -893,10 +900,11 @@ function renderSheet(container, opts) {
     totalsCols = [], newRecord = null, onCellClick = null, onDeleteRow = null,
     onHeaderDblClick = null, headerDblTips = null,
   } = opts;
-  opts._editColsShown = cols.filter(c => editableCols.includes(c));   /* أعمدة قابلة للتحرير معروضة فعلًا */
   container.innerHTML = '';
   const allWidths = loadColWidths();
   const widths = allWidths[container.id] || {};
+  const showCols = applyColOrder(container.id, cols);   /* ترتيب الأعمدة المحفوظ (السحب) */
+  opts._editColsShown = showCols.filter(c => editableCols.includes(c));   /* أعمدة قابلة للتحرير معروضة فعلًا */
   const openEditor = (td, r, c, absIdx, seed = '', isNew = false) =>
     startCellEditor(container, opts, td, r, c, absIdx, seed, isNew);
 
@@ -904,8 +912,21 @@ function renderSheet(container, opts) {
   tbl.className = 'sheet';
   const thead = document.createElement('thead');
   const hr = document.createElement('tr');
-  if (rowHead) { const th = document.createElement('th'); th.className = 'rowh'; th.textContent = '#'; hr.appendChild(th); }
-  cols.forEach(c => {
+  if (rowHead) {
+    const th = document.createElement('th'); th.className = 'rowh'; th.textContent = '#';
+    th.title = 'نقر مزدوج: استعادة ترتيب الأعمدة الافتراضي';
+    th.ondblclick = e => {
+      e.preventDefault(); e.stopPropagation();
+      const m = loadColOrders();
+      if (m[container.id]) {
+        delete m[container.id]; saveColOrders(m);
+        renderSheet(container, opts);
+        toast('استُعيد الترتيب الافتراضي للأعمدة', 'ok');
+      }
+    };
+    hr.appendChild(th);
+  }
+  showCols.forEach(c => {
     const th = document.createElement('th');
     th.textContent = c;
     th.dataset.col = c;
@@ -929,6 +950,53 @@ function renderSheet(container, opts) {
       renderSheet(container, opts);
     });
     th.appendChild(rs);
+    /* ===== تغيير ترتيب الأعمدة بالسحب — كما في أكسس ===== */
+    th.draggable = true;
+    th.title = th.title || 'اسحب رأس العمود لتغيير موضعه';
+    th.addEventListener('dragstart', ev => {
+      if (ev.target.closest && ev.target.closest('.col-rsz')) { ev.preventDefault(); return; }
+      sheetDragCol = { grid: container.id, col: c };
+      th.classList.add('dragging');
+      document.body.classList.add('coldragging');
+      ev.dataTransfer.effectAllowed = 'move';
+      try { ev.dataTransfer.setData('text/plain', c); } catch (e) {}
+    });
+    th.addEventListener('dragend', () => {
+      th.classList.remove('dragging');
+      document.body.classList.remove('coldragging');
+      container.querySelectorAll('th.drop-before,th.drop-after').forEach(x => x.classList.remove('drop-before', 'drop-after'));
+      sheetDragCol = null;
+    });
+    th.addEventListener('dragover', ev => {
+      if (!sheetDragCol || sheetDragCol.grid !== container.id || sheetDragCol.col === c) return;
+      ev.preventDefault();
+      ev.dataTransfer.dropEffect = 'move';
+      const rct = th.getBoundingClientRect();
+      const after = document.documentElement.getAttribute('dir') === 'rtl'
+        ? ev.clientX < rct.left + rct.width / 2
+        : ev.clientX > rct.left + rct.width / 2;
+      container.querySelectorAll('th.drop-before,th.drop-after').forEach(x => x.classList.remove('drop-before', 'drop-after'));
+      th.classList.add(after ? 'drop-after' : 'drop-before');
+      th._dropAfter = after;
+    });
+    th.addEventListener('dragleave', () => th.classList.remove('drop-before', 'drop-after'));
+    th.addEventListener('drop', ev => {
+      ev.preventDefault();
+      th.classList.remove('drop-before', 'drop-after');
+      if (!sheetDragCol || sheetDragCol.grid !== container.id || sheetDragCol.col === c) return;
+      const src = sheetDragCol.col;
+      const cur = showCols.slice();
+      const from = cur.indexOf(src), to = cur.indexOf(c);
+      if (from < 0 || to < 0) return;
+      cur.splice(from, 1);   /* أزل المصدر أولًا ثم أدخله قبل/بعد الهدف */
+      const to2 = cur.indexOf(c);
+      cur.splice(th._dropAfter ? to2 + 1 : to2, 0, src);
+      const m = loadColOrders();
+      m[container.id] = cur;
+      saveColOrders(m);
+      sheetDragCol = null;
+      renderSheet(container, opts);
+    });
     hr.appendChild(th);
   });
   thead.appendChild(hr); tbl.appendChild(thead);
@@ -956,7 +1024,7 @@ function renderSheet(container, opts) {
       tdh.onclick = () => onRowClick && onRowClick(absIdx);
       tr.appendChild(tdh);
     }
-    cols.forEach(c => {
+    showCols.forEach(c => {
       const td = document.createElement('td');
       td.dataset.col = c; td.dataset.row = absIdx;
       let v = r[c];
@@ -1019,7 +1087,7 @@ function renderSheet(container, opts) {
       };
       trn.appendChild(tdh);
     }
-    cols.forEach(c => {
+    showCols.forEach(c => {
       const td = document.createElement('td');
       td.dataset.col = c; td.dataset.row = 'new';
       if (editableCols.includes(c)) {
@@ -1047,7 +1115,7 @@ function renderSheet(container, opts) {
     tdh.textContent = 'Σ';
     tdh.title = 'سطر الإجمالي — مجموع الأعمدة الرقمية';
     trf.appendChild(tdh);
-    cols.forEach(c => {
+    showCols.forEach(c => {
       const td = document.createElement('td');
       if (totalsCols.includes(c)) {
         td.classList.add('num');
@@ -1092,6 +1160,24 @@ function loadColWidths() {
 function saveColWidths(map) {
   try { localStorage.setItem(COLW_KEY, JSON.stringify(map)); } catch (e) {}
 }
+/* ---------- ترتيب الأعمدة المحفوظ (تغيير ترتيب الأعمدة بالسحب — مثل أكسس) ----------
+   سحب رأس العمود وإفلاته على عمود آخر ينقل العمود — يُحفظ لكل جدول على حدة،
+   ونقر مزدوج على خلية الرأس «#» يستعيد الترتيب الافتراضي */
+const COLORDER_KEY = 'fatora_mushtariat_colorder_v1';
+function loadColOrders() {
+  try { return JSON.parse(localStorage.getItem(COLORDER_KEY)) || {}; } catch (e) { return {}; }
+}
+function saveColOrders(map) {
+  try { localStorage.setItem(COLORDER_KEY, JSON.stringify(map)); } catch (e) {}
+}
+function applyColOrder(gridId, cols) {
+  const order = loadColOrders()[gridId];
+  if (!Array.isArray(order) || !order.length) return cols;
+  const known = order.filter((c, i) => cols.includes(c) && order.indexOf(c) === i);   /* بلا تكرار */
+  const rest = cols.filter(c => !order.includes(c));
+  return [...known, ...rest];
+}
+let sheetDragCol = null;   /* {grid, col} أثناء سحب رأس عمود */
 /* التنقل بين الخلايا بعد إعادة بناء الجدول (Enter/Tab/الأسهم — مثل أكسس) */
 let sheetPendingNav = null;   /* {containerId, row, col, seed, newRec} */
 function requestSheetNav(containerId, row, col, seed = '', newRec = false) {
@@ -1536,7 +1622,7 @@ function rowFromEntry(r) {
 }
 
 /* ---------- عرض ورقة بيانات الفاتورة ---------- */
-const FATORA_COLS = ['ترتيب','المادة','الشركة','رمز الباركود','الكمية','المجاني','سعر الشراء','حسم %','قيمة الحسم','الإجمالي قبل الحسم','الإجمالي بعد الحسم','إجمالي الكمية','سعر العميل','السعر الأساسي','عموم معتمد','أساس العرض','مجاني العرض','حسم العرض','السعر الصافي بعد العرض','رقم الطبخة','تاريخ الصنع','تاريخ انتهاء الفعالية','ملاحظات'];
+const FATORA_COLS = ['ترتيب','المادة','الشركة','رمز الباركود','الكمية','المجاني','سعر الشراء','حسم %','قيمة الحسم','الإجمالي قبل الحسم','الإجمالي بعد الحسم','إجمالي الكمية','سعر العميل','السعر الأساسي','عموم معتمد','أساس العرض','مجاني العرض','حسم العرض','السعر الصافي بعد العرض','رقم الطبخة','تاريخ الصنع','شهر','سنة','تاريخ انتهاء الفعالية','ملاحظات'];
 function renderFatoraSheet(page) {
   if (page === undefined) page = APP.curRow >= 0 ? Math.floor(APP.curRow / 200) : 0;
   renderSheet($('fatora_sheet'), {
@@ -1751,6 +1837,7 @@ async function saveFatoora() {
         'سعر الشراء': nz(r['سعر الشراء']), 'حسم %': nz(r['حسم %']),
         'رقم الطبخة': String(r['رقم الطبخة'] ?? ''),
         'تاريخ الصنع': r['تاريخ الصنع'], 'تاريخ انتهاء الفعالية': r['تاريخ انتهاء الفعالية'],
+        'شهر': r['شهر'], 'سنة': r['سنة'],
         'رقم الفاتورة': rno, 'المستخدم': $('f_user').value, 'من': $('f_from').value,
         'إلى': $('f_to').value, 'التاريخ': inputToArDate($('f_date').value),
         'الوقت': inputToArTime($('f_time').value), 'ترتيب': nz(r['ترتيب']),
@@ -1961,7 +2048,7 @@ function materialSearch(q) {
 /* ---------- الكائنات = تبويبات مستندات داخل الصندوق (سلوك أكسس: Tabbed Documents) ---------- */
 const WINDOWS = [
   {id: 'win-fatora', name: 'فاتورة مشتريات', ico: '🧾', grp: 'الفواتير'},
-  {id: 'win-purchases', name: 'مشتريات', ico: '📦', grp: 'الجداول'},
+  {id: 'win-purchases', name: 'جدول فاتورة مشتريات', ico: '📦', grp: 'الجداول'},
   {id: 'win-cards', name: 'بطاقات المواد', ico: '🗂️', grp: 'الجداول'},
   {id: 'win-sales', name: 'مبيعات', ico: '🛒', grp: 'الجداول'},
   {id: 'win-balance', name: 'الرصيد', ico: '⚖️', grp: 'الجداول'},
@@ -2150,8 +2237,40 @@ $('navburger').addEventListener('click', e => {
 });
 /* القائمة تُفتح وتُغلق فقط من زر ☰ — النقر خارجها لا يغلقها */
 
-/* ================= نموذج مشتريات ================= */
-const PURCH_COLS = ['رقم الفاتورة','ترتيب','المادة','الشركة','رمز الباركود','الكمية','المجاني','سعر الشراء','حسم %','قيمة الحسم','الإجمالي قبل الحسم','الإجمالي بعد الحسم','إجمالي الكمية','سعر العميل','السعر الأساسي','عموم معتمد','أساس العرض','مجاني العرض','حسم العرض','السعر الصافي بعد العرض','رقم الطبخة','تاريخ الصنع','تاريخ انتهاء الفعالية','التاريخ','الوقت','المستخدم','من','إلى','ملاحظات'];
+/* ================= جدول فاتورة مشتريات (كما في أكسس — 31 عمودًا بالترتيب) =================
+   ترتيب شهر سنة تاريخ انتهاء الفعالية رمز الباركود الشركة المادة الكمية المجاني
+   حسم% سعر الشراء الإجمالي بعد الحسم رقم الطبخة ملاحظات عموم معتمد حسم العرض
+   سعر العميل قيمة الحسم تاريخ الصنع الإجمالي قبل الحسم إجمالي الكمية رقم الفاتورة
+   المستخدم من إلى الوقت التاريخ السعر الصافي بعد العرض السعر الأساسي أساس العرض مجاني العرض */
+const TABLE31_COLS = ['ترتيب','شهر','سنة','تاريخ انتهاء الفعالية','رمز الباركود','الشركة','المادة','الكمية','المجاني','حسم %','سعر الشراء','الإجمالي بعد الحسم','رقم الطبخة','ملاحظات','عموم معتمد','حسم العرض','سعر العميل','قيمة الحسم','تاريخ الصنع','الإجمالي قبل الحسم','إجمالي الكمية','رقم الفاتورة','المستخدم','من','إلى','الوقت','التاريخ','السعر الصافي بعد العرض','السعر الأساسي','أساس العرض','مجاني العرض'];
+const PURCH_TEXT_COLS = ['رقم الفاتورة','المادة','الشركة','رمز الباركود','تاريخ الصنع','تاريخ انتهاء الفعالية','التاريخ','الوقت','المستخدم','من','إلى','ملاحظات','رقم الطبخة','شهر','سنة'];
+
+/* البيانات القديمة المحفوظة تُكمل أعمدتها الناقصة:
+   شهر/سنة تُشتقان من تاريخ انتهاء الفعالية إن لم تكونا محفوظتين */
+function upgradePurchasesCols() {
+  let changed = false;
+  const derive = t => {
+    const m = String(t ?? '').match(/(\d{4})-(\d{2})/);
+    return m ? { y: m[1], mo: String(parseInt(m[2], 10)) } : null;
+  };
+  DB.purchases.forEach(p => {
+    TABLE31_COLS.forEach(k => {
+      if (p[k] === undefined) { p[k] = null; changed = true; }
+    });
+    if ((p['شهر'] == null || p['سنة'] == null) && p['تاريخ انتهاء الفعالية']) {
+      const d = derive(p['تاريخ انتهاء الفعالية']);
+      if (d) {
+        if (p['سنة'] == null) { p['سنة'] = d.y; changed = true; }
+        if (p['شهر'] == null) { p['شهر'] = d.mo; changed = true; }
+      }
+    }
+  });
+  if (JSON.stringify(DB.purchasesCols) !== JSON.stringify(TABLE31_COLS)) {
+    DB.purchasesCols = [...TABLE31_COLS];
+    changed = true;
+  }
+  return changed;
+}
 function filteredPurchases() {
   const q = $('p_search').value.trim();
   const wh = $('p_wh').value;
@@ -2167,8 +2286,8 @@ function renderPurchases() {
   if (APP.pPage > maxPage) APP.pPage = maxPage;
   $('p_page').textContent = (APP.pPage + 1) + ' / ' + (maxPage + 1);
   renderSheet($('purch_sheet'), {
-    cols: PURCH_COLS, rows,
-    numericCols: PURCH_COLS.filter(c => !['رقم الفاتورة','المادة','الشركة','رمز الباركود','تاريخ الصنع','تاريخ انتهاء الفعالية','التاريخ','الوقت','المستخدم','من','إلى','ملاحظات','رقم الطبخة'].includes(c)),
+    cols: TABLE31_COLS, rows,   /* كل أعمدة الجدول كما في أكسس — الترتيب قابل للتغيير بالسحب */
+    numericCols: TABLE31_COLS.filter(c => !PURCH_TEXT_COLS.includes(c)),
     page: APP.pPage, pageSize,
     onRowClick: i => {
       const abs = APP.pPage * pageSize + i;
@@ -2723,6 +2842,7 @@ async function init() {
     return;
   }
   const loaded = await loadDB();
+  if (upgradePurchasesCols()) await saveDB();   /* مطابقة جدول فاتورة مشتريات: 31 عمودًا */
   if (!loaded) await saveDB();
   /* Form_Load — تحديث أرقام فواتير المشتريات: رقم الفاتورة = من & ' ' & التاريخ & ' ' & الوقت */
   DB.purchases.forEach(p => { p['رقم الفاتورة'] = canonInvoiceNo(p); });
