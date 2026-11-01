@@ -245,6 +245,14 @@ table.sheet th,table.sheet td{
   border-left:1px solid var(--grid);border-bottom:1px solid var(--grid);
   padding:3px 8px;white-space:nowrap;text-align:right;
 }
+/* الخط الوهمي (المنقّط) كما في نموذج أكسس — جدول المشتريات فقط:
+   الفاصل بين العمودين الأول والثاني (ترتيب | شهر) وبين 13 و14 (رقم الطبخة | ملاحظات).
+   العمود الأول في DOM هو خانة (#) فتصير «ترتيب» الطفل الثاني و«رقم الطبخة» الرابع عشر،
+   وحدّ الطفل الأيسر في جدول RTL هو الفاصل بينه وبين العمود الذي يليه */
+#purch_sheet th:nth-child(2),#purch_sheet td:nth-child(2),
+#purch_sheet th:nth-child(14),#purch_sheet td:nth-child(14){
+  border-left:1px dotted #9a978f;
+}
 table.sheet th{
   background:linear-gradient(180deg,var(--hdr1),var(--hdr2));
   font-weight:600;position:sticky;top:0;z-index:3;color:#3d3d3d;
@@ -775,7 +783,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 2;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-01e';
+const APP_VER = '2026-11-02';
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
@@ -1428,30 +1436,40 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
         let s = 0;
         const bc = String(cd['رمز الباركود'] ?? '').toLowerCase();
         const rc = String(cd['الرمز'] ?? '').toLowerCase();
-        if (qL && bc && bc === qL) s = 2;
-        else if (qL && rc && rc === qL) s = 1;
+        const qE = String(qL ?? '').replace(/\s+$/, '');   /* Jet: '=' يتجاهل الفراغات اللاحقة */
+        if (qE && bc && bc === qE) s = 2;
+        else if (qE && rc && rc === qE) s = 1;
         return { cd, s };
       })
       .sort((a, b) => b.s - a.s || String(a.cd['المادة'] ?? '').localeCompare(String(b.cd['المادة'] ?? ''), 'ar'))
       .map(x => x.cd);
+    /* استعلام مصدر صف خانة المادة — HAVING في المادة_Change/F3/Enter في أكسس:
+       المادة Like '*نص*' OR الرمز = 'نص' OR رمز الباركود Like '*نص*'
+       — Like: النمط حرفيًا كما كُتب ومنه الفراغات (Jet لا يقصّ فراغات نمط Like:
+         «3  » لا تطابق أي اسم — لا أحد يملك «3  » في اسمه)
+       — '=': محرك Jet يتجاهل الفراغات اللاحقة فَـ'3  ' = '3' صحيحة،
+         ولذلك كتابة 3 ثم فراغين تُظهر وحدها المادة التي رمزها 3
+         (سيتامول 500 تاميكو 100 ظرف) — كما في أكسس تمامًا */
+    const matQuery = (t, mode) => {
+      const rx = accLike('*' + t + '*');   /* المادة ورمز الباركود: Like '*نص*' — مع دعم * و ? داخل النص */
+      const tEq = String(t).replace(/\s+$/, '').toLowerCase();
+      return DB.cards.filter(cd => {
+        const m = String(cd['المادة'] ?? '');
+        /* المادة_KeyDown F4 (س186): WHERE المادة LIKE '*نص*' — بالاسم فقط */
+        if (mode === 'f4') return rx.test(m);
+        const rc = String(cd['الرمز'] ?? '');
+        const bc = String(cd['رمز الباركود'] ?? '');
+        return rx.test(m) || (!!rc && rc.replace(/\s+$/, '').toLowerCase() === tEq) || rx.test(bc);
+      });
+    };
     const buildMatList = mode => {
       closeMatList();
-      const q = String(inp.value).trim();
+      const q = String(inp.value);   /* Me.المادة.Text حرفيًا — الفراغات جزء من النمط كما كُتِبت */
       const forced = mode === 'f3' || mode === 'f4';
       if (!q && !forced) return;   /* F3/F4 بنص فارغ = كل المواد كما في LIKE '*' في أكسس */
-      const rx = accLike('*' + q + '*');   /* المادة ورمز الباركود: Like '*نص*' — مع دعم * و ? داخل النص */
       const qL = q.toLowerCase();
       const seen = new Set();
-      let hits = DB.cards
-        .filter(cd => {
-          const m = String(cd['المادة'] ?? '');
-          /* المادة_KeyDown F4 (س186): WHERE المادة LIKE '*نص*' — بالاسم فقط */
-          if (mode === 'f4') return rx.test(m);
-          const rc = String(cd['الرمز'] ?? '');
-          const bc = String(cd['رمز الباركود'] ?? '');
-          /* الرمز = 'نص' مطابقة تامة بلا أحرف بدل — كما في HAVING في أكسس */
-          return rx.test(m) || (rc && rc.toLowerCase() === qL) || rx.test(bc);
-        });
+      let hits = matQuery(q, mode);
       if (mode === 'f4') {
         /* F4 بالاسم فقط: أبجدي بحت */
         hits.sort((a, b) => String(a['المادة'] ?? '').localeCompare(String(b['المادة'] ?? ''), 'ar'));
@@ -1538,16 +1556,10 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
            وجدت نتائج ← أول نتيجة ORDER BY المادة (rs.MoveFirst) + fSendKeys "{left}{down}"
            — لا نتائج ← Me.المادة = "" + fSendKeys "{left}" ثم المادة_AfterUpdate */
         e.preventDefault();
-        const q = String(inp.value).trim();
-        const rx = accLike('*' + q + '*');
-        const qL = q.toLowerCase();
-        const hits = DB.cards
-          .filter(cd => rx.test(String(cd['المادة'] ?? ''))
-            || String(cd['الرمز'] ?? '').toLowerCase() === qL
-            || rx.test(String(cd['رمز الباركود'] ?? '')));
-        sortMatHits(hits, qL);   /* التطابق التام (رمز/باركود) أولًا ثم أبجدي */
-        if (hits.length) {
-          inp.value = (hits[0]['المادة'] ?? '');
+        const q = String(inp.value);   /* حرفيًا مع الفراغات — Me.المادة.Text كما في أكسس */
+        const ordered = sortMatHits(matQuery(q), q.toLowerCase());   /* التطابق التام (رمز/باركود) أولًا ثم أبجدي */
+        if (ordered.length) {
+          inp.value = (ordered[0]['المادة'] ?? '');
           if (fresh) materialize();
           navLeftDown();          /* fSendKeys "{left}{down}" */
           commit();
