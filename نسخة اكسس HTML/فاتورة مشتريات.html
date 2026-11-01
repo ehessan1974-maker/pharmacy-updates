@@ -235,6 +235,7 @@ input.num{text-align:center;direction:ltr}
 }
 /* ===== جدول ورقة البيانات ===== */
 .sheetwrap{border:1px solid #b0ada7;border-radius:3px;overflow:auto;background:var(--sheet);position:relative}
+.sheetwrap:focus{outline:none}   /* ورقة البيانات تستقبل الأسهم بلا إطار تركيز — كما في أكسس */
 /* ورقة بيانات الفاتورة تملأ المساحة الفارغة المتبقية في النافذة */
 #win-fatora #fatora_sheet{flex:1 1 auto;min-height:140px;max-height:none}
 table.sheet{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;font-size:12.5px}
@@ -783,7 +784,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 2;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-02';
+const APP_VER = '2026-11-02b';
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
@@ -954,6 +955,7 @@ function renderSheet(container, opts) {
     onHeaderDblClick = null, headerDblTips = null,
   } = opts;
   container.innerHTML = '';
+  container._sheetOpts = opts;   /* يستخدمه مستقبِل أسهم وضع التنقل */
   const allWidths = loadColWidths();
   const widths = allWidths[container.id] || {};
   const showCols = applyColOrder(container.id, cols);   /* ترتيب الأعمدة المحفوظ (السحب) */
@@ -1091,13 +1093,19 @@ function renderSheet(container, opts) {
       }
       if (editableCols.includes(c)) {
         td.classList.add('editable');
-        td.title = 'انقر للتحرير المباشر — Enter للسطر التالي';
+        td.title = 'انقر لتحديد الخلية — الأسهم للتنقل بين الخلايا — F2 أو نقرة أخرى للتحرير';
         td.onclick = e => {
           e.stopPropagation();
           const open = container.querySelector('.edit-in');
           if (open) { requestSheetNav(container.id, absIdx, c); open.blur(); return; }
-          if (onCellClick) onCellClick(absIdx, c, tr, td);
-          openEditor(td, r, c, absIdx, '');
+          /* أكسس: النقرة تحدد الخلية (وضع التنقل) — والنقرة على المحددة نفسها تفتح المحرر */
+          if (sheetSel && sheetSel.containerId === container.id && !sheetSel.newRec
+            && sheetSel.row === absIdx && sheetSel.col === c) {
+            if (onCellClick) onCellClick(absIdx, c, tr, td);
+            openEditor(td, r, c, absIdx, '');
+            return;
+          }
+          selectSheetCell(container, opts, absIdx, c, false);
         };
         td.ondblclick = e => {
           e.stopPropagation();
@@ -1145,12 +1153,17 @@ function renderSheet(container, opts) {
       td.dataset.col = c; td.dataset.row = 'new';
       if (editableCols.includes(c)) {
         td.classList.add('editable');
-        td.title = 'اكتب هنا لإضافة سجل جديد فورًا';
+        td.title = 'اكتب هنا لإضافة سجل جديد فورًا — الأسهم للتنقل';
         td.onclick = e => {
           e.stopPropagation();
           const open = container.querySelector('.edit-in');
           if (open) { requestSheetNav(container.id, 0, c, '', true); open.blur(); return; }
-          openEditor(td, {}, c, -1, '', true);
+          /* أكسس: النقرة تحدد خلية السجل الجديد — الكتابة تبدأ السجل */
+          if (sheetSel && sheetSel.containerId === container.id && sheetSel.newRec && sheetSel.col === c) {
+            openEditor(td, {}, c, -1, '', true);
+            return;
+          }
+          selectSheetCell(container, opts, 0, c, true);
         };
       }
       trn.appendChild(td);
@@ -1203,6 +1216,16 @@ function renderSheet(container, opts) {
       }
     }
   }
+  /* ===== وضع التنقل بالأسهم بين الخلايا (ورقة بيانات أكسس) — ربط مرة واحدة لكل ورقة ===== */
+  if (!container._navBound) {
+    container._navBound = true;
+    container.tabIndex = -1;   /* بلا توقف Tab — التركيز برمجي فقط */
+    container.addEventListener('keydown', ev => sheetNavKey(ev, container));
+    container.addEventListener('click', () => {
+      if (!container.querySelector('.edit-in')) container.focus({ preventScroll: true });
+    });
+  }
+  applySheetSel(container);
 }
 
 /* ---------- عرض الأعمدة المحفوظة (تغيير عرض الأعمدة بالسحب — مثل أكسس) ---------- */
@@ -1235,6 +1258,101 @@ let sheetDragCol = null;   /* {grid, col} أثناء سحب رأس عمود */
 let sheetPendingNav = null;   /* {containerId, row, col, seed, newRec} */
 function requestSheetNav(containerId, row, col, seed = '', newRec = false) {
   sheetPendingNav = {containerId, row, col, seed, newRec};
+}
+/* ===== وضع التنقل بين الخلايا بالأسهم — مثل ورقة بيانات أكسس =====
+   الخلية الحالية محددة (td.sel) بلا محرر مفتوح: الأسهم تحرك التحديد بصريًا
+   (RTL: ← العمود التالي، → السابق)، Enter ينزل للسجل التالي وShift+Enter يصعد،
+   Tab بين الأعمدة، Home/End أول/آخر عمود، F2 أو كتابة حرف يفتحا المحرر
+   (الحرف يستبدل المحتوى كما في أكسس)، Delete يفرّغ الخلية، النقرة تحدد الخلية
+   والنقرة على المحددة نفسها (أو نقر مزدوج) تفتح المحرر. */
+let sheetSel = null;   /* {containerId, row, col, newRec} — الخلية الحالية بوضع التنقل */
+function sheetSelTd(container) {
+  if (!sheetSel || sheetSel.containerId !== container.id) return null;
+  const tbl = container.querySelector('table.sheet');
+  if (!tbl) return null;
+  return sheetSel.newRec
+    ? tbl.querySelector('tr.newrec td[data-col="' + sheetSel.col + '"]')
+    : tbl.querySelector('td[data-row="' + sheetSel.row + '"][data-col="' + sheetSel.col + '"]');
+}
+function applySheetSel(container) {
+  const td = sheetSelTd(container);
+  if (!td) { if (sheetSel && sheetSel.containerId === container.id) sheetSel = null; return; }
+  container.querySelectorAll('td.sel').forEach(x => { if (x !== td) x.classList.remove('sel'); });
+  td.classList.add('sel');
+  const tr = td.closest('tr');
+  if (tr) tr.classList.add('cur');
+}
+function selectSheetCell(container, opts, row, col, newRec = false) {
+  sheetSel = { containerId: container.id, row, col, newRec };
+  const td = sheetSelTd(container);
+  /* أزل التحديد السابق داخل الورقة نفسها — خلية محددة واحدة كورقة بيانات أكسس */
+  container.querySelectorAll('td.sel').forEach(x => { if (x !== td) x.classList.remove('sel'); });
+  if (td) {
+    td.classList.add('sel');
+    const tr = td.closest('tr');
+    if (tr) {
+      container.querySelectorAll('tr.cur').forEach(x => { if (x !== tr) x.classList.remove('cur'); });
+      tr.classList.add('cur');
+    }
+    td.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+  if (!newRec && opts.rows[row] && opts.onCellClick) opts.onCellClick(row, col, td ? td.closest('tr') : null, td);
+  container.focus({ preventScroll: true });
+}
+function editSelCell(container, opts, seed = '') {
+  const td = sheetSelTd(container);
+  if (!td || !sheetSel) return;
+  const s = sheetSel;
+  td.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  startCellEditor(container, opts, td, s.newRec ? {} : opts.rows[s.row], s.col, s.newRec ? -1 : s.row, seed, s.newRec);
+}
+function clearSelCell(container, opts) {
+  if (!sheetSel || sheetSel.containerId !== container.id || sheetSel.newRec) return;
+  const row = opts.rows[sheetSel.row];
+  if (!row) return;
+  const c = sheetSel.col;
+  const old = row[c] != null ? row[c] : null;
+  row[c] = null;
+  row._dirty = true;
+  if (opts.onCellCommit) opts.onCellCommit(row, c, null, old);
+  renderSheet(container, opts);
+  container.focus({ preventScroll: true });
+}
+function sheetNavKey(e, container) {
+  const opts = container._sheetOpts;
+  if (!opts) return;
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;   /* المحرر مفتوح — مفاتيحه أولًا */
+  const ec = (opts._editColsShown && opts._editColsShown.length) ? opts._editColsShown : (opts.editableCols || []);
+  if (!ec.length) return;
+  const rows = opts.rows, hasNew = !!opts.newRecord, maxRow = rows.length - 1;
+  const cur = (sheetSel && sheetSel.containerId === container.id) ? sheetSel : null;
+  const r0 = cur ? (cur.newRec ? rows.length : cur.row) : -1;
+  const j0 = cur ? ec.indexOf(cur.col) : -1;
+  const go = (r, j) => {
+    r = Math.max(0, Math.min(r, hasNew ? rows.length : maxRow));
+    j = Math.max(0, Math.min(j, ec.length - 1));
+    selectSheetCell(container, opts, r, ec[j], hasNew && r >= rows.length);
+    e.preventDefault();
+  };
+  const begin = () => go(r0 < 0 ? 0 : r0, j0 < 0 ? 0 : j0);
+  const k = e.key;
+  if (k === 'ArrowLeft') { cur ? go(r0, j0 + 1) : begin(); }          /* ← بصريًا = العمود التالي في جدول RTL */
+  else if (k === 'ArrowRight') { cur ? go(r0, j0 - 1) : begin(); }    /* → بصريًا = العمود السابق في RTL */
+  else if (k === 'ArrowUp') { e.preventDefault(); cur ? go(r0 - 1, j0) : begin(); }
+  else if (k === 'ArrowDown') { e.preventDefault(); cur ? go(r0 + 1, j0) : begin(); }
+  else if (k === 'Enter') { e.preventDefault(); cur ? (e.shiftKey ? go(r0 - 1, j0) : go(r0 + 1, j0)) : begin(); }
+  else if (k === 'Tab') { e.preventDefault(); cur ? go(r0, e.shiftKey ? j0 - 1 : j0 + 1) : begin(); }
+  else if (k === 'Home') { e.preventDefault(); go(r0 < 0 ? 0 : r0, 0); }
+  else if (k === 'End') { e.preventDefault(); go(r0 < 0 ? 0 : r0, ec.length - 1); }
+  else if (k === 'PageDown') { if (cur) { e.preventDefault(); go(r0 + 5, j0); } }
+  else if (k === 'PageUp') { if (cur) { e.preventDefault(); go(r0 - 5, j0); } }
+  else if (k === 'F2') { if (cur) { e.preventDefault(); editSelCell(container, opts, ''); } }
+  else if (k === 'Delete') { if (cur) { e.preventDefault(); clearSelCell(container, opts); } }
+  else if (k.length === 1 && k !== ' ' && !e.ctrlKey && !e.altKey && !e.metaKey && cur) {
+    e.preventDefault();
+    editSelCell(container, opts, k);   /* الكتابة فوق الخلية المحددة تستبدل محتواها — كما في أكسس */
+  }
 }
 /* سحب مقبض عرض العمود */
 function startColResize(ev, container, tbl, th, col) {
@@ -1271,6 +1389,7 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
   let row = r, idx = absIdx, fresh = isNew;   /* fresh: سطر (*) لم يتحول إلى سجل بعد */
   const old = isNew ? '' : (r[c] ?? '');
   const ec = (opts._editColsShown && opts._editColsShown.length) ? opts._editColsShown : [c];
+  sheetSel = { containerId: container.id, row: isNew ? -1 : absIdx, col: c, newRec: isNew };   /* الخلية قيد التحرير = الخلية الحالية */
   td.innerHTML = '';
   const inp = document.createElement('input');
   inp.className = 'edit-in';
@@ -1297,6 +1416,7 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
     if (opts.newRecord && opts.newRecord.make) {
       row = opts.newRecord.make(c, inp.value) || row;
       idx = opts.rows.length - 1;
+      sheetSel = { containerId: container.id, row: idx, col: c, newRec: false };   /* (*) صار سجلًا حقيقيًا */
     }
   };
   inp.addEventListener('input', materialize);
@@ -1342,42 +1462,55 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
     if (!fresh && row && row._newPending && !row._dirty && opts.newRecord && opts.newRecord.undo)
       opts.newRecord.undo(row);          /* Esc يلغي السجل الجديد الذي لم يُدخل فيه شيء — كما في أكسس */
     renderSheet(container, opts);
+    container.focus({ preventScroll: true });
   };
   inp.onblur = commit;
   inp.onkeydown = e => {
     const last = opts.rows.length - 1;
+    /* الانتقال أثناء التحرير = الالتزام ثم تحديد الخلية الهدف بوضع التنقل — كما في أكسس */
+    const land = (rr, cc, newRec) => selectSheetCell(container, opts, rr, cc, !!newRec);
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (!fresh && idx + 1 < opts.rows.length) requestSheetNav(container.id, idx + 1, c);
-      else if (opts.newRecord) requestSheetNav(container.id, 0, c, '', true);
+      if (!fresh && e.shiftKey && idx - 1 >= 0) land(idx - 1, c);          /* Shift+Enter: السجل السابق */
+      else if (!fresh && idx + 1 < opts.rows.length) land(idx + 1, c);
+      else if (opts.newRecord) land(0, c, true);
       else return;
-      inp.blur();
+      commit();
+      container.focus({ preventScroll: true });
     } else if (e.key === 'Tab') {
       e.preventDefault();
       const j = ec.indexOf(c);
       if (e.shiftKey) {
-        if (fresh) { if (last >= 0) { requestSheetNav(container.id, last, ec[ec.length - 1]); cancel(); } return; }
-        if (j > 0) requestSheetNav(container.id, idx, ec[j - 1]);
-        else if (idx > 0) requestSheetNav(container.id, idx - 1, ec[ec.length - 1]);
+        if (fresh) { if (last >= 0) { sheetSel = { containerId: container.id, row: last, col: ec[ec.length - 1], newRec: false }; cancel(); } return; }
+        if (j > 0) land(idx, ec[j - 1]);
+        else if (idx > 0) land(idx - 1, ec[ec.length - 1]);
         else return;
-        inp.blur();
+        commit();
+        container.focus({ preventScroll: true });
       } else {
-        if (fresh) { requestSheetNav(container.id, 0, ec[j + 1] || ec[0], '', true); inp.blur(); return; }
-        if (j < ec.length - 1) requestSheetNav(container.id, idx, ec[j + 1]);
-        else if (idx + 1 < opts.rows.length) requestSheetNav(container.id, idx + 1, ec[0]);
-        else if (opts.newRecord) { requestSheetNav(container.id, 0, ec[0], '', true); inp.blur(); return; }
+        if (fresh) { land(0, ec[j + 1] || ec[0], true); commit(); container.focus({ preventScroll: true }); return; }
+        if (j < ec.length - 1) land(idx, ec[j + 1]);
+        else if (idx + 1 < opts.rows.length) land(idx + 1, ec[0]);
+        else if (opts.newRecord) { land(0, ec[0], true); commit(); container.focus({ preventScroll: true }); return; }
         else return;
-        inp.blur();
+        commit();
+        container.focus({ preventScroll: true });
       }
     } else if (e.key === 'ArrowDown' && !e.shiftKey) {
       e.preventDefault();
       if (fresh) return;
-      if (idx + 1 < opts.rows.length) { requestSheetNav(container.id, idx + 1, c); inp.blur(); }
-      else if (opts.newRecord) { requestSheetNav(container.id, 0, c, '', true); inp.blur(); }
+      if (idx + 1 < opts.rows.length) land(idx + 1, c);
+      else if (opts.newRecord) land(0, c, true);
+      else return;
+      commit();
+      container.focus({ preventScroll: true });
     } else if (e.key === 'ArrowUp' && !e.shiftKey) {
       e.preventDefault();
-      if (fresh) { if (last >= 0) { requestSheetNav(container.id, last, c); cancel(); } return; }
-      if (idx - 1 >= 0) { requestSheetNav(container.id, idx - 1, c); inp.blur(); }
+      if (fresh) { if (last >= 0) { sheetSel = { containerId: container.id, row: last, col: c, newRec: false }; cancel(); } return; }
+      if (idx - 1 >= 0) land(idx - 1, c);
+      else return;
+      commit();
+      container.focus({ preventScroll: true });
     } else if (e.key === 'Escape') {
       e.preventDefault();
       cancel();
@@ -1411,12 +1544,12 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
       return j < ec.length - 1 ? ec[j + 1] : (j > 0 ? ec[j - 1] : c);
     };
     const navLeftDown = () => {
-      if (fresh || idx + 1 >= opts.rows.length) requestSheetNav(container.id, 0, navLeftCols(), '', true);
-      else requestSheetNav(container.id, idx + 1, navLeftCols());
+      if (fresh || idx + 1 >= opts.rows.length) selectSheetCell(container, opts, 0, navLeftCols(), true);
+      else selectSheetCell(container, opts, idx + 1, navLeftCols(), false);
     };
     const navLeft = () => {
-      if (fresh) requestSheetNav(container.id, 0, navLeftCols(), '', true);
-      else requestSheetNav(container.id, idx, navLeftCols());
+      if (fresh) selectSheetCell(container, opts, 0, navLeftCols(), true);
+      else selectSheetCell(container, opts, idx, navLeftCols(), false);
     };
     const pickMat = (i, viaEnter) => {
       const cd = mitems[i];
@@ -1427,6 +1560,7 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
       if (viaEnter) navLeftDown();   /* {left}{down} قبل الالتزام — يستهلكها البناء الجديد */
       commit();
       if (viaEnter) fSendKeys('{numlock}{numlock}');   /* مطابقة موضع الاستدعاء في أكسس */
+      container.focus({ preventScroll: true });
     };
     /* ترتيب نتائج البحث: تطابق الباركود التام ثم الرمز التام يتصدر القائمة
        (اكتب الرمز/الباركود كاملًا فتظهر المادة فورًا أعلى القائمة)،
@@ -1564,12 +1698,14 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
           navLeftDown();          /* fSendKeys "{left}{down}" */
           commit();
           fSendKeys('{numlock}{numlock}');
+          container.focus({ preventScroll: true });
         } else {
           inp.value = '';
           toast('لا يوجد تطابق للبحث — فُرِّغت الخانة (المادة_KeyDown Enter)', 'warn');
           navLeft();              /* fSendKeys "{left}" — نفس الصف */
           commit();
           fSendKeys('{numlock}{numlock}');
+          container.focus({ preventScroll: true });
         }
         return;   /* Enter مُستهلك هنا — لا تنقل مرة ثانية */
       }
