@@ -379,19 +379,7 @@ body.rowseldrag *{user-select:none!important}
 .combo-list.mat-list .mname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .combo-list.mat-list .mcomp{flex:none;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#8a8781}
 .combo-list.mat-list .mprice{flex:none;font-size:11px;color:#4a4a46;font-variant-numeric:tabular-nums}
-/* رأس القائمة (ثابت أعلى القائمة أثناء التمرير): شريط فلتر الرصيد + تلميح F3/F4 */
-.combo-list.mat-list .mhead{position:sticky;top:0;z-index:2;background:#f6f5f2;border-bottom:1px solid #eceae6}
-.combo-list.mat-list .mbalfil{display:flex;align-items:center;gap:9px;padding:4px 9px;font-size:10.5px;color:#4a4a46;user-select:none;-webkit-user-select:none}
-.combo-list.mat-list .mbalfil .mbt{font-weight:700;color:#6b6862;flex:none}
-.combo-list.mat-list .mbalfil label{display:inline-flex;align-items:center;gap:3px;cursor:pointer;white-space:nowrap}
-.combo-list.mat-list .mbalfil input[type=checkbox]{accent-color:var(--focus);margin:0;cursor:pointer}
-.combo-list.mat-list .mbalfil .mcnt{margin-inline-start:auto;color:#8a8781;font-variant-numeric:tabular-nums;white-space:nowrap}
-.combo-list.mat-list .mhint{padding:3px 9px;font-size:10.5px;color:#8a8781;border-top:1px solid #e7e4df}
-.combo-list.mat-list .mempty{padding:10px 12px;font-size:11.5px;color:#a05a00;background:#fffdf7}
-/* رصيد المادة المعروض في سطر القائمة — أخضر موجب، رمادي صفر، أحمر سالب */
-.combo-list.mat-list .mbal{flex:none;font-size:11px;color:#3f7d34;font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
-.combo-list.mat-list .mbal.zero{color:#8a8781}
-.combo-list.mat-list .mbal.neg{color:#b3372e}
+.combo-list.mat-list .mhint{padding:3px 9px;font-size:10.5px;color:#8a8781;background:#f6f5f2;border-bottom:1px solid #eceae6;position:sticky;top:0}
 .subnote{font-size:11px;color:#8a8781;margin-top:2px}
 .kbd{background:#eceae6;border:1px solid #c2bfba;border-bottom-width:2px;border-radius:3px;padding:0 5px;font-size:10.5px;font-family:Consolas,monospace;color:#333}
 .section-title{font-size:12.5px;font-weight:700;color:var(--acc-dark);border-bottom:1px dashed #c9c6c0;padding-bottom:4px;margin-bottom:2px}
@@ -798,7 +786,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 2;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-02d';
+const APP_VER = '2026-11-02e';
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
@@ -1472,47 +1460,6 @@ function startColResize(ev, container, tbl, th, col) {
   document.addEventListener('mousemove', move);
   document.addEventListener('mouseup', up);
 }
-/* ---------- فلتر رصيد قائمة بحث المادة ----------
-   تظهر في قائمة البحث المواد ذات الرصيد أكبر من 0 فقط، وخانتا اختيار
-   في رأس القائمة («إظهار: رصيد 0 / رصيد سالب») تُظهران المواد ذات
-   رصيد 0 أو أصغر من 0. الرصيد بصيغة نموذج «الرصيد» في أكسس (balanceOf)،
-   والحالة محفوظة في localStorage فتبقى اختيارات المستخدم بين الجلسات */
-const MAT_BALFILTER_KEY = 'fatora_matsearch_balfilter_v1';
-let matBalFilter = { showZero: false, showNeg: false };
-try {
-  const _bf = JSON.parse(localStorage.getItem(MAT_BALFILTER_KEY) || 'null');
-  if (_bf && typeof _bf === 'object') { matBalFilter.showZero = !!_bf.showZero; matBalFilter.showNeg = !!_bf.showNeg; }
-} catch (e) {}
-function saveMatBalFilter() { try { localStorage.setItem(MAT_BALFILTER_KEY, JSON.stringify(matBalFilter)); } catch (e) {} }
-/* هل تمرّ المادة فلتر الرصيد؟ (رصيد > 0 دائمًا؛ رصيد 0 أو سالب حسب خانتَي الإظهار) */
-function matBalPass(mat) {
-  const b = balanceOf(mat);
-  if (b > 0) return true;
-  if (b === 0) return !!matBalFilter.showZero;
-  return !!matBalFilter.showNeg;
-}
-/* شريط الفلتر في رأس القائمة — mousedown preventDefault يُبقي التركيز في خانة
-   المادة فلا تُغلق القائمة عند النقر على خانة الاختيار */
-function buildBalFilterBar(rebuild) {
-  const bar = document.createElement('div');
-  bar.className = 'mbalfil';
-  bar.innerHTML = '<span class="mbt">إظهار:</span>';
-  const mk = (key, label, tip) => {
-    const lb = document.createElement('label');
-    lb.title = tip;
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.checked = !!matBalFilter[key];
-    cb.addEventListener('change', () => { matBalFilter[key] = cb.checked; saveMatBalFilter(); rebuild(); });
-    lb.appendChild(cb);
-    lb.appendChild(document.createTextNode(label));
-    lb.addEventListener('mousedown', ev => ev.preventDefault());
-    bar.appendChild(lb);
-  };
-  mk('showZero', 'رصيد 0', 'إظهار المواد التي رصيدها يساوي 0 في قائمة البحث');
-  mk('showNeg', 'رصيد سالب', 'إظهار المواد التي رصيدها أصغر من 0 في قائمة البحث');
-  return bar;
-}
 /* محرر الخلية المباشر + التنقل بمفاتيح أكسس (Enter للأسفل، Tab يمينًا، الأسهم) */
 function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = false, ex = null) {
   if (td.querySelector('.edit-in')) return;
@@ -1767,10 +1714,7 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
       if (!q && !forced) return;   /* F3/F4 بنص فارغ = كل المواد كما في LIKE '*' في أكسس */
       const qL = q.toLowerCase();
       const seen = new Set();
-      const rawHits = matQuery(q, mode);
-      /* فلتر الرصيد (طلب المستخدم): المواد ذات رصيد > 0 فقط افتراضيًا،
-         وخانتا الاختيار في رأس القائمة تُظهران رصيد 0 أو السالب */
-      let hits = rawHits.filter(cd => matBalPass(cd['المادة']));
+      let hits = matQuery(q, mode);
       if (mode === 'f4') {
         /* F4 بالاسم فقط: أبجدي بحت */
         hits.sort((a, b) => String(a['المادة'] ?? '').localeCompare(String(b['المادة'] ?? ''), 'ar'));
@@ -1783,47 +1727,23 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
           if (seen.has(k)) return false; seen.add(k); return true;
         })
         .slice(0, 200);
-      /* بلا مطابقات أصلًا: بلا قائمة كما في السابق —
-         مطابقات لكن أخفاها فلتر الرصيد: تُعرض القائمة برأسها كي تُتاح خانتا الاختيار */
-      const balHidden = rawHits.length > 0 && !hits.length;
-      if (!mitems.length && !balHidden) return;
+      if (!mitems.length) return;
       mlist = document.createElement('div');
       mlist.className = 'combo-list mat-list';
-      /* رأس القائمة: شريط فلتر الرصيد (+ عدّاد) وتلميح وضع البحث F3/F4 — ثابت أعلى القائمة */
-      const mhead = document.createElement('div');
-      mhead.className = 'mhead';
-      const fbar = buildBalFilterBar(() => buildMatList(mode));
-      const mcnt = document.createElement('span');
-      mcnt.className = 'mcnt';
-      mcnt.title = 'المعروض من إجمالي مطابقات البحث';
-      mcnt.textContent = mitems.length + ' من ' + rawHits.length;
-      fbar.appendChild(mcnt);
-      mhead.appendChild(fbar);
       if (forced) {   /* شريط تلميح يوضح وضع البحث الحالي كما في إطار446 */
         const h = document.createElement('div');
         h.className = 'mhint';
         h.textContent = mode === 'f4'
           ? 'F4 — بطاقة تفصيلية: بحث بالاسم فقط (المادة Like \'*نص*\')'
           : 'F3 — بحث موسع: المادة / الرمز (مطابقة تامة) / رمز الباركود';
-        mhead.appendChild(h);
-      }
-      mlist.appendChild(mhead);
-      if (!mitems.length) {
-        const em = document.createElement('div');
-        em.className = 'mempty';
-        em.textContent = 'لا مواد مطابقة ضمن فلتر الرصيد الحالي — فعِّل خانات «إظهار» في أعلى القائمة';
-        mlist.appendChild(em);
+        mlist.appendChild(h);
       }
       mitems.forEach((cd, i) => {
         const o = document.createElement('div');
         o.className = 'opt';
-        const bal = balanceOf(cd['المادة']);
-        const balCls = bal > 0 ? '' : (bal === 0 ? ' zero' : ' neg');
-        const balTxt = String(Math.round(bal * 100) / 100);
-        o.title = 'الرصيد الحالي: ' + balTxt;
         o.innerHTML = mode === 'f4'
-          ? `<span class="mname">${escHtml(cd['المادة'])}</span><span class="mprice">${escHtml(cd['السعر الأساسي'] == null ? '' : cd['السعر الأساسي'])}</span><span class="mbal${balCls}">${escHtml(balTxt)}</span><span class="mcomp">${escHtml(cd['الشركة'] ?? '')}</span>`
-          : `<span class="mname">${escHtml(cd['المادة'])}</span><span class="mbal${balCls}">${escHtml(balTxt)}</span><span class="mcomp">${escHtml(cd['الشركة'] ?? '')}</span>`;
+          ? `<span class="mname">${escHtml(cd['المادة'])}</span><span class="mprice">${escHtml(cd['السعر الأساسي'] == null ? '' : cd['السعر الأساسي'])}</span><span class="mcomp">${escHtml(cd['الشركة'] ?? '')}</span>`
+          : `<span class="mname">${escHtml(cd['المادة'])}</span><span class="mcomp">${escHtml(cd['الشركة'] ?? '')}</span>`;
         o.addEventListener('mousedown', ev => { ev.preventDefault(); ev.stopPropagation(); pickMat(i); });
         mlist.appendChild(o);
       });
@@ -1868,11 +1788,7 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
       if (mlist && !e.altKey) {
         if (e.key === 'ArrowDown') { e.preventDefault(); if (mhl < mitems.length - 1) { mhl++; hlMat(); } return; }
         if (e.key === 'ArrowUp') { e.preventDefault(); if (mhl > 0) { mhl--; hlMat(); } return; }
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          if (mitems.length) { pickMat(mhl >= 0 ? mhl : 0, true); return; }
-          closeMatList();   /* قائمة بلا نتائج (أخفاها فلتر الرصيد) — يليها سلوك إنتر بلا قائمة */
-        }
+        if (e.key === 'Enter') { e.preventDefault(); pickMat(mhl >= 0 ? mhl : 0, true); return; }
         if (e.key === 'Escape') { e.preventDefault(); closeMatList(); return; }  /* Esc أول: إغلاق القائمة */
       }
       /* المادة_KeyDown Case 115 (F4): إطار446=1 — قائمة تفصيلية ببيانات البطاقة، بحث بالاسم فقط */
@@ -1887,9 +1803,7 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
            — لا نتائج ← Me.المادة = "" + fSendKeys "{left}" ثم المادة_AfterUpdate */
         e.preventDefault();
         const q = String(inp.value);   /* حرفيًا مع الفراغات — Me.المادة.Text كما في أكسس */
-        const raw = matQuery(q);
-        /* فلتر الرصيد نفسه المطبق على القائمة — استعلام التطابق نفسه كما في أكسس */
-        const ordered = sortMatHits(raw.filter(cd => matBalPass(cd['المادة'])), q.toLowerCase());   /* التطابق التام (رمز/باركود) أولًا ثم أبجدي */
+        const ordered = sortMatHits(matQuery(q), q.toLowerCase());   /* التطابق التام (رمز/باركود) أولًا ثم أبجدي */
         if (ordered.length) {
           inp.value = (ordered[0]['المادة'] ?? '');
           if (fresh) materialize();
@@ -1897,34 +1811,9 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
           const landed = landAfterMatEnter();    /* {left}{down}: السطر التالي في خانة المادة — إلا للرصيد المنخفض */
           fSendKeys('{numlock}{numlock}');
           if (landed !== 'editor') container.focus({ preventScroll: true });
-        } else if (raw.length) {
-          /* كل المطابقات مخفاها فلتر الرصيد — التطابق التام (باركود ثم رمز ثم الاسم) يُقبل
-             ويستمر تدفق الرصيد المنخفض (الكمية تُملأ بالرصيد — طلب «الرصيد أقل من 1»)،
-             والكتابة الجزئية تُفرَّغ مع تلميح بخانات الإظهار كما في أكسس */
-          const qE = q.replace(/\s+$/, '').toLowerCase();   /* Jet: '=' يتجاهل الفراغات اللاحقة */
-          const exact = raw.find(cd => String(cd['رمز الباركود'] ?? '').replace(/\s+$/, '').toLowerCase() === qE && String(cd['رمز الباركود'] ?? '').trim() !== '')
-            || raw.find(cd => String(cd['الرمز'] ?? '').replace(/\s+$/, '').toLowerCase() === qE && String(cd['الرمز'] ?? '').trim() !== '')
-            || raw.find(cd => String(cd['المادة'] ?? '').toLowerCase() === qE);
-          if (exact) {
-            inp.value = (exact['المادة'] ?? '');
-            if (fresh) materialize();
-            commit();
-            const b = balanceOf(exact['المادة']);
-            toast('المادة موجودة في البطاقات لكن فلتر الرصيد يخفيها (الرصيد ' + (Math.round(b * 100) / 100) + ') — فعّل «إظهار: ' + (b === 0 ? 'رصيد 0' : 'رصيد سالب') + '» من رأس القائمة', 'warn');
-            const landed = landAfterMatEnter();    /* رصيد أقل من 1 ← خانة الكمية بالرصيد، وإلا السطر التالي */
-            fSendKeys('{numlock}{numlock}');
-            if (landed !== 'editor') container.focus({ preventScroll: true });
-            return;   /* Enter مُستهلك هنا */
-          }
-          inp.value = '';
-          toast('توجد مطابقات لكن أخفاها فلتر الرصيد — فعّل «إظهار: رصيد 0 / رصيد سالب» من رأس القائمة ثم أعد البحث', 'warn');
-          navStay();              /* fSendKeys "{left}" — نفس الخانة والسطر (النص فُرّغ) */
-          commit();
-          fSendKeys('{numlock}{numlock}');
-          container.focus({ preventScroll: true });
         } else {
           inp.value = '';
-          toast('لا يوجد تطابق للبحث — فُرِّغت الخانة (المادة_KeyDown Enter)', 'warn');
+          toast('لا يوجد تطابق للبحث — فُرِّغت الخانة (المادة_KeyDown Enter)', 'warn');
           navStay();              /* fSendKeys "{left}" — نفس الخانة والسطر (النص فُرّغ) */
           commit();
           fSendKeys('{numlock}{numlock}');
