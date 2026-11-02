@@ -786,7 +786,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 2;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-02h';
+const APP_VER = '2026-11-02i';
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
@@ -1540,8 +1540,9 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
     }
     if (hadValue) row._dirty = true;
     row[c] = nv === '' ? null : nv;
+    const wasPending = row._newPending;   /* هل كان سجل (*) غير محفوظ قبل هذا الالتزام — DMax في أكسس لا يشمله */
     if (row._newPending) row._newPending = false;
-    opts.onCellCommit && opts.onCellCommit(row, c, nv, old);
+    opts.onCellCommit && opts.onCellCommit(row, c, nv, old, wasPending);
     renderSheet(container, opts);
   };
   const cancel = () => {
@@ -1948,12 +1949,24 @@ function qiyamMinJadwalAlbahth(name) {
     r['عموم معتمد'] = card['عموم معتمد'];
     r['الشركة'] = card['الشركة'];
     r['رمز الباركود'] = card['رمز الباركود'];
+  } else {
+    /* DLookup بلا مطابقة يرجع Null فتُفرَّغ الخانات الخمس كما في أكسس */
+    r['سعر الشراء'] = null; r['السعر الأساسي'] = null; r['عموم معتمد'] = null;
+    r['الشركة'] = null; r['رمز الباركود'] = null;
   }
+}
+
+/* [تاريخ انتهاء الفعالية] = "1 " & [شهر] & " " & [سنة] — في VBA أي & مع Null تعطي Null:
+   شهر أو سنة فارغ → الناتج Null فتُفرَّغ الفعالية (المادة_AfterUpdate و شهر/سنة_AfterUpdate بلا شرط) */
+function expFromMonthYear(r) {
+  const mo = (r['شهر'] == null || String(r['شهر']).trim() === '') ? null : String(r['شهر']).trim().padStart(2, '0');
+  const yr = (r['سنة'] == null || String(r['سنة']).trim() === '') ? null : String(r['سنة']).trim();
+  return (mo == null || yr == null) ? null : `${yr}-${mo}-01`;
 }
 
 /* المادة_AfterUpdate — التنفيذ الموحد على السجل الهدف (نموذج الإدخال العلوي القديم
    أُزيل والإدخال يتم بمحرر خلية الجدول — هذه النسخة تعمل على أي سجل بلا اعتماد DOM):
-   الكمية=1 + قيم_من_جدول_البحث + تاريخ الصنع = أول شهر السنة السابقة
+   الكمية=1 + قيم_من_جدول_البحث + تاريخ الصنع = 1/م/س لـ(Date − 365)
    + تاريخ انتهاء الفعالية = 1/شهر/سنة + المجاني=0 + حسم%=0 + قيم_متغيرة
    + ترتيب = DMax(ترتيب)+1 + Requery للنماذج المفتوحة (IsFormLoaded في Module14) */
 function materialAfterUpdate(r, name) {
@@ -1966,17 +1979,17 @@ function materialAfterUpdate(r, name) {
   const stMat = $('st_mat'); if (stMat) stMat.textContent = name || '—';
   r['الكمية'] = 1;
   qiyamMinJadwalAlbahth(name);
-  // [تاريخ الصنع] = Format(Date - 365, "1/mm/yy")  → أول شهر السنة السابقة تقريبًا
-  const d = new Date(); d.setFullYear(d.getFullYear() - 1);
+  // [تاريخ الصنع] = Format(Date - 365, "1/mm/yy") — حرفيًا: شهر وسنة (Date − 365) واليوم = 1
+  const d = new Date(); d.setDate(d.getDate() - 365);
   r['تاريخ الصنع'] = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
-  // [تاريخ انتهاء الفعالية] = "1 " & [شهر] & " " & [سنة]
-  if (r['شهر'] && r['سنة']) r['تاريخ انتهاء الفعالية'] = `${r['سنة']}-${String(r['شهر']).padStart(2, '0')}-01`;
+  // [تاريخ انتهاء الفعالية] = "1 " & [شهر] & " " & [سنة] — بلا شرط كما في أكسس
+  r['تاريخ انتهاء الفعالية'] = expFromMonthYear(r);
   r['الكمية'] = 1;
   r['المجاني'] = 0;
   r['حسم %'] = 0;
   qiyamMotaghayyera(r);
-  // ترتيب = DMax(ترتيب)+1
-  r['ترتيب'] = DB.invoice.reduce((m, x) => Math.max(m, x === r ? 0 : nz(x['ترتيب'])), 0) + 1;   /* DMax على الجدول في أكسس — السطر الحالي ليس فيه بعد: استثناؤه يمنع تضخيم الرقم عند تكرار الاستدعاء */
+  // ترتيب = IIf(IsNull(DMax("[ترتيب]","[فاتورة مشتريات]")),1,DMax+1)
+  r['ترتيب'] = DB.invoice.reduce((m, x) => Math.max(m, (x === r && r._newPending) ? 0 : nz(x['ترتيب'])), 0) + 1;   /* DMax يقرأ الجدول: يشمل ترتيب السطر القديم المحفوظ، ويستثني السطر الجديد غير المحفوظ بعد */
   requeryOpenForms();   /* IsFormLoaded("بطاقات المواد") / IsFormLoaded("مشتريات") ثم Requery */
 }
 
@@ -2064,7 +2077,7 @@ function renderFatoraSheet(page) {
     editableCols: ['ترتيب','المادة','الكمية','المجاني','سعر الشراء','حسم %','قيمة الحسم','أساس العرض','مجاني العرض','حسم العرض','رقم الطبخة','تاريخ الصنع','تاريخ انتهاء الفعالية','ملاحظات','شهر','سنة'],
     materialCombo: true,   /* قائمة بحث المادة أثناء الكتابة — مصدر الصف من أكسس */
     evalCols: ['الكمية', 'سعر الشراء'],   /* KeyPress Enter في أكسس: Eval للعملية الحسابية */
-    onCellCommit: (r, c) => {
+    onCellCommit: (r, c, nv, old, wasPending) => {
       if (c === 'قيمة الحسم') {
         /* قيمة_الحسم_AfterUpdate — عكس الاتجاه: اشتقاق حسم% من قيمة الحسم ثم إعادة الحساب */
         const discBase = nz(r['الكمية']) * nz(r['سعر الشراء']);
@@ -2074,27 +2087,36 @@ function renderFatoraSheet(page) {
       if (c === 'المادة') {
         APP.currentMaterial = r['المادة'] ?? '';
         $('st_mat').textContent = r['المادة'] || '—';
+        /* قيم_من_جدول_البحث — DLookup بلا مطابقة يرجع Null فتُفرَّغ الخانات الخمس كما في أكسس */
         const card = cardByMaterial(r['المادة']);
-        if (card) {          /* إحضار بيانات المادة من البطاقات (قيم_من_جدول_البحث) */
+        if (card) {
           r['سعر الشراء'] = card['السعر الأساسي'];
           r['السعر الأساسي'] = card['السعر الأساسي'];
           r['عموم معتمد'] = card['عموم معتمد'];
           r['الشركة'] = card['الشركة'];
           r['رمز الباركود'] = card['رمز الباركود'];
+        } else {
+          r['سعر الشراء'] = null; r['السعر الأساسي'] = null; r['عموم معتمد'] = null;
+          r['الشركة'] = null; r['رمز الباركود'] = null;
         }
         /* المادة_AfterUpdate — الافتراضيات تُطبق على كل اختيار مادة (سطر جديد أو قديم) كما في أكسس */
         r['الكمية'] = 1; r['المجاني'] = 0; r['حسم %'] = 0;
-        const md = new Date(); md.setFullYear(md.getFullYear() - 1);
+        /* [تاريخ الصنع] = Format(Date - 365, "1/mm/yy") — حرفيًا: شهر وسنة (Date − 365) واليوم = 1 */
+        const md = new Date(); md.setDate(md.getDate() - 365);
         r['تاريخ الصنع'] = `${md.getFullYear()}-${String(md.getMonth() + 1).padStart(2, '0')}-01`;
-        if (r['شهر'] && r['سنة'])
-          r['تاريخ انتهاء الفعالية'] = `${r['سنة']}-${String(r['شهر']).padStart(2, '0')}-01`;
-        r['ترتيب'] = DB.invoice.reduce((m, x) => Math.max(m, x === r ? 0 : nz(x['ترتيب'])), 0) + 1;   /* DMax على الجدول في أكسس — السطر الحالي ليس فيه بعد: استثناؤه يمنع تضخيم الرقم عند تكرار الاستدعاء */
+        /* [تاريخ انتهاء الفعالية] = "1 " & [شهر] & " " & [سنة] — بلا شرط كما في أكسس */
+        r['تاريخ انتهاء الفعالية'] = expFromMonthYear(r);
+        /* ترتيب = IIf(IsNull(DMax("[ترتيب]","[فاتورة مشتريات]")),1,DMax+1) — DMax يقرأ الجدول:
+           يشمل ترتيب السطر القديم المحفوظ (قيمته الحالية)، ويستثني السطر الجديد (*) غير المحفوظ بعد */
+        r['ترتيب'] = DB.invoice.reduce((m, x) => Math.max(m, (x === r && wasPending) ? 0 : nz(x['ترتيب'])), 0) + 1;
         /* نهاية المادة_AfterUpdate في أكسس: Requery للنماذج المفتوحة
            (IsFormLoaded "بطاقات المواد"/"مشتريات" في Module14) */
         requeryOpenForms();
       }
-      if ((c === 'شهر' || c === 'سنة') && r['شهر'] && r['سنة'])
-        r['تاريخ انتهاء الفعالية'] = `${r['سنة']}-${String(r['شهر']).padStart(2, '0')}-01`;
+      /* شهر_AfterUpdate / سنة_AfterUpdate — [تاريخ انتهاء الفعالية] = "1 " & [شهر] & " " & [سنة]
+         بلا شرط كما في أكسس (فراغ أحد الحقلين → Null → تُفرَّغ الفعالية) */
+      if (c === 'شهر' || c === 'سنة')
+        r['تاريخ انتهاء الفعالية'] = expFromMonthYear(r);
       qiyamMotaghayyera(r); netAfterOffer(r); saveDB();
     },
     rows: DB.invoice,
