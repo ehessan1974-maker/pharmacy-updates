@@ -254,14 +254,19 @@ table.sheet th,table.sheet td{
 #purch_sheet th:nth-child(14),#purch_sheet td:nth-child(14){
   border-left:1px dotted #9a978f;
 }
+/* مؤشرات أكسس الحقيقية: سهم أسود غامق نازل على رأس العمود (محدد العمود) —
+   SVG مخصص لأن المؤشرات النظامية لا تعطي هذا الشكل */
 table.sheet th{
   background:linear-gradient(180deg,var(--hdr1),var(--hdr2));
   font-weight:600;position:sticky;top:0;z-index:3;color:#3d3d3d;
-  border-bottom:1px solid #a8a5a0;cursor:default;
+  border-bottom:1px solid #a8a5a0;
+  cursor:url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24'><path d='M12 22 L4.5 3.5 L12 8 L19.5 3.5 Z' fill='black' stroke='white' stroke-width='1'/></svg>") 12 22, default;
 }
 table.sheet th.rowh,table.sheet td.rowh{
   position:sticky;right:0;z-index:2;background:#efeecd;color:#7a6a00;
-  font-size:10.5px;min-width:26px;text-align:center;cursor:default;   /* محدد السجل في أكسس: السهم العادي لا يد الويب */
+  font-size:10.5px;min-width:26px;text-align:center;
+  /* محدد السجل في أكسس: سهم أسود غامق أفقي يشير نحو السجل (الواجهة عربية: المحدد يمينًا فيشير يسارًا) */
+  cursor:url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24'><path d='M2 12 L20.5 4.5 L16 12 L20.5 19.5 Z' fill='black' stroke='white' stroke-width='1'/></svg>") 2 12, default;
 }
 table.sheet th.rowh{z-index:4}
 table.sheet tr:nth-child(even) td{background:#f7f9fc}
@@ -282,7 +287,7 @@ body.colresizing *{cursor:col-resize!important}
 table.sheet tr.newrec td{background:#fffef5;color:#a0987a}
 table.sheet tr.newrec td.editable:hover{background:#fff7d6;box-shadow:inset 0 0 0 1.5px #d9c66b}
 /* ===== تغيير ترتيب الأعمدة بالسحب — كما في أكسس (سحب رأس العمود) ===== */
-table.sheet th[draggable="true"]{cursor:grab}
+/* رأس العمود في أكسس يُظهر السهم الأسود النازل حتى وهو قابل للسحب — لا grab */
 table.sheet th.dragging{opacity:.35;background:#eee9e2}
 /* الخط الأحمر = مكان هبوط العمود بالضبط (الجهة الفيزيائية في RTL):
    drop-before: سيُدرج قبل الهدف بالتدفق = على يمين الهدف بصريًا → الخط على حافته اليمنى
@@ -788,7 +793,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 3;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-02k';
+const APP_VER = '2026-11-02l';
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
@@ -994,10 +999,10 @@ function renderSheet(container, opts) {
     th.dataset.col = c;
     if (widths[c]) { th.style.width = widths[c] + 'px'; th.style.minWidth = widths[c] + 'px'; }
     if (onSelectHeader) th.onclick = () => onSelectHeader(c);
-    /* نقر مزدوج على رأس العمود — مثل أحداث DblClick في أكسس (الترتيب: إعادة ترقيم 1..n) */
+    /* نقر مزدوج على رأس العمود — مثل أحداث DblClick في أكسس (الترتيب: إعادة ترقيم 1..n)
+       المؤشر = سهم أكسس الأسود النازل من CSS (لا pointer inline) */
     if (onHeaderDblClick) {
       th.ondblclick = e => { e.preventDefault(); e.stopPropagation(); onHeaderDblClick(c); };
-      th.style.cursor = 'pointer';
       if (headerDblTips && headerDblTips[c]) th.title = headerDblTips[c];
     }
     /* مقبض تغيير عرض العمود — مثل أكسس */
