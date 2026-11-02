@@ -786,7 +786,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 2;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-02e';
+const APP_VER = '2026-11-02f';
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
@@ -1461,7 +1461,7 @@ function startColResize(ev, container, tbl, th, col) {
   document.addEventListener('mouseup', up);
 }
 /* محرر الخلية المباشر + التنقل بمفاتيح أكسس (Enter للأسفل، Tab يمينًا، الأسهم) */
-function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = false, ex = null) {
+function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = false) {
   if (td.querySelector('.edit-in')) return;
   let row = r, idx = absIdx, fresh = isNew;   /* fresh: سطر (*) لم يتحول إلى سجل بعد */
   const old = isNew ? '' : (r[c] ?? '');
@@ -1484,7 +1484,7 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
   }
   td.appendChild(inp);
   inp.focus();
-  if (seed === '' || (ex && ex.selectAll)) inp.select();   /* تعليم كامل الرقم — تدفق الرصيد المنخفض */
+  if (seed === '') inp.select();
   else inp.setSelectionRange(inp.value.length, inp.value.length);
   /* مثل أكسس: يتحول سطر (*) إلى سجل حقيقي فور بدء الكتابة */
   const materialize = () => {
@@ -1548,16 +1548,6 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
     const land = (rr, cc, newRec) => selectSheetCell(container, opts, rr, cc, !!newRec);
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (ex && ex.lowBal) {
-        /* تدفق الرصيد المنخفض: إنتر في خانة الكمية — تتعبأ جميع الخانات (قيم_متغيرة
-           في الالتزام) ثم سطر جديد ويستقر المؤشر في خانة المادة */
-        if (!fresh && idx + 1 < opts.rows.length) selectSheetCell(container, opts, idx + 1, 'المادة', false);
-        else if (opts.newRecord) selectSheetCell(container, opts, 0, 'المادة', true);
-        else { commit(); container.focus({ preventScroll: true }); return; }
-        commit();
-        container.focus({ preventScroll: true });
-        return;
-      }
       if (!fresh && e.shiftKey && idx - 1 >= 0) land(idx - 1, c);          /* Shift+Enter: السجل السابق */
       else if (!fresh && idx + 1 < opts.rows.length) land(idx + 1, c);
       else if (opts.newRecord) land(0, c, true);
@@ -1626,10 +1616,9 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
        أما "{numlock}{numlock}" (إصلاح ما يكسره SendKeys في أكسس) فلا فعل له هنا:
        أحداثنا الاصطناعية لا تقلب أقفال النظام إطلاقًا — وهذا غاية موديول حالة
        المفاتيح نفسها (حفظ حالة NumLock). */
-    /* الاستقرار بعد إنتر المادة: السطر التالي في خانة المادة — إلا إذا كان رصيد
-       الكمية أقل من 1 فيقفز المؤشر إلى خانة الكمية وتُملأ بالرصيد ويُعلَّم الرقم
-       كاملًا؛ وبعد إنتر في خانة الكمية تتعبأ جميع الخانات ويقفز المؤشر إلى سطر
-       جديد ويستقر في خانة المادة */
+    /* الاستقرار بعد إنتر المادة: تتعبأ الخانات ثم يقفز المؤشر إلى السطر التالي
+       ويستقر في خانة المادة — (أو سطر السجل الجديد * إذا كان السطر الحالي آخر
+       السطور) — {down} في المادة_KeyDown (Case 13) في أكسس */
     const navNextRowMat = () => {
       if (idx + 1 < opts.rows.length) selectSheetCell(container, opts, idx + 1, 'المادة', false);
       else selectSheetCell(container, opts, 0, 'المادة', true);
@@ -1637,28 +1626,6 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
     const navStay = () => {
       if (fresh) selectSheetCell(container, opts, 0, 'المادة', true);
       else selectSheetCell(container, opts, idx, 'المادة', false);
-    };
-    const landAfterMatEnter = () => {
-      const r2 = opts.rows[idx];
-      if (!r2) return 'nav';
-      const bal = balanceOf(r2['المادة']);
-      if (bal < 1) {
-        const oldQ = r2['الكمية'] != null ? r2['الكمية'] : null;
-        r2['الكمية'] = bal;
-        r2._dirty = true;
-        opts.onCellCommit && opts.onCellCommit(r2, 'الكمية', bal, oldQ);   /* قيم_متغيرة + حفظ */
-        renderSheet(container, opts);
-        const tdQty = container.querySelector('td[data-row="' + idx + '"][data-col="الكمية"]');
-        if (tdQty) {
-          tdQty.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-          startCellEditor(container, opts, tdQty, r2, 'الكمية', idx, String(bal), false, { selectAll: true, lowBal: true });
-          return 'editor';   /* محرر الكمية مفتوح — لا تنقلب التركيز إلى الحاوية فيُغلق */
-        }
-        return 'nav';
-      } else {
-        navNextRowMat();
-        return 'nav';
-      }
     };
     const pickMat = (i, viaEnter) => {
       const cd = mitems[i];
@@ -1668,9 +1635,9 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
       if (fresh) materialize();
       commit();
       if (viaEnter) {
-        const landed = landAfterMatEnter();   /* الرصيد أقل من 1 ← خانة الكمية، وإلا السطر التالي في خانة المادة */
-        fSendKeys('{numlock}{numlock}');   /* مطابقة موضع الاستدعاء في أكسس */
-        if (landed !== 'editor') container.focus({ preventScroll: true });
+        navNextRowMat();                 /* {left}{down}: السطر التالي في خانة المادة */
+        fSendKeys('{numlock}{numlock}'); /* مطابقة موضع الاستدعاء في أكسس */
+        container.focus({ preventScroll: true });
       } else container.focus({ preventScroll: true });
     };
     /* ترتيب نتائج البحث: تطابق الباركود التام ثم الرمز التام يتصدر القائمة
@@ -1808,9 +1775,9 @@ function startCellEditor(container, opts, td, r, c, absIdx, seed = '', isNew = f
           inp.value = (ordered[0]['المادة'] ?? '');
           if (fresh) materialize();
           commit();
-          const landed = landAfterMatEnter();    /* {left}{down}: السطر التالي في خانة المادة — إلا للرصيد المنخفض */
+          navNextRowMat();                       /* {left}{down}: السطر التالي في خانة المادة */
           fSendKeys('{numlock}{numlock}');
-          if (landed !== 'editor') container.focus({ preventScroll: true });
+          container.focus({ preventScroll: true });
         } else {
           inp.value = '';
           toast('لا يوجد تطابق للبحث — فُرِّغت الخانة (المادة_KeyDown Enter)', 'warn');
