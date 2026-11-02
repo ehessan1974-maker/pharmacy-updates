@@ -260,15 +260,17 @@ table.sheet th{
   background:linear-gradient(180deg,var(--hdr1),var(--hdr2));
   font-weight:600;position:sticky;top:0;z-index:3;color:#3d3d3d;
   border-bottom:1px solid #a8a5a0;
-  cursor:url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24'><path d='M12 22 L4.5 3.5 L12 8 L19.5 3.5 Z' fill='black' stroke='white' stroke-width='1'/></svg>") 12 22, default;
+  cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMAAAAXCAYAAADpwXTaAAABfElEQVR4nL2Uuy4FURSGv5lxiRwkJKKRkEh0EgnRoPQaJ+IR6DXCU6gUCp1C4RFcQkOhUiASoRMO5zKKvRZr7zNmT+VPdtZc1vr3/++1ZqAaUqCnYi6JrPB+FZiuSlJEauM18AUcA2tAb7BpISbMdWYKzoFcVhsYDTbzkEocA46AcSlSwkFD9Ag0yhSlUngFDIuSZaAF9AEDQppJfjtmUVUsiYomsCEb3RubD0DNCAib5ilMgQtTfAK8AB25v42pUugMrUvhJ/7B58AdMA/M4Bo2AvTL8hSq5CHgSdQ0jao8IH8HnsX6nnHWpW6X37MLiULyDjAndZnh+mGeAj4ksUhZjhvkHNgsIiJ4eFiiriXxFL+zhWQJsIJ/+NZWC9eg2TJV1m6CG2AtVjJVuiW50T+JJtQDWxovJedPexY6JjXc96hEuhaq2CtSty1kDYk7wftK0DGZBN5wjbjBffyV7IVQGweiajF43oWY3ATYB16BMyGK/oZihDb+D74Bx5F5rNz2B98AAAAASUVORK5CYII=") 9 21, url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2719%27%20height%3D%2723%27%3E%3Cpath%20d%3D%27M9.10%2021.16%20L16.98%209.14%20L10.84%208.78%20L10.97%202.77%20L7.27%201.50%20L7.01%207.72%20L1.50%203.62%20Z%27%20fill%3D%27black%27%2F%3E%3C%2Fsvg%3E") 9 21, default;
 }
 table.sheet th.rowh,table.sheet td.rowh{
   position:sticky;right:0;z-index:2;background:#efeecd;color:#7a6a00;
   font-size:10.5px;min-width:26px;text-align:center;
   /* محدد السجل في أكسس: سهم أسود غامق أفقي يشير نحو السجل (الواجهة عربية: المحدد يمينًا فيشير يسارًا) */
-  cursor:url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24'><path d='M2 12 L20.5 4.5 L16 12 L20.5 19.5 Z' fill='black' stroke='white' stroke-width='1'/></svg>") 2 12, default;
+  cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABcAAAATCAYAAAB7u5a2AAABaUlEQVR4nK3UsUocURQG4G82IbEQQsqASIhY+AaSKu+QUmIhooUPYZW3sLIQxFQphUCKRKzVIqRIFEEhQZugLJvZ3RR7Jrk7uY676A9nmDlzzn/Of8+9l7uhwMM7cvyHVo20wDwe1YPGwYOwHko8wRKOMIff8X9kFJFQJL5ZvMUx+tgYt9m6dHiFLVwHaR/7/ikq3IKWYWmTWMSnhLBvsAQXeBFxFXm2+3rl51jH94SwF6Rl2GLEZndMTsZLrOB1dA3dTFddnISvjSt08Atv8KMq8BTL+JCR3q35UhU5/2EUbInHFD4nAe2G5NtsLV2qdGlWcRlBZUOBDr6EfcVp2DeDWVVNqwpUHzN4nxCVmfeDyKnyJsIea0A69SX8rKmoyPeSpupo3Ot/h4Fp7BieRR+7hk9uaiMhVbGAsyDu4l34x7pH6khP6zNsRoHtTAON3eXQS+LODU7kR4OtKwrdC268N+4TI91+8AcfB3c637mQrAAAAABJRU5ErkJggg==") 2 9, url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2723%27%20height%3D%2719%27%3E%3Cpath%20d%3D%27M1.50%209.10%20L13.52%2016.98%20L13.87%2010.84%20L19.88%2010.97%20L21.16%207.27%20L14.94%207.01%20L19.04%201.50%20Z%27%20fill%3D%27black%27%2F%3E%3C%2Fsvg%3E") 2 9, default;
 }
 table.sheet th.rowh{z-index:4}
+/* زاوية الجدول = محدد الورقة في أكسس: نقر يحدد الجدول بأكمله */
+table.sheet th.rowh.corner{cursor:default}
 table.sheet tr:nth-child(even) td{background:#f7f9fc}
 table.sheet tr:hover td{background:#eef4fb}
 table.sheet td.sel{background:var(--sel)!important;outline:1px solid #6ba4d8;outline-offset:-1px}
@@ -294,16 +296,18 @@ table.sheet th.dragging{opacity:.35;background:#eee9e2}
    drop-after : سيُدرج بعد الهدف بالتدفق  = على يسار الهدف بصريًا → الخط على حافته اليسرى */
 table.sheet th.drop-before{box-shadow:inset -3px 0 0 0 var(--acc)}
 table.sheet th.drop-after{box-shadow:inset 3px 0 0 0 var(--acc)}
-body.coldragging{cursor:grabbing!important;user-select:none!important}
-body.coldragging *{cursor:grabbing!important}
+/* أثناء نقل الأعمدة بالسحب: المؤشر السهم الافتراضي — كما في أكسس */
+body.coldragging{cursor:default!important;user-select:none!important}
+body.coldragging *{cursor:default!important}
 /* ===== نقل السطور بالسحب — مثل نقل الأعمدة: اسحب محدد سطر محدد مسبقًا لموضعه الجديد،
    وتنتقل السطور المحددة كلها ككتلة بترتيبها (نقل سطر واحد أو مجموعة دفعة واحدة) ===== */
 table.sheet tr.dragging-row{opacity:.4}
 /* الخط الأزرق = موضع هبوط السطور بالضبط: drop-above فوق السطر الهدف وdrop-below تحته */
 table.sheet tr.drop-above td,table.sheet tr.drop-above th{box-shadow:inset 0 3px 0 0 var(--acc)}
 table.sheet tr.drop-below td,table.sheet tr.drop-below th{box-shadow:inset 0 -3px 0 0 var(--acc)}
-body.rowdragging{cursor:grabbing!important;user-select:none!important}
-body.rowdragging *{cursor:grabbing!important}
+/* أثناء نقل السطور بالسحب: المؤشر السهم الافتراضي — كما في أكسس */
+body.rowdragging{cursor:default!important;user-select:none!important}
+body.rowdragging *{cursor:default!important}
 table.sheet tr.newrec td.rowh{color:#8a7a00;font-weight:800;font-size:13px}
 table.sheet tfoot td{
   position:sticky;bottom:0;z-index:2;
@@ -317,9 +321,10 @@ table.sheet td.rowh{user-select:none;-webkit-user-select:none}
    Ctrl+نقر للإضافة/الإزالة، Shift+نقر لنطاق، والسحب عبر المحددات يمتد التحديد،
    والحذف بمفتاح Delete فقط عندما يكون السطر محددًا كاملًا (لا زر حذف كما في أكسس) ===== */
 table.sheet tr.rowsel td{background:#d9e7f8!important}
-table.sheet tr.rowsel td.rowh{background:#b9d3ef;box-shadow:inset 3px 0 0 0 var(--focus);color:#1f4473;font-weight:700}
-body.rowseldrag{user-select:none!important;-webkit-user-select:none!important}
-body.rowseldrag *{user-select:none!important}
+table.sheet tr.rowsel td.rowh{background:#b9d3ef;box-shadow:inset 3px 0 0 0 var(--focus);color:#1f4473;font-weight:700;cursor:default}
+/* أثناء تمديد التحديد بالسحب يبقى المؤشر سهم محدد السجل كما هو — لا يتغير فوق الفواصل */
+body.rowseldrag{cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABcAAAATCAYAAAB7u5a2AAABaUlEQVR4nK3UsUocURQG4G82IbEQQsqASIhY+AaSKu+QUmIhooUPYZW3sLIQxFQphUCKRKzVIqRIFEEhQZugLJvZ3RR7Jrk7uY676A9nmDlzzn/Of8+9l7uhwMM7cvyHVo20wDwe1YPGwYOwHko8wRKOMIff8X9kFJFQJL5ZvMUx+tgYt9m6dHiFLVwHaR/7/ikq3IKWYWmTWMSnhLBvsAQXeBFxFXm2+3rl51jH94SwF6Rl2GLEZndMTsZLrOB1dA3dTFddnISvjSt08Atv8KMq8BTL+JCR3q35UhU5/2EUbInHFD4nAe2G5NtsLV2qdGlWcRlBZUOBDr6EfcVp2DeDWVVNqwpUHzN4nxCVmfeDyKnyJsIea0A69SX8rKmoyPeSpupo3Ot/h4Fp7BieRR+7hk9uaiMhVbGAsyDu4l34x7pH6khP6zNsRoHtTAON3eXQS+LODU7kR4OtKwrdC268N+4TI91+8AcfB3c637mQrAAAAABJRU5ErkJggg==") 2 9, url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2723%27%20height%3D%2719%27%3E%3Cpath%20d%3D%27M1.50%209.10%20L13.52%2016.98%20L13.87%2010.84%20L19.88%2010.97%20L21.16%207.27%20L14.94%207.01%20L19.04%201.50%20Z%27%20fill%3D%27black%27%2F%3E%3C%2Fsvg%3E") 2 9, default!important;user-select:none!important;-webkit-user-select:none!important}
+body.rowseldrag *{cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABcAAAATCAYAAAB7u5a2AAABaUlEQVR4nK3UsUocURQG4G82IbEQQsqASIhY+AaSKu+QUmIhooUPYZW3sLIQxFQphUCKRKzVIqRIFEEhQZugLJvZ3RR7Jrk7uY676A9nmDlzzn/Of8+9l7uhwMM7cvyHVo20wDwe1YPGwYOwHko8wRKOMIff8X9kFJFQJL5ZvMUx+tgYt9m6dHiFLVwHaR/7/ikq3IKWYWmTWMSnhLBvsAQXeBFxFXm2+3rl51jH94SwF6Rl2GLEZndMTsZLrOB1dA3dTFddnISvjSt08Atv8KMq8BTL+JCR3q35UhU5/2EUbInHFD4nAe2G5NtsLV2qdGlWcRlBZUOBDr6EfcVp2DeDWVVNqwpUHzN4nxCVmfeDyKnyJsIea0A69SX8rKmoyPeSpupo3Ot/h4Fp7BieRR+7hk9uaiMhVbGAsyDu4l34x7pH6khP6zNsRoHtTAON3eXQS+LODU7kR4OtKwrdC268N+4TI91+8AcfB3c637mQrAAAAABJRU5ErkJggg==") 2 9, url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2723%27%20height%3D%2719%27%3E%3Cpath%20d%3D%27M1.50%209.10%20L13.52%2016.98%20L13.87%2010.84%20L19.88%2010.97%20L21.16%207.27%20L14.94%207.01%20L19.04%201.50%20Z%27%20fill%3D%27black%27%2F%3E%3C%2Fsvg%3E") 2 9, default!important}
 /* ===== تحديد الأعمدة — مثل محدد الأعمدة (Column Selector) في ورقة بيانات أكسس:
    النقر على رأس العمود يحدد العمود كاملًا. بعد التحديد يصبح مؤشر رأس العمود
    السهم العادي (default) — علامة جاهزية النقل: سحب عمود محدد ينقل الأعمدة المحددة ===== */
@@ -327,8 +332,9 @@ table.sheet th.colsel{background:#b9d3ef!important;color:#1f4473;cursor:default!
 table.sheet td.colsel{background:#d9e7f8!important}
 table.sheet tr.newrec td.colsel{background:#e3ebf6!important}
 table.sheet tfoot td.colsel{background:#e2ebf7!important}
-body.colseldrag{user-select:none!important;-webkit-user-select:none!important}
-body.colseldrag *{user-select:none!important}
+/* أثناء تمديد التحديد بالسحب يبقى المؤشر السهم النازل كما هو — لا يتغير فوق الفواصل */
+body.colseldrag{cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMAAAAXCAYAAADpwXTaAAABfElEQVR4nL2Uuy4FURSGv5lxiRwkJKKRkEh0EgnRoPQaJ+IR6DXCU6gUCp1C4RFcQkOhUiASoRMO5zKKvRZr7zNmT+VPdtZc1vr3/++1ZqAaUqCnYi6JrPB+FZiuSlJEauM18AUcA2tAb7BpISbMdWYKzoFcVhsYDTbzkEocA46AcSlSwkFD9Ag0yhSlUngFDIuSZaAF9AEDQppJfjtmUVUsiYomsCEb3RubD0DNCAib5ilMgQtTfAK8AB25v42pUugMrUvhJ/7B58AdMA/M4Bo2AvTL8hSq5CHgSdQ0jao8IH8HnsX6nnHWpW6X37MLiULyDjAndZnh+mGeAj4ksUhZjhvkHNgsIiJ4eFiiriXxFL+zhWQJsIJ/+NZWC9eg2TJV1m6CG2AtVjJVuiW50T+JJtQDWxovJedPexY6JjXc96hEuhaq2CtSty1kDYk7wftK0DGZBN5wjbjBffyV7IVQGweiajF43oWY3ATYB16BMyGK/oZihDb+D74Bx5F5rNz2B98AAAAASUVORK5CYII=") 9 21, url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2719%27%20height%3D%2723%27%3E%3Cpath%20d%3D%27M9.10%2021.16%20L16.98%209.14%20L10.84%208.78%20L10.97%202.77%20L7.27%201.50%20L7.01%207.72%20L1.50%203.62%20Z%27%20fill%3D%27black%27%2F%3E%3C%2Fsvg%3E") 9 21, default!important;user-select:none!important;-webkit-user-select:none!important}
+body.colseldrag *{cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMAAAAXCAYAAADpwXTaAAABfElEQVR4nL2Uuy4FURSGv5lxiRwkJKKRkEh0EgnRoPQaJ+IR6DXCU6gUCp1C4RFcQkOhUiASoRMO5zKKvRZr7zNmT+VPdtZc1vr3/++1ZqAaUqCnYi6JrPB+FZiuSlJEauM18AUcA2tAb7BpISbMdWYKzoFcVhsYDTbzkEocA46AcSlSwkFD9Ag0yhSlUngFDIuSZaAF9AEDQppJfjtmUVUsiYomsCEb3RubD0DNCAib5ilMgQtTfAK8AB25v42pUugMrUvhJ/7B58AdMA/M4Bo2AvTL8hSq5CHgSdQ0jao8IH8HnsX6nnHWpW6X37MLiULyDjAndZnh+mGeAj4ksUhZjhvkHNgsIiJ4eFiiriXxFL+zhWQJsIJ/+NZWC9eg2TJV1m6CG2AtVjJVuiW50T+JJtQDWxovJedPexY6JjXc96hEuhaq2CtSty1kDYk7wftK0DGZBN5wjbjBffyV7IVQGweiajF43oWY3ATYB16BMyGK/oZihDb+D74Bx5F5rNz2B98AAAAASUVORK5CYII=") 9 21, url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2719%27%20height%3D%2723%27%3E%3Cpath%20d%3D%27M9.10%2021.16%20L16.98%209.14%20L10.84%208.78%20L10.97%202.77%20L7.27%201.50%20L7.01%207.72%20L1.50%203.62%20Z%27%20fill%3D%27black%27%2F%3E%3C%2Fsvg%3E") 9 21, default!important}
 .hint{font-size:11px;color:#777}
 /* ===== أدوات ورقة الفاتورة: نسخ السطور المحددة / نسخ الأعمدة المحددة ===== */
 .sheettools{display:flex;gap:6px;align-items:center;padding:0 8px 6px;flex-wrap:wrap}
@@ -819,7 +825,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 3;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-03a';
+const APP_VER = '2026-11-03b';
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
@@ -1006,8 +1012,16 @@ function renderSheet(container, opts) {
   const thead = document.createElement('thead');
   const hr = document.createElement('tr');
   if (rowHead) {
-    const th = document.createElement('th'); th.className = 'rowh'; th.textContent = '#';
-    th.title = 'نقر مزدوج: استعادة ترتيب الأعمدة الافتراضي';
+    const th = document.createElement('th'); th.className = 'rowh corner'; th.textContent = '#';
+    th.title = 'نقر: تحديد الجدول بأكمله (كل السطور) — نقر مزدوج: استعادة ترتيب الأعمدة الافتراضي';
+    /* زاوية الجدول = محدد الورقة في أكسس: النقر يحدد كل السطور فيتظلل الجدول بأكمله */
+    th.onclick = e => {
+      e.preventDefault(); e.stopPropagation();
+      if (rows.length) {
+        selectRows(container, opts, 0, 'set');
+        if (rows.length > 1) selectRows(container, opts, rows.length - 1, 'range');
+      }
+    };
     th.ondblclick = e => {
       e.preventDefault(); e.stopPropagation();
       const m = loadColOrders();
