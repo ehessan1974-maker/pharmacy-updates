@@ -786,7 +786,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 2;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-02g';
+const APP_VER = '2026-11-02h';
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
@@ -2118,6 +2118,12 @@ function renderFatoraSheet(page) {
         r['الكمية'] = 1; r['المجاني'] = 0; r['حسم %'] = 0;
         const d = new Date(); d.setFullYear(d.getFullYear() - 1);
         r['تاريخ الصنع'] = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+        /* القيمة الافتراضية كما في أكسس (=Month(Date()) / =Year(Date())): خانة شهر = رقم الشهر
+           الحالي وخانة سنة = رقم السنة الحالية — تُطبقان لحظة تحوّل سطر (*) إلى سجل،
+           فيُبنى تاريخ انتهاء الفعالية في المادة_AfterUpdate على 1/الشهر الحالي/السنة الحالية */
+        const nd = new Date();
+        r['شهر'] = nd.getMonth() + 1;
+        r['سنة'] = nd.getFullYear();
         r._newPending = true;
         DB.invoice.push(r);
         APP.curRow = DB.invoice.length - 1;
