@@ -786,7 +786,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 2;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-02f';
+const APP_VER = '2026-11-02g';
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
@@ -1111,6 +1111,7 @@ function renderSheet(container, opts) {
       if (editableCols.includes(c)) {
         td.classList.add('editable');
         td.title = 'انقر لتحديد الخلية — الأسهم للتنقل بين الخلايا — F2 أو نقرة أخرى للتحرير';
+        if (c === 'ترتيب' && onHeaderDblClick) td.title += ' — دبل كليك: إعادة ترقيم السطور 1..n';
         td.onclick = e => {
           e.stopPropagation();
           const open = container.querySelector('.edit-in');
@@ -1126,6 +1127,15 @@ function renderSheet(container, opts) {
         };
         td.ondblclick = e => {
           e.stopPropagation();
+          /* دبل كليك خانة «ترتيب»: إعادة ترقيم السطور 1..n — ترتيب_DblClick في أكسس
+             يقع على الخانة نفسها، وهذا المعالج نفسه المستخدم على رأس العمود
+             (يعمل في الأوراق التي تمرّره فقط — فاتورة مشتريات) */
+          if (c === 'ترتيب' && onHeaderDblClick) {
+            const openEd = container.querySelector('.edit-in');
+            if (openEd) openEd.blur();   /* التزام أي محرر مفتوح قبل إعادة البناء */
+            onHeaderDblClick(c);
+            return;
+          }
           /* Alt+نقر مزدوج ينفّذ الدالة الخاصة (إعادة تسمية المادة/الشركة الجماعية…)
              بدل فتح المحرر — كما في DblClick بجوار مربع التحرير والسرد في أكسس */
           if (e.altKey && onCellDblClick) { onCellDblClick(r, c, absIdx); return; }
@@ -1966,7 +1976,7 @@ function materialAfterUpdate(r, name) {
   r['حسم %'] = 0;
   qiyamMotaghayyera(r);
   // ترتيب = DMax(ترتيب)+1
-  r['ترتيب'] = DB.invoice.reduce((m, x) => Math.max(m, nz(x['ترتيب'])), 0) + 1;
+  r['ترتيب'] = DB.invoice.reduce((m, x) => Math.max(m, x === r ? 0 : nz(x['ترتيب'])), 0) + 1;   /* DMax على الجدول في أكسس — السطر الحالي ليس فيه بعد: استثناؤه يمنع تضخيم الرقم عند تكرار الاستدعاء */
   requeryOpenForms();   /* IsFormLoaded("بطاقات المواد") / IsFormLoaded("مشتريات") ثم Requery */
 }
 
@@ -2078,7 +2088,7 @@ function renderFatoraSheet(page) {
         r['تاريخ الصنع'] = `${md.getFullYear()}-${String(md.getMonth() + 1).padStart(2, '0')}-01`;
         if (r['شهر'] && r['سنة'])
           r['تاريخ انتهاء الفعالية'] = `${r['سنة']}-${String(r['شهر']).padStart(2, '0')}-01`;
-        r['ترتيب'] = DB.invoice.reduce((m, x) => Math.max(m, nz(x['ترتيب'])), 0) + 1;
+        r['ترتيب'] = DB.invoice.reduce((m, x) => Math.max(m, x === r ? 0 : nz(x['ترتيب'])), 0) + 1;   /* DMax على الجدول في أكسس — السطر الحالي ليس فيه بعد: استثناؤه يمنع تضخيم الرقم عند تكرار الاستدعاء */
         /* نهاية المادة_AfterUpdate في أكسس: Requery للنماذج المفتوحة
            (IsFormLoaded "بطاقات المواد"/"مشتريات" في Module14) */
         requeryOpenForms();
@@ -2104,7 +2114,7 @@ function renderFatoraSheet(page) {
     newRecord: {
       make: c => {
         const r = newInvoiceRow();
-        r['ترتيب'] = DB.invoice.reduce((m, x) => Math.max(m, nz(x['ترتيب'])), 0) + 1;
+        r['ترتيب'] = DB.invoice.reduce((m, x) => Math.max(m, x === r ? 0 : nz(x['ترتيب'])), 0) + 1;   /* DMax على الجدول في أكسس — السطر الحالي ليس فيه بعد: استثناؤه يمنع تضخيم الرقم عند تكرار الاستدعاء */
         r['الكمية'] = 1; r['المجاني'] = 0; r['حسم %'] = 0;
         const d = new Date(); d.setFullYear(d.getFullYear() - 1);
         r['تاريخ الصنع'] = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
