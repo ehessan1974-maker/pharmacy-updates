@@ -312,6 +312,15 @@ table.sheet tr.rowsel td{background:#d9e7f8!important}
 table.sheet tr.rowsel td.rowh{background:#b9d3ef;box-shadow:inset 3px 0 0 0 var(--focus);color:#1f4473;font-weight:700}
 body.rowseldrag{user-select:none!important;-webkit-user-select:none!important}
 body.rowseldrag *{user-select:none!important}
+/* ===== تحديد الأعمدة — مثل محدد الأعمدة (Column Selector) في ورقة بيانات أكسس:
+   النقر على رأس العمود يحدد العمود كاملًا. بعد التحديد يصبح مؤشر رأس العمود
+   السهم العادي (default) — علامة جاهزية النقل: سحب عمود محدد ينقل الأعمدة المحددة ===== */
+table.sheet th.colsel{background:#b9d3ef!important;color:#1f4473;cursor:default!important}
+table.sheet td.colsel{background:#d9e7f8!important}
+table.sheet tr.newrec td.colsel{background:#e3ebf6!important}
+table.sheet tfoot td.colsel{background:#e2ebf7!important}
+body.colseldrag{user-select:none!important;-webkit-user-select:none!important}
+body.colseldrag *{user-select:none!important}
 .hint{font-size:11px;color:#777}
 /* مربع إجمالي */
 .totalbox{
@@ -793,7 +802,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 3;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-02l';
+const APP_VER = '2026-11-02m';
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
@@ -1017,12 +1026,51 @@ function renderSheet(container, opts) {
       renderSheet(container, opts);
     });
     th.appendChild(rs);
-    /* ===== تغيير ترتيب الأعمدة بالسحب — كما في أكسس ===== */
+    /* ===== تحديد الأعمدة — كما في أكسس: النقر على رأس العمود يحدد العمود كاملًا،
+       Ctrl+نقر للإضافة/الإزالة، Shift+نقر لنطاق، والسحب عبر الرؤوس يمتد التحديد.
+       بعد التحديد يصبح مؤشر الرأس السهم العادي (default من CSS على th.colsel) —
+       والسحب على عمود محدد مسبقًا ينقل الأعمدة المحددة كلها بدل تمديد التحديد ===== */
+    th.onmousedown = e => {
+      if (e.button !== 0) return;
+      if (e.target.closest && e.target.closest('.col-rsz')) return;   /* مقبض عرض العمود لا يحدد */
+      const sel = colSelFor(container.id);
+      const wasSel = !!(sel && sel.cols.has(c));
+      selectCols(container, opts, c,
+        (e.ctrlKey || e.metaKey) ? 'toggle' : (e.shiftKey ? 'range' : (wasSel ? 'keep' : 'set')));
+      /* السحب للنقل فقط على عمود محدد مسبقًا (بعد التحديد يصبح المؤشر default) —
+         على غير المحدد يُوقف draggable مؤقتًا ليكون السحب تمديد تحديد خالصًا
+         (بلا preventDefault هنا حتى لا يُمنع بدء السحب الطبيعي عند النقل) */
+      const moveIntent = wasSel && !e.ctrlKey && !e.metaKey && !e.shiftKey;
+      th.draggable = moveIntent;
+      colPressMove = moveIntent;
+      document.body.classList.add('colseldrag');
+      /* سحب عبر الرؤوس يمتد التحديد — كما في سحب محدد السجل (العمود المحدد مسبقًا يُسحب للنقل) */
+      const move = ev => {
+        if (colPressMove) return;
+        const thh = ev.target && ev.target.closest ? ev.target.closest('th[data-col]') : null;
+        if (thh && thh.dataset.col && thh.closest('table.sheet') === tbl)
+          selectCols(container, opts, thh.dataset.col, 'range');
+      };
+      const up = () => {
+        document.removeEventListener('mouseover', move);
+        document.removeEventListener('mouseup', up);
+        document.body.classList.remove('colseldrag');
+        colPressMove = false;
+        th.draggable = true;
+      };
+      document.addEventListener('mouseover', move);
+      document.addEventListener('mouseup', up);
+    };
+    /* ===== نقل الأعمدة بالسحب — كما في أكسس: بعد تحديد العمود يُسحب الرأس لموضعه الجديد ===== */
     th.draggable = true;
-    th.title = th.title || 'اسحب رأس العمود لتغيير موضعه';
+    th.title = th.title || 'انقر لتحديد العمود — Ctrl+نقر لإضافة/إزالة — Shift+نقر لنطاق — السحب عبر الرؤوس يحدد عدة أعمدة — اسحب العمود المحدد لنقله';
     th.addEventListener('dragstart', ev => {
       if (ev.target.closest && ev.target.closest('.col-rsz')) { ev.preventDefault(); return; }
-      sheetDragCol = { grid: container.id, col: c };
+      /* النقل بالسحب للأعمدة المحددة فقط — سحب رأس غير محدد يبقى تمديد تحديد (معالج mousedown أعلاه) */
+      const sel = colSelFor(container.id);
+      const group = (sel && sel.cols.has(c)) ? [...sel.cols] : null;
+      if (!group || !colPressMove) { ev.preventDefault(); return; }
+      sheetDragCol = { grid: container.id, col: c, cols: group };
       th.classList.add('dragging');
       document.body.classList.add('coldragging');
       ev.dataTransfer.effectAllowed = 'move';
@@ -1031,11 +1079,15 @@ function renderSheet(container, opts) {
     th.addEventListener('dragend', () => {
       th.classList.remove('dragging');
       document.body.classList.remove('coldragging');
+      document.body.classList.remove('colseldrag');
+      colPressMove = false;
+      th.draggable = true;
       container.querySelectorAll('th.drop-before,th.drop-after').forEach(x => x.classList.remove('drop-before', 'drop-after'));
       sheetDragCol = null;
     });
     th.addEventListener('dragover', ev => {
-      if (!sheetDragCol || sheetDragCol.grid !== container.id || sheetDragCol.col === c) return;
+      if (!sheetDragCol || sheetDragCol.grid !== container.id) return;
+      if ((sheetDragCol.cols || [sheetDragCol.col]).includes(c)) return;   /* الإفلات على عمود منقول لا معنى له */
       ev.preventDefault();
       ev.dataTransfer.dropEffect = 'move';
       const rct = th.getBoundingClientRect();
@@ -1050,14 +1102,18 @@ function renderSheet(container, opts) {
     th.addEventListener('drop', ev => {
       ev.preventDefault();
       th.classList.remove('drop-before', 'drop-after');
-      if (!sheetDragCol || sheetDragCol.grid !== container.id || sheetDragCol.col === c) return;
-      const src = sheetDragCol.col;
+      if (!sheetDragCol || sheetDragCol.grid !== container.id) return;
+      const moving = (sheetDragCol.cols || [sheetDragCol.col]).filter(x => showCols.includes(x));
+      if (!moving.length || moving.includes(c)) return;
       const cur = showCols.slice();
-      const from = cur.indexOf(src), to = cur.indexOf(c);
-      if (from < 0 || to < 0) return;
-      cur.splice(from, 1);   /* أزل المصدر أولًا ثم أدخله قبل/بعد الهدف */
+      /* أزل الأعمدة المنقولة كلها (من الآخر لثبات المواضع) ثم أدخلها ككتلة
+         بترتيبها الحالي قبل/بعد الهدف — نقل جماعي كما في أكسس */
+      const froms = moving.map(x => cur.indexOf(x)).filter(i => i >= 0).sort((a, b) => a - b);
+      const block = froms.map(i => cur[i]);
+      froms.reverse().forEach(i => cur.splice(i, 1));
       const to2 = cur.indexOf(c);
-      cur.splice(th._dropAfter ? to2 + 1 : to2, 0, src);
+      if (to2 < 0) return;
+      cur.splice(th._dropAfter ? to2 + 1 : to2, 0, ...block);
       const m = loadColOrders();
       m[container.id] = cur;
       saveColOrders(m);
@@ -1220,6 +1276,7 @@ function renderSheet(container, opts) {
     trf.appendChild(tdh);
     showCols.forEach(c => {
       const td = document.createElement('td');
+      td.dataset.col = c;   /* تمييز عمود محدد (colsel) يشمل سطر الإجمالي */
       if (totalsCols.includes(c)) {
         td.classList.add('num');
         const s = rows.reduce((acc, r) => acc + (parseFloat(r[c]) || 0), 0);
@@ -1264,6 +1321,7 @@ function renderSheet(container, opts) {
   }
   applySheetSel(container);
   applyRowSel(container);
+  applyColSel(container);
 }
 
 /* ---------- عرض الأعمدة المحفوظة (تغيير عرض الأعمدة بالسحب — مثل أكسس) ---------- */
@@ -1291,7 +1349,8 @@ function applyColOrder(gridId, cols) {
   const rest = cols.filter(c => !order.includes(c));
   return [...known, ...rest];
 }
-let sheetDragCol = null;   /* {grid, col} أثناء سحب رأس عمود */
+let sheetDragCol = null;   /* {grid, col, cols[]} أثناء سحب رأس عمود — cols = الأعمدة المحددة المنقولة */
+let colPressMove = false;  /* الضغط حاليًا على رأس عمود محدد مسبقًا — السحب بعده ينقل بدل تمديد التحديد */
 /* التنقل بين الخلايا بعد إعادة بناء الجدول (Enter/Tab/الأسهم — مثل أكسس) */
 let sheetPendingNav = null;   /* {containerId, row, col, seed, newRec} */
 function requestSheetNav(containerId, row, col, seed = '', newRec = false) {
@@ -1321,8 +1380,9 @@ function applySheetSel(container) {
   if (tr) tr.classList.add('cur');
 }
 function selectSheetCell(container, opts, row, col, newRec = false) {
-  /* الانتقال إلى خلية (نقرة/أسهم) يُلغي تحديد السطور الكاملة — كما في أكسس */
+  /* الانتقال إلى خلية (نقرة/أسهم) يُلغي تحديد السطور الكاملة وتحديد الأعمدة — كما في أكسس */
   if (rowSelFor(container.id)) clearRowSel(container);
+  if (colSelFor(container.id)) clearColSel(container);
   sheetSel = { containerId: container.id, row, col, newRec };
   const td = sheetSelTd(container);
   /* أزل التحديد السابق داخل الورقة نفسها — خلية محددة واحدة كورقة بيانات أكسس */
@@ -1401,9 +1461,65 @@ function selectRows(container, opts, absIdx, mode = 'set') {
     sheetSel = null;
     container.querySelectorAll('td.sel').forEach(x => x.classList.remove('sel'));
   }
+  if (colSelFor(container.id)) clearColSel(container);   /* تحديد سطر يلغي تحديد الأعمدة — كما في أكسس */
   sheetRowSel = { containerId: container.id, rows, anchor };
   document.querySelectorAll('tr.rowsel').forEach(x => x.classList.remove('rowsel'));
   applyRowSel(container);
+  container.focus({ preventScroll: true });
+}
+/* ===== تحديد أعمدة كاملة — مثل محدد الأعمدة (Column Selector) في ورقة بيانات أكسس =====
+   النقر على رأس العمود يحدد العمود كاملًا، Ctrl+نقر يضيف/يزيل، Shift+نقر يمدّ النطاق،
+   والسحب عبر الرؤوس يحدد عدة أعمدة. تحديد عمود يلغي تحديد السطور والخلية — كما في أكسس.
+   بعد التحديد يصبح مؤشر رأس العمود السهم العادي (default من CSS على th.colsel) —
+   علامة جاهزية النقل: سحب رأس عمود محدد ينقل الأعمدة المحددة كلها معًا. */
+let sheetColSel = null;   /* {containerId, cols:Set<string>, anchor:string|null} */
+function colSelFor(containerId) {
+  return (sheetColSel && sheetColSel.containerId === containerId) ? sheetColSel : null;
+}
+function clearColSel(container) {
+  if (sheetColSel && (!container || sheetColSel.containerId === container.id)) sheetColSel = null;
+  (container || document).querySelectorAll('.colsel').forEach(x => x.classList.remove('colsel'));
+}
+function applyColSel(container) {
+  const cs = colSelFor(container.id);
+  container.querySelectorAll('.colsel').forEach(x => x.classList.remove('colsel'));
+  if (!cs || !cs.cols.size) return;
+  const tbl = container.querySelector('table.sheet');
+  if (!tbl) return;
+  cs.cols.forEach(cname => {
+    tbl.querySelectorAll('th[data-col="' + cname + '"],td[data-col="' + cname + '"]')
+      .forEach(x => x.classList.add('colsel'));
+  });
+}
+function selectCols(container, opts, col, mode = 'set') {
+  const prev = colSelFor(container.id);
+  const order = applyColOrder(container.id, opts.cols);   /* ترتيب العرض الحالي (بعد أي نقل) */
+  let cols, anchor;
+  if (mode === 'toggle') {
+    cols = new Set(prev ? prev.cols : []);
+    if (cols.has(col)) cols.delete(col); else cols.add(col);
+    anchor = col;
+  } else if (mode === 'range' && prev && prev.anchor != null) {
+    const a = order.indexOf(prev.anchor), b = order.indexOf(col);
+    if (a < 0 || b < 0) { cols = new Set([col]); anchor = col; }
+    else {
+      for (let i = Math.min(a, b); i <= Math.max(a, b); i++) prev.cols.add(order[i]);
+      cols = prev.cols; anchor = prev.anchor;
+    }
+  } else if (mode === 'keep' && prev && prev.cols.has(col)) {
+    cols = prev.cols; anchor = prev.anchor;   /* ضغط على رأس محدد أصلًا: يبقى التحديد كاملًا (نقل جماعي) */
+  } else {
+    cols = new Set([col]); anchor = col;
+  }
+  /* تحديد عمود يلغي تحديد السطور والخلية الحالية — كما يلغي محدد الأعمدة ما قبله في أكسس */
+  if (rowSelFor(container.id)) clearRowSel(container);
+  if (sheetSel && sheetSel.containerId === container.id) {
+    sheetSel = null;
+    container.querySelectorAll('td.sel').forEach(x => x.classList.remove('sel'));
+  }
+  sheetColSel = { containerId: container.id, cols, anchor };
+  document.querySelectorAll('.colsel').forEach(x => x.classList.remove('colsel'));
+  applyColSel(container);
   container.focus({ preventScroll: true });
 }
 function sheetNavKey(e, container) {
