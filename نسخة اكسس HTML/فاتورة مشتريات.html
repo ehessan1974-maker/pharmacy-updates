@@ -296,6 +296,14 @@ table.sheet th.drop-before{box-shadow:inset -3px 0 0 0 var(--acc)}
 table.sheet th.drop-after{box-shadow:inset 3px 0 0 0 var(--acc)}
 body.coldragging{cursor:grabbing!important;user-select:none!important}
 body.coldragging *{cursor:grabbing!important}
+/* ===== نقل السطور بالسحب — مثل نقل الأعمدة: اسحب محدد سطر محدد مسبقًا لموضعه الجديد،
+   وتنتقل السطور المحددة كلها ككتلة بترتيبها (نقل سطر واحد أو مجموعة دفعة واحدة) ===== */
+table.sheet tr.dragging-row{opacity:.4}
+/* الخط الأزرق = موضع هبوط السطور بالضبط: drop-above فوق السطر الهدف وdrop-below تحته */
+table.sheet tr.drop-above td,table.sheet tr.drop-above th{box-shadow:inset 0 3px 0 0 var(--acc)}
+table.sheet tr.drop-below td,table.sheet tr.drop-below th{box-shadow:inset 0 -3px 0 0 var(--acc)}
+body.rowdragging{cursor:grabbing!important;user-select:none!important}
+body.rowdragging *{cursor:grabbing!important}
 table.sheet tr.newrec td.rowh{color:#8a7a00;font-weight:800;font-size:13px}
 table.sheet tfoot td{
   position:sticky;bottom:0;z-index:2;
@@ -322,6 +330,10 @@ table.sheet tfoot td.colsel{background:#e2ebf7!important}
 body.colseldrag{user-select:none!important;-webkit-user-select:none!important}
 body.colseldrag *{user-select:none!important}
 .hint{font-size:11px;color:#777}
+/* ===== أدوات ورقة الفاتورة: نسخ السطور المحددة / نسخ الأعمدة المحددة ===== */
+.sheettools{display:flex;gap:6px;align-items:center;padding:0 8px 6px;flex-wrap:wrap}
+.sheettools .tbtn:disabled{opacity:.45;cursor:default}
+.sheettools .tbtn:disabled:hover{background:linear-gradient(180deg,#fdfcfa,#eceae6);border-color:var(--btn-b)}
 /* مربع إجمالي */
 .totalbox{
   display:flex;align-items:center;gap:8px;background:#fffbe8;border:1px solid #d9c66b;
@@ -502,6 +514,11 @@ body.colseldrag *{user-select:none!important}
         </div>
       </div>
 
+      <div class="sheettools">
+        <button class="tbtn" id="btn_cpy_rows" disabled title="نسخ السطور المحددة (Ctrl+C) — تُدرج نسخة طبق الأصل بعد آخر سطر محدد بترتيبها">نسخ السطور المحددة</button>
+        <button class="tbtn" id="btn_cpy_cols" disabled title="نسخ بيانات الأعمدة المحددة إلى الحافظة (Ctrl+C) — كل سطر في سطر والخلايا بفواصل جدولة، للصقها في Excel أو أي برنامج">نسخ الأعمدة المحددة</button>
+        <span class="hint">لنقل سطر أو أكثر: حدّدها من خانة # ثم اسحب محدد أحدها إلى الموضع الجديد — مثل نقل الأعمدة من رأس العمود</span>
+      </div>
       <div class="sheetwrap" id="fatora_sheet"></div>
     </div>
   </div>
@@ -802,7 +819,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 3;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-02m';
+const APP_VER = '2026-11-03a';
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
@@ -1139,14 +1156,23 @@ function renderSheet(container, opts) {
       /* ===== محدد السجل — كما في أكسس: النقر يحدد السطر كاملًا، Ctrl+نقر يضيف/يزيل،
          Shift+نقر يمدد النطاق من نقطة الأصل، والسحب عبر المحددات يمتد التحديد.
          لا زر حذف — الحذف بمفتاح Delete فقط عندما يكون السطر محددًا كاملًا ===== */
-      tdh.title = 'انقر لتحديد السطر — Ctrl+نقر لإضافة/إزالة — Shift+نقر لنطاق — السحب يحدد عدة سطور — Delete للحذف';
+      tdh.title = 'انقر لتحديد السطر — Ctrl+نقر لإضافة/إزالة — Shift+نقر لنطاق — السحب عبر المحددات يحدد عدة سطور — اسحب سطرًا محددًا لنقله مع كل المحدد — Ctrl+C نسخ — Delete حذف';
       tdh.onmousedown = e => {
         if (e.button !== 0) return;
-        e.preventDefault();
+        const rs0 = rowSelFor(container.id);
+        const wasSel = !!(rs0 && rs0.rows.has(absIdx));
+        /* الضغط على محدد سطر محدد مسبقًا (بلا Ctrl/Shift) = نية نقل: يبقى تحديد المجموعة
+           كاملًا والسحب بعدها ينقل السطور المحددة كلها — مثل نقل الأعمدة المحددة برأسها */
+        const moveIntent = wasSel && !e.ctrlKey && !e.metaKey && !e.shiftKey && !!opts.onMoveRows;
+        rowPressMove = moveIntent;
+        tdh.draggable = moveIntent;   /* السحب عند النقل فقط — وإلا فهو تمديد تحديد خالص */
+        if (!moveIntent) e.preventDefault();
         document.body.classList.add('rowseldrag');
-        selectRows(container, opts, absIdx, (e.ctrlKey || e.metaKey) ? 'toggle' : (e.shiftKey ? 'range' : 'set'));
-        /* سحب محدد السجل عبر السطور يمتد التحديد — كما في أكسس */
+        selectRows(container, opts, absIdx,
+          (e.ctrlKey || e.metaKey) ? 'toggle' : (e.shiftKey ? 'range' : (wasSel ? 'keep' : 'set')));
+        /* سحب محدد السجل عبر السطور يمتد التحديد — كما في أكسس (إلا عند نية النقل) */
         const move = ev => {
+          if (rowPressMove) return;
           const rh = ev.target && ev.target.closest ? ev.target.closest('td.rowh') : null;
           if (rh && rh._absIdx != null && rh.closest('table.sheet') === tbl)
             selectRows(container, opts, rh._absIdx, 'range');
@@ -1155,11 +1181,36 @@ function renderSheet(container, opts) {
           document.removeEventListener('mouseover', move);
           document.removeEventListener('mouseup', up);
           document.body.classList.remove('rowseldrag');
+          rowPressMove = false;
+          tdh.draggable = false;
         };
         document.addEventListener('mouseover', move);
         document.addEventListener('mouseup', up);
       };
       tdh.onclick = () => onRowClick && onRowClick(absIdx);
+      /* ===== نقل السطور بالسحب — بعد تحديد السطر/السطور يُسحب محدد أحدها لموضعه الجديد،
+         وتنتقل المجموعة المحددة كلها ككتلة بترتيبها (نقل فردي أو جماعي دفعة واحدة) ===== */
+      tdh.addEventListener('dragstart', ev => {
+        if (!rowPressMove) { ev.preventDefault(); return; }
+        const rs = rowSelFor(container.id);
+        const group = (rs && rs.rows.has(absIdx))
+          ? [...rs.rows].filter(i => i >= 0 && i < rows.length).sort((a, b) => a - b) : null;
+        if (!group || !opts.onMoveRows) { ev.preventDefault(); return; }
+        sheetDragRow = { grid: container.id, row: absIdx, rows: group };
+        tr.classList.add('dragging-row');
+        document.body.classList.add('rowdragging');
+        ev.dataTransfer.effectAllowed = 'move';
+        try { ev.dataTransfer.setData('text/plain', String(absIdx)); } catch (e) {}
+      });
+      tdh.addEventListener('dragend', () => {
+        tr.classList.remove('dragging-row');
+        document.body.classList.remove('rowdragging');
+        document.body.classList.remove('rowseldrag');
+        rowPressMove = false;
+        tdh.draggable = false;
+        container.querySelectorAll('tr.drop-above,tr.drop-below').forEach(x => x.classList.remove('drop-above', 'drop-below'));
+        sheetDragRow = null;
+      });
       tr.appendChild(tdh);
     }
     showCols.forEach(c => {
@@ -1218,6 +1269,30 @@ function renderSheet(container, opts) {
       tr.appendChild(td);
     });
     tr.onclick = () => onRowClick && onRowClick(absIdx);
+    /* ===== إفلات السطور المنقولة: الخط الأزرق فوق/تحت السطر الهدف = موضع الهبوط بالضبط،
+       والهدف لا يكون أبدًا سطرًا منقولًا (الإفلات على المنقول لا معنى له كما في الأعمدة) ===== */
+    tr._absIdx = absIdx;
+    tr.addEventListener('dragover', ev => {
+      if (!sheetDragRow || sheetDragRow.grid !== container.id) return;
+      if (tr._absIdx == null || sheetDragRow.rows.includes(tr._absIdx)) return;
+      ev.preventDefault();
+      ev.dataTransfer.dropEffect = 'move';
+      const rct = tr.getBoundingClientRect();
+      const after = ev.clientY > rct.top + rct.height / 2;
+      container.querySelectorAll('tr.drop-above,tr.drop-below').forEach(x => x.classList.remove('drop-above', 'drop-below'));
+      tr.classList.add(after ? 'drop-below' : 'drop-above');
+      tr._dropAfter = after;
+    });
+    tr.addEventListener('dragleave', () => tr.classList.remove('drop-above', 'drop-below'));
+    tr.addEventListener('drop', ev => {
+      ev.preventDefault();
+      tr.classList.remove('drop-above', 'drop-below');
+      if (!sheetDragRow || sheetDragRow.grid !== container.id) return;
+      const moving = sheetDragRow.rows.filter(i => i >= 0 && i < rows.length && i !== tr._absIdx).sort((a, b) => a - b);
+      sheetDragRow = null;
+      if (!moving.length || tr._absIdx == null || !opts.onMoveRows) return;
+      opts.onMoveRows(moving, tr._absIdx, !!tr._dropAfter);
+    });
     tbody.appendChild(tr);
   });
   /* ---- سطر السجل الجديد (*) — دائمًا جاهز للكتابة مثل أكسس ---- */
@@ -1351,6 +1426,8 @@ function applyColOrder(gridId, cols) {
 }
 let sheetDragCol = null;   /* {grid, col, cols[]} أثناء سحب رأس عمود — cols = الأعمدة المحددة المنقولة */
 let colPressMove = false;  /* الضغط حاليًا على رأس عمود محدد مسبقًا — السحب بعده ينقل بدل تمديد التحديد */
+let sheetDragRow = null;   /* {grid, row, rows[]} أثناء سحب محدد السطر — rows = السطور المحددة المنقولة */
+let rowPressMove = false;  /* الضغط حاليًا على محدد سطر محدد مسبقًا — السحب بعده ينقل بدل تمديد التحديد */
 /* التنقل بين الخلايا بعد إعادة بناء الجدول (Enter/Tab/الأسهم — مثل أكسس) */
 let sheetPendingNav = null;   /* {containerId, row, col, seed, newRec} */
 function requestSheetNav(containerId, row, col, seed = '', newRec = false) {
@@ -1429,6 +1506,7 @@ function rowSelFor(containerId) {
 function clearRowSel(container) {
   if (sheetRowSel && (!container || sheetRowSel.containerId === container.id)) sheetRowSel = null;
   (container || document).querySelectorAll('tr.rowsel').forEach(x => x.classList.remove('rowsel'));
+  updateSelButtons();
 }
 function applyRowSel(container) {
   const rs = rowSelFor(container.id);
@@ -1453,6 +1531,8 @@ function selectRows(container, opts, absIdx, mode = 'set') {
     rows = new Set(prev.rows);
     for (let i = a; i <= b; i++) rows.add(i);
     anchor = prev.anchor;
+  } else if (mode === 'keep' && prev && prev.rows.has(absIdx)) {
+    rows = prev.rows; anchor = prev.anchor;   /* ضغط على سطر محدد أصلًا: يبقى التحديد كاملًا (نقل جماعي) */
   } else {
     rows = new Set([absIdx]); anchor = absIdx;
   }
@@ -1466,6 +1546,7 @@ function selectRows(container, opts, absIdx, mode = 'set') {
   document.querySelectorAll('tr.rowsel').forEach(x => x.classList.remove('rowsel'));
   applyRowSel(container);
   container.focus({ preventScroll: true });
+  updateSelButtons();
 }
 /* ===== تحديد أعمدة كاملة — مثل محدد الأعمدة (Column Selector) في ورقة بيانات أكسس =====
    النقر على رأس العمود يحدد العمود كاملًا، Ctrl+نقر يضيف/يزيل، Shift+نقر يمدّ النطاق،
@@ -1479,6 +1560,7 @@ function colSelFor(containerId) {
 function clearColSel(container) {
   if (sheetColSel && (!container || sheetColSel.containerId === container.id)) sheetColSel = null;
   (container || document).querySelectorAll('.colsel').forEach(x => x.classList.remove('colsel'));
+  updateSelButtons();
 }
 function applyColSel(container) {
   const cs = colSelFor(container.id);
@@ -1521,6 +1603,71 @@ function selectCols(container, opts, col, mode = 'set') {
   document.querySelectorAll('.colsel').forEach(x => x.classList.remove('colsel'));
   applyColSel(container);
   container.focus({ preventScroll: true });
+  updateSelButtons();
+}
+/* ===== نسخ المحدد — مثل نسخ السجلات/الأعمدة في أكسس:
+   نسخ السطور المحددة = إدراج نسخة طبق الأصل منها بعد آخر سطر محدد بترتيبها،
+   نسخ الأعمدة المحددة = بياناتها كاملة إلى الحافظة (TSV) للصقها في Excel أو أي برنامج.
+   في الأوراق التي لا تدعم التكرار: نسخ السطور يذهب إلى الحافظة أيضًا ===== */
+function copySheetSelection(container, opts) {
+  const rs = rowSelFor(container.id), cs = colSelFor(container.id);
+  if (rs && rs.rows.size) {
+    const idxs = [...rs.rows].filter(i => i >= 0 && i < (opts.rows || []).length).sort((a, b) => a - b);
+    if (!idxs.length) return;
+    if (opts.onCopyRows) { opts.onCopyRows(idxs); return; }
+    copyTextToClipboard(rowsSelectionToTsv(container, idxs)).then(ok =>
+      toast(ok ? `تم نسخ ${idxs.length} سطر إلى الحافظة` : 'تعذر النسخ إلى الحافظة', ok ? 'ok' : 'warn'));
+    return;
+  }
+  if (cs && cs.cols.size) copySelectedColsToClipboard(container);
+}
+function rowsSelectionToTsv(container, idxs) {
+  const opts = container._sheetOpts || {};
+  const order = applyColOrder(container.id, opts.cols || []);
+  const src = opts.rows || [];
+  return idxs.filter(i => i >= 0 && i < src.length).map(i => order.map(c => {
+    let v = src[i][c];
+    if (v === null || v === undefined) v = '';
+    return String(v).replace(/\t/g, ' ').replace(/[\r\n]+/g, ' ');
+  }).join('\t')).join('\n');
+}
+async function copySelectedColsToClipboard(container) {
+  const cs = colSelFor(container.id);
+  if (!cs || !cs.cols.size) return;
+  const opts = container._sheetOpts || {};
+  const order = applyColOrder(container.id, opts.cols || []);   /* ترتيب العرض الحالي بعد أي نقل */
+  const cols = order.filter(c => cs.cols.has(c));
+  if (!cols.length) return;
+  const src = opts.rows || [];
+  const lines = src.map(r => cols.map(c => {
+    let v = r[c];
+    if (v === null || v === undefined) v = '';
+    return String(v).replace(/\t/g, ' ').replace(/[\r\n]+/g, ' ');
+  }).join('\t'));
+  const ok = await copyTextToClipboard(lines.join('\n'));
+  const nm = cols.length === 1 ? `العمود «${cols[0]}»` : `${cols.length} أعمدة`;
+  toast(ok ? `تم نسخ بيانات ${nm} (${src.length} سطرًا) إلى الحافظة — الصقها في Excel أو أي برنامج` : 'تعذر النسخ إلى الحافظة', ok ? 'ok' : 'warn');
+}
+async function copyTextToClipboard(txt) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(txt); return true; }
+  } catch (e) { /* بديل أدناه */ }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = txt; ta.style.cssText = 'position:fixed;top:-1000px;right:-1000px';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove(); return ok;
+  } catch (e) { return false; }
+}
+function updateSelButtons() {
+  const br = $('btn_cpy_rows'), bc = $('btn_cpy_cols');
+  if ((!br && !bc)) return;
+  const fs = $('fatora_sheet');
+  if (!fs) return;
+  const rs = rowSelFor(fs.id), cs = colSelFor(fs.id);
+  if (br) br.disabled = !(rs && rs.rows.size);
+  if (bc) bc.disabled = !(cs && cs.cols.size);
 }
 function sheetNavKey(e, container) {
   const opts = container._sheetOpts;
@@ -1561,6 +1708,11 @@ function sheetNavKey(e, container) {
       opts.onDeleteRows([...rs.rows].sort((a, b) => a - b));
     }
     else if (cur) { e.preventDefault(); clearSelCell(container, opts); }
+  }
+  else if ((e.ctrlKey || e.metaKey) && !e.altKey && (k === 'c' || k === 'C')) {
+    /* Ctrl+C — نسخ المحدد: السطور المحددة (تكرارها في الفاتورة) أو الأعمدة المحددة (إلى الحافظة) */
+    e.preventDefault();
+    copySheetSelection(container, opts);
   }
   else if (k.length === 1 && k !== ' ' && !e.ctrlKey && !e.altKey && !e.metaKey && cur) {
     e.preventDefault();
@@ -2293,6 +2445,8 @@ function renderFatoraSheet(page) {
       entryFromRow(DB.invoice[i]);
     },
     onDeleteRows: idxs => deleteInvoiceRows(idxs),
+    onMoveRows: (moving, targetIdx, after) => moveInvoiceRows(moving, targetIdx, after),
+    onCopyRows: idxs => duplicateInvoiceRows(idxs),
     onRowClick: i => { APP.curRow = i; entryFromRow(DB.invoice[i]); renderFatoraSheet(); },
     onCellDblClick: async (r, c) => {
       // نقر مزدوج على الخلايا الخاصة
@@ -2336,9 +2490,57 @@ async function deleteInvoiceRows(idxs) {
   entryFromRow(curInvoiceRow());
   renderFatoraSheet();
   saveDB();
+  updateSelButtons();
   toast(n === 1 ? 'تم حذف السطر' : `تم حذف ${n} سطور`, 'ok');
 }
 function deleteInvoiceRow(i) { return deleteInvoiceRows([i]); }
+/* ---------- نقل السطور المحددة (سحب محدد السطر #) — تنتقل المجموعة ككتلة بترتيبها ---------- */
+function moveInvoiceRows(moving, targetIdx, after) {
+  moving = [...new Set(moving || [])].filter(i => i >= 0 && i < DB.invoice.length && i !== targetIdx).sort((a, b) => a - b);
+  if (!moving.length || targetIdx == null || targetIdx < 0 || targetIdx >= DB.invoice.length) return;
+  const n = moving.length;
+  const targetRow = DB.invoice[targetIdx];
+  const block = moving.map(i => DB.invoice[i]);
+  moving.slice().reverse().forEach(i => DB.invoice.splice(i, 1));   /* إزالة من الأسفل للأعلى لثبات الفهارس */
+  const t = DB.invoice.indexOf(targetRow);
+  if (t < 0) return;
+  const at = after ? t + 1 : t;
+  DB.invoice.splice(at, 0, ...block);
+  renumberOrder();   /* الترحيل يرتب بعمود «ترتيب» — إعادة الترقيم تثبّت الترتيب الجديد 1..n */
+  sheetRowSel = { containerId: 'fatora_sheet', rows: new Set(block.map((_, k) => at + k)), anchor: at };
+  APP.curRow = at;
+  entryFromRow(curInvoiceRow());
+  renderFatoraSheet();
+  saveDB();
+  updateSelButtons();
+  toast(n === 1 ? 'تم نقل السطر إلى موضعه الجديد' : `تم نقل ${n} سطور ككتلة بترتيبها إلى موضعها الجديد`, 'ok');
+}
+/* ---------- نسخ السطور المحددة — إدراج نسخة طبق الأصل بعد آخر سطر محدد بترتيبها ---------- */
+function duplicateInvoiceRows(idxs) {
+  idxs = [...new Set(idxs || [])].filter(i => i >= 0 && i < DB.invoice.length).sort((a, b) => a - b);
+  if (!idxs.length) return;
+  const n = idxs.length;
+  const clones = idxs.map(i => { const c = { ...DB.invoice[i] }; delete c._newPending; delete c._dirty; return c; });
+  const at = idxs[n - 1] + 1;   /* بعد آخر سطر محدد مباشرة */
+  DB.invoice.splice(at, 0, ...clones);
+  renumberOrder();
+  sheetRowSel = { containerId: 'fatora_sheet', rows: new Set(clones.map((_, k) => at + k)), anchor: at };
+  APP.curRow = at;
+  entryFromRow(curInvoiceRow());
+  renderFatoraSheet();
+  saveDB();
+  updateSelButtons();
+  toast(n === 1 ? 'تم نسخ السطر — أُدرجت النسخة بعده مباشرة' : `تم نسخ ${n} سطور — أُدرجت النسخ بعد السطر ${idxs[n - 1] + 1} بترتيبها`, 'ok');
+}
+/* ---------- أزرار نسخ المحدد في شريط ورقة الفاتورة (سطور/أعمدة) ---------- */
+(function () {
+  const br = $('btn_cpy_rows'), bc = $('btn_cpy_cols');
+  if (br) br.onclick = () => {
+    const fs = $('fatora_sheet'); const rs = fs && rowSelFor(fs.id);
+    if (rs && rs.rows.size) duplicateInvoiceRows([...rs.rows].sort((a, b) => a - b));
+  };
+  if (bc) bc.onclick = () => { const fs = $('fatora_sheet'); if (fs) copySelectedColsToClipboard(fs); };
+})();
 
 /* ---------- تعديلات عبر InputBox (كما في Access) ---------- */
 async function editMaterialName(r) {
