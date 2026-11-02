@@ -261,7 +261,7 @@ table.sheet th{
 }
 table.sheet th.rowh,table.sheet td.rowh{
   position:sticky;right:0;z-index:2;background:#efeecd;color:#7a6a00;
-  font-size:10.5px;min-width:26px;text-align:center;cursor:pointer;
+  font-size:10.5px;min-width:26px;text-align:center;cursor:default;   /* محدد السجل في أكسس: السهم العادي لا يد الويب */
 }
 table.sheet th.rowh{z-index:4}
 table.sheet tr:nth-child(even) td{background:#f7f9fc}
@@ -788,7 +788,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 3;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-02j';
+const APP_VER = '2026-11-02k';
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
