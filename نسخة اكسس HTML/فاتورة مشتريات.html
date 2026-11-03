@@ -825,7 +825,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 3;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-03c';
+const APP_VER = '2026-11-03d';
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
@@ -1711,6 +1711,15 @@ function sheetNavKey(e, container) {
   if (!opts) return;
   const t = e.target;
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;   /* المحرر مفتوح — مفاتيحه أولًا */
+  /* Ctrl+C — نسخ المحدد إلى الحافظة: السطور المحددة (صف عناوين + قيمها) أو الأعمدة المحددة —
+     لا إدراج في الجدول، كما في أكسس. تعمل لأي ورقة حتى للقراءة فقط،
+     ومع أي تخطيط لوحة مفاتيح: e.key يتغير مع التخطيط العربي (زر C ينتج «ؤ») لذا نعتمد e.code أيضًا */
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'c' || e.key === 'C' || e.code === 'KeyC')) {
+    e.preventDefault();
+    e.__sheetCopied = true;   /* علامة للمعالج العام (أسفل الملف) كي لا يكرر النسخ */
+    copySheetSelection(container, opts);
+    return;
+  }
   const ec = (opts._editColsShown && opts._editColsShown.length) ? opts._editColsShown : (opts.editableCols || []);
   if (!ec.length) return;
   const rows = opts.rows, hasNew = !!opts.newRecord, maxRow = rows.length - 1;
@@ -1745,11 +1754,6 @@ function sheetNavKey(e, container) {
       opts.onDeleteRows([...rs.rows].sort((a, b) => a - b));
     }
     else if (cur) { e.preventDefault(); clearSelCell(container, opts); }
-  }
-  else if ((e.ctrlKey || e.metaKey) && !e.altKey && (k === 'c' || k === 'C')) {
-    /* Ctrl+C — نسخ المحدد إلى الحافظة: السطور المحددة (صف عناوين + قيمها) أو الأعمدة المحددة — لا إدراج في الجدول، كما في أكسس */
-    e.preventDefault();
-    copySheetSelection(container, opts);
   }
   else if (k.length === 1 && k !== ' ' && !e.ctrlKey && !e.altKey && !e.metaKey && cur) {
     e.preventDefault();
@@ -3686,11 +3690,29 @@ function bindEvents() {
   document.addEventListener('keyup', keyStateHandler, true);
   window.addEventListener('focus', () => renderKeyLamps());
 
-  /* --- اختصارات Autokeys --- */
+  /* --- اختصارات Autokeys (e.code يجعلها تعمل مع أي تخطيط لوحة مفاتيح كما في أكسس) --- */
   document.addEventListener('keydown', e => {
-    if (e.ctrlKey && e.key === '2') { e.preventDefault(); tathbitAlnamaz(); openWindow('win-purchases'); }
-    else if (e.ctrlKey && e.key === '3') { e.preventDefault(); openWindow('win-purchases'); }
-    else if (e.ctrlKey && e.key === '4') { e.preventDefault(); invokeCalc(); }
+    if (e.ctrlKey && (e.key === '2' || e.code === 'Digit2')) { e.preventDefault(); tathbitAlnamaz(); openWindow('win-purchases'); }
+    else if (e.ctrlKey && (e.key === '3' || e.code === 'Digit3')) { e.preventDefault(); openWindow('win-purchases'); }
+    else if (e.ctrlKey && (e.key === '4' || e.code === 'Digit4')) { e.preventDefault(); invokeCalc(); }
+  });
+  /* --- Ctrl+C العام: نسخ المحدد من أي ورقة بيانات حتى لو كان التركيز خارجها (نقر خارجي أو خروج عن الورقة)
+     بشرط وجود تحديد سطور أو أعمدة وألا يكون الهدف حقل تحرير — ومع أي تخطيط لوحة مفاتيح (e.code) كما في أكسس --- */
+  document.addEventListener('keydown', e => {
+    if (!((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'c' || e.key === 'C' || e.code === 'KeyC'))) return;
+    if (e.__sheetCopied) return;   /* معالج الورقة نفّذها فعلًا */
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+    for (const cont of document.querySelectorAll('.sheetwrap')) {
+      const opts = cont._sheetOpts;
+      if (!opts) continue;
+      const rs = rowSelFor(cont.id), cs = colSelFor(cont.id);
+      if ((rs && rs.rows.size) || (cs && cs.cols.size)) {
+        e.preventDefault();
+        copySheetSelection(cont, opts);
+        return;
+      }
+    }
   });
   /* --- حذف السطور المحددة بمفتاح Delete: يُعالج داخل sheetNavKey لكل ورقة —
      الحذف لا يُفعّل إلا عند تحديد السطر كاملًا من خانة «#» (كما في أكسس) --- */
