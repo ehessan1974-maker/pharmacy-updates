@@ -32,7 +32,7 @@ button.retry{margin-top:14px;background:linear-gradient(180deg,#c2484c,#a4373a);
     <div class="bar" id="bar"><span></span></div>
     <div class="offnote" id="offnote">⚠ تعذر الاتصال — تم تشغيل النسخة الاحتياطية المحفوظة محلياً (قد لا تكون آخر تحديث). اتصل بالإنترنت ثم أعد الفتح لتحديثها.</div>
     <button class="retry" id="retry" style="display:none" onclick="location.reload()">إعادة المحاولة</button>
-    <div class="sub">هذا المشغّل يجلب آخر نسخة من المستودع تلقائياً عند كل فتح — لا حاجة لتنزيل أي شيء مرة أخرى.<br>يجرّب عدة مصادر معاً ويشغّل أحدث إصدار بينها — فلا يؤثر حجب أو تعثر مصدر واحد.</div>
+    <div class="sub">هذا المشغّل يجلب آخر نسخة من المستودع تلقائياً عند كل فتح، ويشغّل الأحدث بين المستودع والنسخة المحفوظة لديك — تنزيل نسخة جديدة وفتحها مرة واحدة يكفي ليبقى هذا الإصدار هو المُشغَّل دائمًا.</div>
   </div>
 </div>
 
@@ -104,8 +104,8 @@ function fetchOne(url,isApi,timeout){
       .catch(function(e){clearTimeout(to);rej(e);});
   });
 }
-function runApp(html,ver){
-  var s=st(); if(s){try{s.setItem(K_HTML,html);if(ver)s.setItem(K_VER,ver);}catch(e){}}
+function runApp(html,ver,skipWrite){
+  var s=st(); if(s&&!skipWrite){try{s.setItem(K_HTML,html);if(ver)s.setItem(K_VER,ver);}catch(e){}}
   document.open(); document.write(html); document.close();
 }
 function fail(){
@@ -126,18 +126,37 @@ function runBackup(){
 
 (function boot(){
   var list=sources(Date.now());
+  /* النسخة المحفوظة محليًا (من جلب سابق أو من التخزين الذاتي للبرنامج نفسه) تشارك
+     في اختيار الأحدث: إن كانت أحدث من كل ما يجلب من المستودع تُشغَّل هي — فيصل
+     التحديث بتنزيل النسخة الجديدة وفتحها مرة واحدة فقط حتى لو كانت نسخة GitHub متقادمة */
+  var s0=st();
+  var cached=s0?(function(){try{return s0.getItem(K_HTML);}catch(e){return null}})():null;
+  if(cached&&isApp(cached))cached={html:cached,ver:extractVer(cached)||(s0?(function(){try{return s0.getItem(K_VER);}catch(e){return null}})():null),local:1};
+  else cached=null;
   setMsg('جاري جلب آخر نسخة — تجربة '+list.length+' مصادر معاً...');
-  /* كل المصادر بالتوازي ثم اختيار الأحدث إصداراً بين الاستجابات الصالحة */
+  /* كل المصادر بالتوازي ثم اختيار الأحدث إصدارًا بينها وبين النسخة المحفوظة */
   Promise.all(list.map(function(x){return fetchOne(x.u,x.api,9000).catch(function(){return null;});}))
     .then(function(results){
-      var cands=results.filter(function(h){return isApp(h);})
+      var fetched=results.filter(function(h){return isApp(h);})
         .map(function(h){return {html:h, ver:extractVer(h)};});
+      var cands=fetched.slice();
+      if(cached)cands.push(cached);
       if(!cands.length){runBackup();return;}
       /* اختيار حتمي: امسح واحتفظ بالأحدث (أأمن من sort بمقارنات تعادل كاملة) */
       var best=cands[0];
       for(var i=1;i<cands.length;i++) if(newer(cands[i].ver, best.ver)) best=cands[i];
-      setMsg('تم ✓ — تشغيل إصدار '+(best.ver||'غير معروف')+' ('+Math.round(best.html.length/1024)+' كب)');
-      setTimeout(function(){runApp(best.html,best.ver);},350);
+      if(best.local){
+        if(!fetched.length){
+          document.getElementById('offnote').style.display='block';
+          setMsg('وضع عدم الاتصال — إصدار '+(best.ver||'غير معروف'));
+        } else {
+          setMsg('تم ✓ — تشغيل النسخة الأحدث المحفوظة لديك (إصدار '+(best.ver||'غير معروف')+') — نسخة المستودع أقدم');
+        }
+        setTimeout(function(){runApp(best.html,best.ver,true);},(fetched.length?350:900));
+      } else {
+        setMsg('تم ✓ — تشغيل إصدار '+(best.ver||'غير معروف')+' ('+Math.round(best.html.length/1024)+' كب)');
+        setTimeout(function(){runApp(best.html,best.ver);},350);
+      }
     });
 })();
 </script>

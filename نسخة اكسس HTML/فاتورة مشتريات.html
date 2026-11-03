@@ -19,9 +19,9 @@
   --btn:#f4f2ee;
   --btn-b:#9a968f;
   /* أحجام الخط القابلة للضبط من قسم «الإعدادات» في القائمة الجانبية */
-  --fs-sheet:12.5px;    /* خط الجداول (ورقة الفاتورة وبقية الأوراق) */
-  --fs-head:13px;       /* خط حقول «بيانات الفاتورة» أعلى الجدول — الافتراضي كما في النسخة الأصلية */
-  --fs-status:11.5px;   /* خط شريط الحالة — الافتراضي كما في النسخة الأصلية */
+  --fs-sheet:8px;       /* خط الجداول (ورقة الفاتورة وبقية الأوراق) — الافتراضي 8 بطلب المستخدم */
+  --fs-head:8px;        /* خط حقول «بيانات الفاتورة» أعلى الجدول — الافتراضي 8 بطلب المستخدم */
+  --fs-status:8px;      /* خط شريط الحالة — الافتراضي 8 بطلب المستخدم */
   --txt:#1f1f1f;
   --label:#444;
   --panel:#f6f5f3;
@@ -491,8 +491,8 @@ body.colseldrag *{cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMA
     <div id="setgrp" class="ngrp collapsed">
       <div class="ngrp-h" title="انقر لتمديد أو تقليص الإعدادات"><span class="chev">▼</span><span>الإعدادات</span></div>
       <div class="ngrp-body">
-        <div class="set-row"><label title="حجم الخط في جدول الفاتورة وبقية الجداول">خط الجدول</label><input type="number" id="set_fs_sheet" min="9" max="20" step="0.5" inputmode="decimal"><span class="set-unit">px</span></div>
-        <div class="set-row"><label title="حجم الخط في حقول «بيانات الفاتورة» أعلى الجدول">خط بيانات الفاتورة</label><input type="number" id="set_fs_head" min="9" max="18" step="0.5" inputmode="decimal"><span class="set-unit">px</span></div>
+        <div class="set-row"><label title="حجم الخط في جدول الفاتورة وبقية الجداول">خط الجدول</label><input type="number" id="set_fs_sheet" min="8" max="20" step="0.5" inputmode="decimal"><span class="set-unit">px</span></div>
+        <div class="set-row"><label title="حجم الخط في حقول «بيانات الفاتورة» أعلى الجدول">خط بيانات الفاتورة</label><input type="number" id="set_fs_head" min="8" max="18" step="0.5" inputmode="decimal"><span class="set-unit">px</span></div>
         <div class="set-row"><label title="حجم الخط في شريط الحالة أسفل الشاشة">خط شريط الحالة</label><input type="number" id="set_fs_status" min="8" max="16" step="0.5" inputmode="decimal"><span class="set-unit">px</span></div>
         <button class="tbtn" id="set_fs_reset" title="إعادة الأحجام الثلاثة إلى الافتراضي">استعادة الأحجام الافتراضية</button>
       </div>
@@ -858,7 +858,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 3;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-03j';   /* j: الافتراضي = ما على لابتوب المستخدم: أحجام الخط الأصلية (13/11.5) + المادة الحالية تتبع السجل الحالي + الأعمدة الجديدة تُدرَج بموضعها الافتراضي لا آخر الجدول */
+const APP_VER = '2026-11-03k';   /* k: بطلب المستخدم — افتراضي الخطوط 8/8/8 + ترتيب الأعمدة الافتراضي الجديد (شهر/سنة/الفعالية بعد الترتيب) + التخزين الذاتي للنسخة ليختار المشغّل الأحدث بين المحلي والمستودع */
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
@@ -1464,7 +1464,7 @@ function saveColWidths(map) {
 /* ---------- ترتيب الأعمدة المحفوظ (تغيير ترتيب الأعمدة بالسحب — مثل أكسس) ----------
    سحب رأس العمود وإفلاته على عمود آخر ينقل العمود — يُحفظ لكل جدول على حدة،
    ونقر مزدوج على خلية الرأس «#» يستعيد الترتيب الافتراضي */
-const COLORDER_KEY = 'fatora_mushtariat_colorder_v1';
+const COLORDER_KEY = 'fatora_mushtariat_colorder_v2';   /* v2: إهمال الترتيبات المحفوظة القديمة كي يسري الافتراضي الجديد — السحب اليدوي بعدها يُحفظ في هذا المفتاح */
 function loadColOrders() {
   try { return JSON.parse(localStorage.getItem(COLORDER_KEY)) || {}; } catch (e) { return {}; }
 }
@@ -2456,7 +2456,9 @@ function rowFromEntry(r) {
 }
 
 /* ---------- عرض ورقة بيانات الفاتورة ---------- */
-const FATORA_COLS = ['ترتيب','المادة','الشركة','رمز الباركود','الكمية','المجاني','سعر الشراء','حسم %','قيمة الحسم','الإجمالي قبل الحسم','الإجمالي بعد الحسم','إجمالي الكمية','سعر العميل','السعر الأساسي','عموم معتمد','أساس العرض','مجاني العرض','حسم العرض','السعر الصافي بعد العرض','رقم الطبخة','تاريخ الصنع','شهر','سنة','تاريخ انتهاء الفعالية','ملاحظات'];
+/* ترتيب أعمدة ورقة الفاتورة الافتراضي — بطلب المستخدم حرفيًا (مطابق لبرنامجه):
+   الترتيب/شهر/سنة/تاريخ انتهاء الفعالية أولًا ثم باقي الأعمدة، وتاريخ الصنع قبل ملاحظات */
+const FATORA_COLS = ['ترتيب','شهر','سنة','تاريخ انتهاء الفعالية','المادة','الشركة','رمز الباركود','الكمية','المجاني','سعر الشراء','حسم %','قيمة الحسم','الإجمالي قبل الحسم','الإجمالي بعد الحسم','إجمالي الكمية','سعر العميل','السعر الأساسي','عموم معتمد','أساس العرض','مجاني العرض','حسم العرض','السعر الصافي بعد العرض','رقم الطبخة','تاريخ الصنع','ملاحظات'];
 function renderFatoraSheet(page) {
   if (page === undefined) page = APP.curRow >= 0 ? Math.floor(APP.curRow / 200) : 0;
   renderSheet($('fatora_sheet'), {
@@ -3097,9 +3099,9 @@ $('setgrp').querySelector('.ngrp-h').addEventListener('click', () => {
 /* ---------- الإعدادات: أحجام الخط في الجدول وبيانات الفاتورة وشريط الحالة ----------
    تتغير فورًا أثناء الكتابة عبر متغيرات CSS (--fs-sheet / --fs-head / --fs-status)
    وتُحفظ في خيارات المستخدم (localStorage) وتُستعاد عند فتح البرنامج */
-/* الافتراضي = أحجام النسخة الأصلية على لابتوب المستخدم (الجدول 12.5 / بيانات الفاتورة 13 / شريط الحالة 11.5) */
-const FS_DEFAULTS = { fs_sheet: 12.5, fs_head: 13, fs_status: 11.5 };
-const FS_LIMITS = { fs_sheet: [9, 20], fs_head: [9, 18], fs_status: [8, 16] };
+/* الافتراضي = 8 لكلٍّ منها بطلب المستخدم — الحد الأدنى 8 كي يُقبل الإدخال */
+const FS_DEFAULTS = { fs_sheet: 8, fs_head: 8, fs_status: 8 };
+const FS_LIMITS = { fs_sheet: [8, 20], fs_head: [8, 18], fs_status: [8, 16] };
 const FS_INPUTS = { fs_sheet: 'set_fs_sheet', fs_head: 'set_fs_head', fs_status: 'set_fs_status' };
 function applyFontSizes(fs) {
   const st = document.documentElement.style;
@@ -3884,6 +3886,18 @@ async function init() {
   $('st_ver_num').textContent = APP_VER;
   toast((loaded ? 'تم استعادة بياناتك المحفوظة' : 'تم تحميل البيانات الأولية من قاعدة Access') + ' — إصدار ' + APP_VER, 'ok');
   if (mergedCardsMsg) { toast(mergedCardsMsg, 'ok'); mergedCardsMsg = ''; }
+  /* التخزين الذاتي: البرنامج يحفظ نسخته الحالية ليستخدمها المشغّل كأحدث إصدار معروف —
+     فتح الملف المُنزَّل مرة واحدة واحدة يجعل المشغّل يعرض هذا الإصدار لاحقًا حتى لو كانت
+     نسخة المستودع على GitHub أقدم (رفع التحديثات إلى GitHub غير متاح من بيئة التطوير) */
+  try {
+    if (localStorage.getItem('__fatoret_last_ver') !== APP_VER) {
+      const selfHtml = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+      if (selfHtml.length > 50000 && selfHtml.indexOf('SEED_B64') > -1) {
+        localStorage.setItem('__fatoret_last_html', selfHtml);
+        localStorage.setItem('__fatoret_last_ver', APP_VER);
+      }
+    }
+  } catch (e) {}
 }
 function fillDatalists() {
   /* المستخدمون/من/إلى — مرتبة حسب آخر استخدام كما في مصادر الصف:
