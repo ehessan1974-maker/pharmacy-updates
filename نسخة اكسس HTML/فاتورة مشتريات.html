@@ -429,6 +429,18 @@ body.colseldrag *{cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMA
 .combo-list.mat-list .mcomp{flex:none;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#8a8781}
 .combo-list.mat-list .mprice{flex:none;font-size:11px;color:#4a4a46;font-variant-numeric:tabular-nums}
 .combo-list.mat-list .mhint{padding:3px 9px;font-size:10.5px;color:#8a8781;background:#f6f5f2;border-bottom:1px solid #eceae6;position:sticky;top:0}
+/* قائمة إسدال حقول رأس الفاتورة (من/إلى/المستخدم/رقم الفاتورة) — الفتح يعرض جميع
+   البيانات لا ما يطابق النص المكتوب (قائمة datalist في المتصفح تُصفّى بالنص) كما في أكسس */
+.combo-list.head-list .opt{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:var(--fs-head)}
+.combo-list.head-list .hval{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.combo-list.head-list .hsub{flex:none;max-width:62%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:calc(var(--fs-head)*0.885);color:#8a8781;font-variant-numeric:tabular-nums;direction:ltr}
+/* سهم الإسدال داخل الخانة — بديل سهم datalist الذي اختفى بإزالة list */
+.ctl .dd{position:absolute;inset-inline-end:1px;top:1px;bottom:1px;width:16px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:#6b6862;font-size:9px;background:linear-gradient(#f6f5f2,#e4e2dc);border-inline-start:1px solid #d8d5cf;
+  border-start-end-radius:1px;border-end-end-radius:1px;user-select:none}
+.ctl .dd:hover{background:linear-gradient(#ecebe6,#d9d6d0);color:#1f1f1d}
+#win-fatora .fatora-head .ctl.has-dd .i{padding-inline-end:19px}
 .subnote{font-size:11px;color:#8a8781;margin-top:2px}
 .kbd{background:#eceae6;border:1px solid #c2bfba;border-bottom-width:2px;border-radius:3px;padding:0 5px;font-size:10.5px;font-family:Consolas,monospace;color:#333}
 .section-title{font-size:12.5px;font-weight:700;color:var(--acc-dark);border-bottom:1px dashed #c9c6c0;padding-bottom:4px;margin-bottom:2px}
@@ -546,12 +558,12 @@ body.colseldrag *{cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMA
       <div class="groupbox fatora-head">
         <span class="gtitle">بيانات الفاتورة</span>
         <div class="grid6">
-          <div class="field"><label>من</label><div class="ctl"><input class="i" id="f_from" list="dl_from"></div><datalist id="dl_from"></datalist></div>
+          <div class="field"><label>من</label><div class="ctl has-dd"><input class="i" id="f_from" title="من — F4 أو سهم الإسدال يعرض جميع المستودعات مع تواريخ استخدامها مهما كان المكتوب في الخانة"><span class="dd" data-dd="f_from" title="إسدال — عرض جميع البيانات">▾</span></div></div>
           <div class="field"><label>التاريخ</label><div class="ctl"><input class="i" id="f_date" type="date"></div></div>
-          <div class="field"><label>المستخدم</label><div class="ctl"><input class="i" id="f_user" list="dl_users"></div><datalist id="dl_users"></datalist></div>
-          <div class="field"><label>إلى</label><div class="ctl"><input class="i" id="f_to" list="dl_to"></div><datalist id="dl_to"></datalist></div>
+          <div class="field"><label>المستخدم</label><div class="ctl has-dd"><input class="i" id="f_user" title="المستخدم — F4 أو سهم الإسدال يعرض جميع المستخدمين مع تواريخ استخدامهم مهما كان المكتوب في الخانة"><span class="dd" data-dd="f_user" title="إسدال — عرض جميع البيانات">▾</span></div></div>
+          <div class="field"><label>إلى</label><div class="ctl has-dd"><input class="i" id="f_to" title="إلى — F4 أو سهم الإسدال يعرض جميع جهات الإسناد مع تواريخ استخدامها مهما كان المكتوب في الخانة"><span class="dd" data-dd="f_to" title="إسدال — عرض جميع البيانات">▾</span></div></div>
           <div class="field"><label>الوقت</label><div class="ctl"><input class="i" id="f_time" type="time" step="1"></div></div>
-          <div class="field"><label>رقم الفاتورة</label><div class="ctl"><input class="i" id="f_invoiceno" list="dl_invoices" placeholder="مستودع ... التاريخ الوقت"><datalist id="dl_invoices"></datalist></div></div>
+          <div class="field"><label>رقم الفاتورة</label><div class="ctl has-dd"><input class="i" id="f_invoiceno" placeholder="مستودع ... التاريخ الوقت" title="رقم الفاتورة — F4 أو سهم الإسدال يعرض جميع الفواتير (الرقم، المستودع، الإجمالي، التاريخ) مهما كان المكتوب في الخانة"><span class="dd" data-dd="f_invoiceno" title="إسدال — عرض جميع البيانات">▾</span></div></div>
         </div>
       </div>
 
@@ -858,7 +870,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 3;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-03k';   /* k: بطلب المستخدم — افتراضي الخطوط 8/8/8 + ترتيب الأعمدة الافتراضي الجديد (شهر/سنة/الفعالية بعد الترتيب) + التخزين الذاتي للنسخة ليختار المشغّل الأحدث بين المحلي والمستودع */
+const APP_VER = '2026-11-03l';   /* l: إسدال خانات رأس الفاتورة (من/إلى/المستخدم/رقم الفاتورة) يعرض جميع البيانات عند الفتح لا ما يطابق النص المكتوب فقط — قائمة خاصة بديلة عن datalist (المتصفح يصفّيها بالنص): الفتح = مصدر الصف كاملًا كما في Form_Load (أزواج من+التاريخ مرتبة بالتاريخ) والفواتير برقمها ومستودعها وإجماليها وتاريخها، والكتابة = تصفية كما في نص_من_Change (DISTINCT + Like) */
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
@@ -3639,6 +3651,8 @@ function bindEvents() {
   $('f_invoiceno').addEventListener('change', () => {
     loadInvoiceByNo($('f_invoiceno').value.trim());
   });
+  /* إسدال خانات الرأس: الفتح يعرض جميع البيانات، والكتابة تُصفّي (كما في أكسس) */
+  headCombos();
   $('btn-updtime').onclick = () => { $('f_time').value = nowTime(); $('f_date').value = today(); rebuildInvoiceNo(); };
   $('btn-save').onclick = saveFatoora;
   $('btn-newinvoice').onclick = async () => {
@@ -3900,28 +3914,8 @@ async function init() {
   } catch (e) {}
 }
 function fillDatalists() {
-  /* المستخدمون/من/إلى — مرتبة حسب آخر استخدام كما في مصادر الصف:
-     SELECT المستخدم, Max(التاريخ) FROM مشتريات GROUP BY المستخدم ORDER BY Max(التاريخ) DESC */
-  const lastUse = key => {
-    /* إرجاع [القيمة، آخر تاريخ] مرتبة تنازليًا بالتاريخ — كما في مصادر الصف */
-    const m = new Map();
-    DB.purchases.forEach(p => {
-      const v = p[key]; if (!v) return;
-      const d = arDateToInput(p['التاريخ']) || '';
-      if (!m.has(v) || d > m.get(v)) m.set(v, d);
-    });
-    return [...m.entries()]
-      .sort((a, b) => b[1].localeCompare(a[1]) || String(a[0]).localeCompare(String(b[0]), 'ar'));
-  };
-  /* التاريخ يظهر بجوار القيمة في القائمة المنسدلة كما في أعمدة RowSource بأكسس */
-  $('dl_users').innerHTML = lastUse('المستخدم').map(([u, d]) => `<option value="${escHtml(u)}">${escHtml(d)}</option>`).join('');
-  // من
-  $('dl_from').innerHTML = lastUse('من').map(([u, d]) => `<option value="${escHtml(u)}">${escHtml(d)}</option>`).join('');
-  // إلى
-  $('dl_to').innerHTML = lastUse('إلى').map(([u, d]) => `<option value="${escHtml(u)}">${escHtml(d)}</option>`).join('');
-  // الفواتير
-  const invs = purchaseInvoices().slice(0, 800);
-  $('dl_invoices').innerHTML = invs.map(v => `<option value="${escHtml(v.no)}">${escHtml(v.from)} — ${fmt(v.total)}</option>`).join('');
+  /* خانات من/إلى/المستخدم/رقم الفاتورة لم تعد تستخدم datalist — إسدالها قائمة خاصة
+     headCombos() تفتح بجميع البيانات (القائمة الأصلية للمتصفح تُصفّى بالنص المكتوب) */
   // بطاقات المواد
   $('dl_cards_all').innerHTML = DB.cards.slice(0, 5000).map(c => `<option value="${escHtml(c['المادة'])}">`).join('');
   // شركات بطاقات المواد
@@ -3929,6 +3923,130 @@ function fillDatalists() {
   $('c_comp').innerHTML = '<option value="">— الكل —</option>' + comps.map(u => `<option value="${escHtml(u)}">${escHtml(u)}</option>`).join('');
   // مستودعات مشتريات
   $('p_wh').innerHTML = '<option value="">— الكل —</option>' + [...new Set(DB.purchases.map(p => p['من']).filter(Boolean))].map(u => `<option value="${escHtml(u)}">${escHtml(u)}</option>`).join('');
+}
+/* ================= إسدال حقول رأس الفاتورة — الفتح يعرض جميع البيانات =================
+   في أكسس: فتح مربع التحرير والسرد يُسدل مصدر الصف كاملًا مهما كان مكتوبًا في الخانة
+   (Form_Load: SELECT من, التاريخ GROUP BY من, التاريخ ORDER BY التاريخ DESC)، والتصفية
+   تحصل فقط أثناء الكتابة (نص_من_Change: SELECT DISTINCT من WHERE Like '*نص*' ORDER BY من).
+   قائمة datalist الأصلية في المتصفح لا تعرض إلا ما يطابق النص المكتوب — لذلك صار الإسدال
+   هنا قائمة خاصة: الفتح (السهم/F4/Alt+↓) = جميع البيانات، الكتابة = تصفية، كما في أكسس */
+function headDropdown(inp, cfg) {
+  let list = null, hl = -1, items = [];
+  const close = () => { if (list) { list.remove(); list = null; } hl = -1; };
+  const hlOpt = () => {
+    if (!list) return;
+    const opts = [...list.querySelectorAll('.opt')];
+    opts.forEach((el, i) => el.classList.toggle('hl', i === hl));
+    if (opts[hl]) opts[hl].scrollIntoView({ block: 'nearest' });
+  };
+  /* تموضع القائمة: تلازم الخانة — RTL: محاذاة نهاية الخانة وامتداد يسارًا،
+     وإن لم تتسع فمن بدايتها، وانقلاب للأعلى قرب أسفل الشاشة (كقائمة المادة) */
+  const place = () => {
+    if (!list || !list.isConnected) return;
+    const rect = inp.getBoundingClientRect();
+    const w = Math.max(rect.width, cfg.minW || 260);
+    const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+    list.style.width = w + 'px';
+    let left = rect.right - w;
+    if (left < 4) left = Math.min(Math.max(4, rect.left), Math.max(4, vw - w - 4));
+    if (left + w > vw - 4) left = Math.max(4, vw - w - 4);
+    list.style.left = left + 'px';
+    const h = Math.min(list.scrollHeight, 240);
+    let top = rect.bottom + 1;
+    if (top + h > vh - 4 && rect.top - h - 6 > 4) top = Math.max(4, rect.top - h - 6);
+    list.style.top = top + 'px';
+  };
+  /* all=true: فتح بجميع البيانات بغضّ النظر عن نص الخانة — all=false: تصفية بالكتابة */
+  const build = all => {
+    close();
+    items = cfg.rows(all ? '' : String(inp.value));
+    if (!items.length) return;
+    list = document.createElement('div');
+    list.className = 'combo-list head-list';
+    items.forEach((row, i) => {
+      const o = document.createElement('div');
+      o.className = 'opt';
+      o.innerHTML = cfg.render(row);
+      o.addEventListener('mousedown', ev => { ev.preventDefault(); ev.stopPropagation(); pick(i); });
+      list.appendChild(o);
+    });
+    document.body.appendChild(list);
+    list.style.position = 'fixed';
+    list.style.display = 'block';
+    place(); place();
+    hl = all ? -1 : 0;
+    hlOpt();
+  };
+  const pick = i => {
+    const row = items[i];
+    if (!row) return;
+    close();
+    inp.value = cfg.text(row);
+    inp.dispatchEvent(new Event('change', { bubbles: true }));   /* rebuildInvoiceNo / loadInvoiceByNo */
+    inp.focus({ preventScroll: true });
+  };
+  const toggle = () => { list ? close() : build(true); };
+  inp._headDD = { build, close, toggle };   /* للاختبار الآلي */
+  cfg.arrow.addEventListener('mousedown', ev => { ev.preventDefault(); ev.stopPropagation(); toggle(); });
+  inp.addEventListener('input', () => build(!String(inp.value)));   /* الكتابة تصفّي؛ مسح النص يعيد الجميع */
+  inp.onkeydown = e => {
+    if (e.key === 'F4' || (e.altKey && e.key === 'ArrowDown')) { e.preventDefault(); toggle(); return; }
+    if (list && !e.altKey) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); if (hl < items.length - 1) { hl++; hlOpt(); } return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); if (hl > 0) { hl--; hlOpt(); } else if (hl < 0) { hl = items.length - 1; hlOpt(); } return; }
+      if (e.key === 'Enter') { e.preventDefault(); pick(hl >= 0 ? hl : 0); return; }
+      if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+    }
+  };
+  inp.addEventListener('blur', () => setTimeout(() => { if (list && document.activeElement !== inp) close(); }, 120));
+}
+function headCombos() {
+  /* من/إلى/المستخدم — الفتح: كل أزواج (القيمة، التاريخ) كما في مصدر الصف عند Form_Load
+     ORDER BY التاريخ DESC؛ الكتابة: DISTINCT القيمة WHERE Like '*نص*' ORDER BY القيمة
+     كما في نص_من_Change (بلا تاريخ — عمود واحد كما في أكسس) */
+  const pairCfg = (inp, key) => {
+    const allPairs = () => {
+      const seen = new Set(), out = [];
+      for (const p of DB.purchases) {
+        const v = p[key]; if (!v) continue;
+        const d = arDateToInput(p['التاريخ']) || '';
+        const k = v + '|' + d;
+        if (seen.has(k)) continue;
+        seen.add(k); out.push({ v, d });
+      }
+      return out.sort((a, b) => String(b.d).localeCompare(String(a.d)) || String(a.v).localeCompare(String(b.v), 'ar')).slice(0, 1000);
+    };
+    headDropdown(inp, {
+      arrow: inp.parentElement.querySelector('.dd'),
+      minW: 260,
+      rows: q => {
+        if (!String(q ?? '').trim()) return allPairs();
+        const rx = accLike('*' + q + '*');
+        const vals = [...new Set(DB.purchases.map(p => p[key]).filter(v => v && rx.test(String(v))))];
+        return vals.sort((a, b) => String(a).localeCompare(String(b), 'ar')).map(v => ({ v, d: '' }));
+      },
+      render: r => `<span class="hval">${escHtml(r.v)}</span>` + (r.d ? `<span class="hsub">${escHtml(r.d)}</span>` : ''),
+      text: r => r.v,
+    });
+  };
+  pairCfg($('f_from'), 'من');
+  pairCfg($('f_to'), 'إلى');
+  pairCfg($('f_user'), 'المستخدم');
+  /* رقم الفاتورة — الفتح: جميع الفواتير (الرقم، المستودع، الإجمالي، التاريخ) بترتيب
+     التاريخ تنازليًا؛ الكتابة: WHERE (من & رقم & التاريخ) Like '*نص*' كما في
+     نص_رقم_الفاتورة_KeyDown Alt+Down في أكسس */
+  headDropdown($('f_invoiceno'), {
+    arrow: $('f_invoiceno').parentElement.querySelector('.dd'),
+    minW: 340,
+    rows: q => {
+      const invs = purchaseInvoices();
+      const s = String(q ?? '').trim();
+      const hit = s ? invs.filter(v => accLike('*' + s + '*').test([v.from, v.no, arDateToInput(v.date)].filter(Boolean).join(' '))) : invs;
+      return hit.slice(0, 800);
+    },
+    render: v => `<span class="hval">${escHtml(v.no)}</span><span class="hsub">${escHtml([v.from, fmt(v.total), arDateToInput(v.date)].filter(Boolean).join(' — '))}</span>`,
+    text: v => v.no,
+  });
 }
 function escHtml(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
