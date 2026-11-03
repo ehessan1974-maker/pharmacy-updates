@@ -521,8 +521,8 @@ body.colseldrag *{cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMA
       </div>
 
       <div class="sheettools">
-        <button class="tbtn" id="btn_cpy_rows" disabled title="نسخ السطور المحددة إلى الحافظة (Ctrl+C) — صف العناوين ثم السطور بفواصل جدولة، للصقها في Excel أو أي برنامج — لا تُدرج في الجدول كما في أكسس">نسخ السطور المحددة</button>
-        <button class="tbtn" id="btn_cpy_cols" disabled title="نسخ بيانات الأعمدة المحددة إلى الحافظة (Ctrl+C) — صف العناوين ثم كل السطور والخلايا بفواصل جدولة، للصقها في Excel أو أي برنامج">نسخ الأعمدة المحددة</button>
+        <button class="tbtn" id="btn_cpy_rows" disabled title="نسخ السطور المحددة إلى الحافظة (Ctrl+C) — صف العناوين ثم السطور، وتُلصق كجدول منسّق بخطوط فاصلة في Word أو Excel أو أي برنامج — لا تُدرج في الجدول كما في أكسس">نسخ السطور المحددة</button>
+        <button class="tbtn" id="btn_cpy_cols" disabled title="نسخ بيانات الأعمدة المحددة إلى الحافظة (Ctrl+C) — صف العناوين ثم كل السطور، وتُلصق كجدول منسّق بخطوط فاصلة في Word أو Excel أو أي برنامج">نسخ الأعمدة المحددة</button>
         <span class="hint">لنقل سطر أو أكثر: حدّدها من خانة # ثم اسحب محدد أحدها إلى الموضع الجديد — مثل نقل الأعمدة من رأس العمود</span>
       </div>
       <div class="sheetwrap" id="fatora_sheet"></div>
@@ -825,7 +825,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 3;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-03d';
+const APP_VER = '2026-11-03e';
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
@@ -1637,10 +1637,33 @@ function sheetHtmlEsc(v) {
   if (v === null || v === undefined) v = '';
   return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\t/g, ' ').replace(/[\r\n]+/g, ' ');
 }
-function rowsSelectionToHtmlTable(order, rows) {
-  const head = order.length ? '<tr>' + order.map(c => '<th>' + sheetHtmlEsc(c) + '</th>').join('') + '</tr>' : '';
-  const body = rows.map(r => '<tr>' + order.map(c => '<td>' + sheetHtmlEsc(r[c]) + '</td>').join('') + '</tr>').join('');
-  return '<table>' + (head ? '<thead>' + head + '</thead>' : '') + (body ? '<tbody>' + body + '</tbody>' : '') + '</table>';
+function rowsSelectionToHtmlTable(container, order, rows) {
+  /* جدول HTML منسّق مطابق لشكل ورقة البيانات: خطوط فاصلة بين كل خانتين، ترويسة ملونة،
+     تظليل متناوب للسطور، أرقام موسّطة ltr كما في الورقة، والسالب بأحمر — أنماط مضمّنة
+     كي يُلصق الجدول بحدوده في Word أو Excel أو البريد أو أي يقبل HTML */
+  const opts = container._sheetOpts || {};
+  const nums = opts.numericCols || [];
+  const B = '#c8c8c8';   /* var(--grid) */
+  const cell = (v, c, th) => {
+    const isNum = !th && nums.includes(c);
+    let extra = '', col = '';
+    if (isNum) {
+      extra = 'direction:ltr;text-align:center;font-variant-numeric:tabular-nums;';
+      const n = parseFloat(v);
+      if (!isNaN(n) && n < 0) col = 'color:#b02020;';
+    }
+    const style = (th ? 'padding:4px 8px;text-align:center;background:#f5f4f2;color:#3d3d3d;font-weight:600;'
+                      : 'padding:3px 8px;' + (isNum ? '' : 'text-align:right;')) +
+      extra + col + 'border:1px solid ' + B + ';white-space:nowrap;';
+    const tag = th ? 'th' : 'td';
+    return '<' + tag + ' style="' + style + '">' + sheetHtmlEsc(v) + '</' + tag + '>';
+  };
+  const head = order.length ? '<tr>' + order.map(c => cell(c, c, true)).join('') + '</tr>' : '';
+  const body = rows.map((r, ri) =>
+    '<tr' + (ri % 2 === 1 ? ' style="background:#f7f9fc"' : '') + '>' +
+    order.map(c => cell(r[c], c, false)).join('') + '</tr>').join('');
+  return '<table dir="rtl" style="border-collapse:collapse;font-family:Segoe UI,Tahoma,Arial,sans-serif;font-size:12.5px;background:#fff;color:#1a1a1a">' +
+    (head ? '<thead>' + head + '</thead>' : '') + (body ? '<tbody>' + body + '</tbody>' : '') + '</table>';
 }
 /* نسخ السطور المحددة إلى الحافظة — لا إدراج في الجدول إطلاقًا */
 async function copySheetRowsToClipboard(container) {
@@ -1652,7 +1675,7 @@ async function copySheetRowsToClipboard(container) {
   const order = applyColOrder(container.id, opts.cols || []);   /* ترتيب العرض الحالي بعد أي نقل */
   const tsv = [order.map(sheetTsvEsc).join('\t')]
     .concat(idxs.map(i => order.map(c => sheetTsvEsc(src[i][c])).join('\t'))).join('\n');
-  const html = rowsSelectionToHtmlTable(order, idxs.map(i => src[i]));
+  const html = rowsSelectionToHtmlTable(container, order, idxs.map(i => src[i]));
   const ok = await copyTextToClipboard(tsv, html);
   toast(ok ? `تم نسخ ${idxs.length} سطر إلى الحافظة — لم تُدرج في الجدول؛ الصقها في Excel أو أي برنامج`
            : 'تعذر النسخ إلى الحافظة', ok ? 'ok' : 'warn');
@@ -1669,7 +1692,7 @@ async function copySelectedColsToClipboard(container) {
   const src = opts.rows || [];
   const tsv = [cols.map(sheetTsvEsc).join('\t')]
     .concat(src.map(r => cols.map(c => sheetTsvEsc(r[c])).join('\t'))).join('\n');
-  const html = rowsSelectionToHtmlTable(cols, src);
+  const html = rowsSelectionToHtmlTable(container, cols, src);
   const ok = await copyTextToClipboard(tsv, html);
   const nm = cols.length === 1 ? `العمود «${cols[0]}»` : `${cols.length} أعمدة`;
   toast(ok ? `تم نسخ بيانات ${nm} (${src.length} سطرًا) إلى الحافظة — الصقها في Excel أو أي برنامج` : 'تعذر النسخ إلى الحافظة', ok ? 'ok' : 'warn');
