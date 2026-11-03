@@ -18,6 +18,10 @@
   --focus:#2b579a;
   --btn:#f4f2ee;
   --btn-b:#9a968f;
+  /* أحجام الخط القابلة للضبط من قسم «الإعدادات» في القائمة الجانبية */
+  --fs-sheet:12.5px;    /* خط الجداول (ورقة الفاتورة وبقية الأوراق) */
+  --fs-head:13px;       /* خط حقول «بيانات الفاتورة» أعلى الجدول — الافتراضي كما في النسخة الأصلية */
+  --fs-status:11.5px;   /* خط شريط الحالة — الافتراضي كما في النسخة الأصلية */
   --txt:#1f1f1f;
   --label:#444;
   --panel:#f6f5f3;
@@ -238,7 +242,16 @@ input.num{text-align:center;direction:ltr}
 .sheetwrap:focus{outline:none}   /* ورقة البيانات تستقبل الأسهم بلا إطار تركيز — كما في أكسس */
 /* ورقة بيانات الفاتورة تملأ المساحة الفارغة المتبقية في النافذة */
 #win-fatora #fatora_sheet{flex:1 1 auto;min-height:140px;max-height:none}
-table.sheet{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;font-size:12.5px}
+/* حاوية «بيانات الفاتورة» مضغوطة لأقصى حد لتوفير المساحة للجدول:
+   الحقول الستة في صف واحد (grid6) وحشوات وخطوط مصغّرة — النطاق محصور بنافذة الفاتورة فقط */
+#win-fatora .win-body{padding:5px 10px 6px;gap:5px}
+#win-fatora .fatora-head{margin-top:4px;padding:4px 8px 5px}
+#win-fatora .fatora-head .grid6{gap:3px 10px}
+#win-fatora .fatora-head .field{gap:1px}
+#win-fatora .fatora-head .field>label{font-size:calc(var(--fs-head)*0.885);line-height:1.25}   /* 0.885×13 = 11.5 كما في النسخة الأصلية */
+#win-fatora .fatora-head .i{padding:2px 5px;font-size:var(--fs-head)}
+#win-fatora .fatora-head>.gtitle{font-size:calc(var(--fs-head)*0.885);top:-8px;padding:0 6px}   /* 11.5 عند الافتراضي كما في النسخة الأصلية */
+table.sheet{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;font-size:var(--fs-sheet)}
 table.sheet th,table.sheet td{
   /* حد فيزيائي يسار لا منطقي (inline-end): خلايا الأرقام .num اتجاهها ltr فينقلب
      border-inline-end إلى الحافة اليمنى ويبقى الفاصل بين العمودين بلا خط —
@@ -264,7 +277,7 @@ table.sheet th{
 }
 table.sheet th.rowh,table.sheet td.rowh{
   position:sticky;right:0;z-index:2;background:#efeecd;color:#7a6a00;
-  font-size:10.5px;min-width:26px;text-align:center;
+  font-size:calc(var(--fs-sheet)*0.84);min-width:26px;text-align:center;
   /* محدد السجل في أكسس: سهم أسود غامق أفقي يشير نحو السجل (الواجهة عربية: المحدد يمينًا فيشير يسارًا) */
   cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABcAAAATCAYAAAB7u5a2AAABaUlEQVR4nK3UsUocURQG4G82IbEQQsqASIhY+AaSKu+QUmIhooUPYZW3sLIQxFQphUCKRKzVIqRIFEEhQZugLJvZ3RR7Jrk7uY676A9nmDlzzn/Of8+9l7uhwMM7cvyHVo20wDwe1YPGwYOwHko8wRKOMIff8X9kFJFQJL5ZvMUx+tgYt9m6dHiFLVwHaR/7/ikq3IKWYWmTWMSnhLBvsAQXeBFxFXm2+3rl51jH94SwF6Rl2GLEZndMTsZLrOB1dA3dTFddnISvjSt08Atv8KMq8BTL+JCR3q35UhU5/2EUbInHFD4nAe2G5NtsLV2qdGlWcRlBZUOBDr6EfcVp2DeDWVVNqwpUHzN4nxCVmfeDyKnyJsIea0A69SX8rKmoyPeSpupo3Ot/h4Fp7BieRR+7hk9uaiMhVbGAsyDu4l34x7pH6khP6zNsRoHtTAON3eXQS+LODU7kR4OtKwrdC268N+4TI91+8AcfB3c637mQrAAAAABJRU5ErkJggg==") 2 9, url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2723%27%20height%3D%2719%27%3E%3Cpath%20d%3D%27M1.50%209.10%20L13.52%2016.98%20L13.87%2010.84%20L19.88%2010.97%20L21.16%207.27%20L14.94%207.01%20L19.04%201.50%20Z%27%20fill%3D%27black%27%2F%3E%3C%2Fsvg%3E") 2 9, default;
 }
@@ -277,7 +290,7 @@ table.sheet td.sel{background:var(--sel)!important;outline:1px solid #6ba4d8;out
 table.sheet tr.cur td.rowh{background:#e3c93f}
 table.sheet td.num{direction:ltr;text-align:center;font-variant-numeric:tabular-nums}
 table.sheet td.neg{color:#b02020}
-table.sheet td .edit-in{width:100%;border:1.5px solid var(--focus);padding:1px 5px;font-family:inherit;font-size:12.5px;outline:none}
+table.sheet td .edit-in{width:100%;border:1.5px solid var(--focus);padding:1px 5px;font-family:inherit;font-size:var(--fs-sheet);outline:none}
 /* ===== سلوك أكسس: تحرير مباشر + سجل جديد (*) + سطر الإجمالي + تغيير عرض الأعمدة ===== */
 table.sheet td.editable{cursor:cell}
 table.sheet td.editable:hover{box-shadow:inset 0 0 0 1.5px #6ba4d8}
@@ -336,10 +349,6 @@ table.sheet tfoot td.colsel{background:#e2ebf7!important}
 body.colseldrag{cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMAAAAXCAYAAADpwXTaAAABfElEQVR4nL2Uuy4FURSGv5lxiRwkJKKRkEh0EgnRoPQaJ+IR6DXCU6gUCp1C4RFcQkOhUiASoRMO5zKKvRZr7zNmT+VPdtZc1vr3/++1ZqAaUqCnYi6JrPB+FZiuSlJEauM18AUcA2tAb7BpISbMdWYKzoFcVhsYDTbzkEocA46AcSlSwkFD9Ag0yhSlUngFDIuSZaAF9AEDQppJfjtmUVUsiYomsCEb3RubD0DNCAib5ilMgQtTfAK8AB25v42pUugMrUvhJ/7B58AdMA/M4Bo2AvTL8hSq5CHgSdQ0jao8IH8HnsX6nnHWpW6X37MLiULyDjAndZnh+mGeAj4ksUhZjhvkHNgsIiJ4eFiiriXxFL+zhWQJsIJ/+NZWC9eg2TJV1m6CG2AtVjJVuiW50T+JJtQDWxovJedPexY6JjXc96hEuhaq2CtSty1kDYk7wftK0DGZBN5wjbjBffyV7IVQGweiajF43oWY3ATYB16BMyGK/oZihDb+D74Bx5F5rNz2B98AAAAASUVORK5CYII=") 9 21, url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2719%27%20height%3D%2723%27%3E%3Cpath%20d%3D%27M9.10%2021.16%20L16.98%209.14%20L10.84%208.78%20L10.97%202.77%20L7.27%201.50%20L7.01%207.72%20L1.50%203.62%20Z%27%20fill%3D%27black%27%2F%3E%3C%2Fsvg%3E") 9 21, default!important;user-select:none!important;-webkit-user-select:none!important}
 body.colseldrag *{cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMAAAAXCAYAAADpwXTaAAABfElEQVR4nL2Uuy4FURSGv5lxiRwkJKKRkEh0EgnRoPQaJ+IR6DXCU6gUCp1C4RFcQkOhUiASoRMO5zKKvRZr7zNmT+VPdtZc1vr3/++1ZqAaUqCnYi6JrPB+FZiuSlJEauM18AUcA2tAb7BpISbMdWYKzoFcVhsYDTbzkEocA46AcSlSwkFD9Ag0yhSlUngFDIuSZaAF9AEDQppJfjtmUVUsiYomsCEb3RubD0DNCAib5ilMgQtTfAK8AB25v42pUugMrUvhJ/7B58AdMA/M4Bo2AvTL8hSq5CHgSdQ0jao8IH8HnsX6nnHWpW6X37MLiULyDjAndZnh+mGeAj4ksUhZjhvkHNgsIiJ4eFiiriXxFL+zhWQJsIJ/+NZWC9eg2TJV1m6CG2AtVjJVuiW50T+JJtQDWxovJedPexY6JjXc96hEuhaq2CtSty1kDYk7wftK0DGZBN5wjbjBffyV7IVQGweiajF43oWY3ATYB16BMyGK/oZihDb+D74Bx5F5rNz2B98AAAAASUVORK5CYII=") 9 21, url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2719%27%20height%3D%2723%27%3E%3Cpath%20d%3D%27M9.10%2021.16%20L16.98%209.14%20L10.84%208.78%20L10.97%202.77%20L7.27%201.50%20L7.01%207.72%20L1.50%203.62%20Z%27%20fill%3D%27black%27%2F%3E%3C%2Fsvg%3E") 9 21, default!important}
 .hint{font-size:11px;color:#777}
-/* ===== أدوات ورقة الفاتورة: نسخ السطور المحددة / نسخ الأعمدة المحددة ===== */
-.sheettools{display:flex;gap:6px;align-items:center;padding:0 8px 6px;flex-wrap:wrap}
-.sheettools .tbtn:disabled{opacity:.45;cursor:default}
-.sheettools .tbtn:disabled:hover{background:linear-gradient(180deg,#fdfcfa,#eceae6);border-color:var(--btn-b)}
 /* مربع إجمالي */
 .totalbox{
   display:flex;align-items:center;gap:8px;background:#fffbe8;border:1px solid #d9c66b;
@@ -375,21 +384,29 @@ body.colseldrag *{cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMA
 }
 .toast.ok{background:#2e7d32}.toast.err{background:#b3261e}.toast.warn{background:#e0a413;color:#3d2c00}
 @keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-/* شارة الحالة */
+/* شارة الحالة — بأدنى ارتفاع ممكن لتوفير المساحة للجدول، وبياناتها في سطر واحد
+   يفيض عرضه فتُمرَّر يمينًا ويسارًا: بعجلة الفأرة (معالج JS أسفل الملف) أو بسحب شريط التمرير الرقيق */
 #statusbar{
   flex:none;background:linear-gradient(180deg,#f2f1ef,#e2e0dc);border-top:1px solid #c4c1bb;
-  padding:4px 12px;display:flex;gap:18px;font-size:11.5px;color:#555;align-items:center;
+  padding:1px 8px;display:flex;gap:14px;font-size:var(--fs-status);color:#555;align-items:center;
+  white-space:nowrap;overflow-x:auto;overflow-y:hidden;
+  scrollbar-width:thin;scrollbar-color:#b5b1aa transparent;
 }
-#statusbar .st{display:flex;gap:5px;align-items:center}
+#statusbar::-webkit-scrollbar{height:5px}
+#statusbar::-webkit-scrollbar-track{background:transparent}
+#statusbar::-webkit-scrollbar-thumb{background:#b5b1aa;border-radius:3px}
+#statusbar .st{display:flex;gap:5px;align-items:center;flex:none}
+#statusbar .st.flex1{flex:1 1 0;min-width:0}   /* يمتص الفائض حين يتسع السطر، ويصفر عند الفيض ليبدأ التمرير */
 #statusbar b{color:#222}
+#statusbar .kbd{font-size:calc(var(--fs-status)*0.95)}   /* رقاقات الاختصارات تتدرج مع خط الشريط */
 /* ===== موديول حالة المفاتيح — مصابيح NumLock/CapsLock/ScrollLock في شريط الحالة =====
    IsCapsLockOn/IsNumLockOn/IsScrollLock في أكسس (GetKeyboardState) — المتصفح لا يستطيع
    قراءة الحالة عند الطلب ولا تغييرها، لكن getModifierState في أحداث لوحة المفاتيح
    يعطيها لحظة بلحظة. النقطة الجوهرية في أكسس: تشغيل_أرقام_لوحة_المفاتيح يفرض NumLock
    حتى تكتب الأرقام بلوحة الأرقام — هنا: لمبة حمراء وامضة عند الإطفاء + تحذير */
-.keylamp{display:inline-flex;align-items:center;gap:4px;padding:1px 7px;border-radius:9px;
-  border:1px solid #c9c6c0;background:#faf9f7;color:#9a958d;font-weight:700;font-size:10.5px;line-height:16px}
-.keylamp .dot{width:7px;height:7px;border-radius:50%;background:#c4c1bb;flex:none}
+.keylamp{display:inline-flex;align-items:center;gap:3px;padding:0 5px;border-radius:8px;
+  border:1px solid #c9c6c0;background:#faf9f7;color:#9a958d;font-weight:700;font-size:calc(var(--fs-status)*0.86);line-height:13px}
+.keylamp .dot{width:6px;height:6px;border-radius:50%;background:#c4c1bb;flex:none}
 .keylamp.on{color:#1d6b2f;border-color:#8fbf9a;background:#eef8f0}
 .keylamp.on .dot{background:#2e9c48;box-shadow:0 0 4px #2e9c48}
 .keylamp.warn{color:#8a1d1d;border-color:#d99a9a;background:#fdeeee;animation:klblink 1s steps(2,start) infinite}
@@ -404,7 +421,7 @@ body.colseldrag *{cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMA
   background:#fff;border:1px solid #8f8c86;z-index:50;box-shadow:0 4px 12px rgba(0,0,0,.22);
   display:none;
 }
-.combo-list .opt{padding:4px 9px;cursor:pointer;font-size:12.5px;border-bottom:1px solid #f0efec}
+.combo-list .opt{padding:4px 9px;cursor:pointer;font-size:var(--fs-sheet);border-bottom:1px solid #f0efec}
 .combo-list .opt:hover,.combo-list .opt.hl{background:var(--sel)}
 /* قائمة بحث خانة المادة — عمودان (المادة + الشركة) مثل مصدر الصف في أكسس */
 .combo-list.mat-list .opt{display:flex;align-items:center;justify-content:space-between;gap:12px}
@@ -425,6 +442,17 @@ body.colseldrag *{cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMA
 #ctrlgrp.collapsed .ngrp-body{display:none}
 #ctrlgrp .ctrl-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px}
 #ctrlgrp .ctrl-row3 .tbtn{padding:3px 2px;font-size:10.5px;white-space:normal;line-height:1.25}
+/* قسم الإعدادات في القائمة الجانبية: أحجام خط الجدول وبيانات الفاتورة وشريط الحالة */
+#setgrp{flex:none;margin:4px 8px 0}
+#setgrp .ngrp-body{display:grid;grid-template-columns:1fr;gap:5px;padding:6px 2px 8px}
+#setgrp.collapsed .ngrp-body{display:none}
+#setgrp .set-row{display:flex;gap:6px;align-items:center}
+#setgrp .set-row label{font-size:11px;color:#555;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#setgrp .set-row input{width:54px;padding:2px 4px;border:1px solid #a6a29b;border-radius:2px;
+  font-family:inherit;font-size:12px;text-align:center;direction:ltr;background:#fff;outline:none}
+#setgrp .set-row input:focus{border-color:var(--focus);box-shadow:0 0 0 1.5px rgba(43,87,154,.25)}
+#setgrp .set-unit{font-size:10px;color:#8a8781;min-width:16px}
+#setgrp .tbtn{width:100%;padding:4px 8px;font-size:11.5px}
 .pager{display:flex;gap:6px;align-items:center;font-size:12px;color:#555}
 .pager button{padding:2px 10px}
 .flex1{flex:1}
@@ -458,6 +486,15 @@ body.colseldrag *{cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMA
         <button class="tbtn warn" id="btn-neg">سالب</button>
         <button class="tbtn" id="btn-newinvoice" title="مسح الفاتورة الحالية وبدء فاتورة جديدة">فاتورة جديدة</button>
         <button class="tbtn primary" id="btn-save">حفظ الفاتورة</button>
+      </div>
+    </div>
+    <div id="setgrp" class="ngrp collapsed">
+      <div class="ngrp-h" title="انقر لتمديد أو تقليص الإعدادات"><span class="chev">▼</span><span>الإعدادات</span></div>
+      <div class="ngrp-body">
+        <div class="set-row"><label title="حجم الخط في جدول الفاتورة وبقية الجداول">خط الجدول</label><input type="number" id="set_fs_sheet" min="9" max="20" step="0.5" inputmode="decimal"><span class="set-unit">px</span></div>
+        <div class="set-row"><label title="حجم الخط في حقول «بيانات الفاتورة» أعلى الجدول">خط بيانات الفاتورة</label><input type="number" id="set_fs_head" min="9" max="18" step="0.5" inputmode="decimal"><span class="set-unit">px</span></div>
+        <div class="set-row"><label title="حجم الخط في شريط الحالة أسفل الشاشة">خط شريط الحالة</label><input type="number" id="set_fs_status" min="8" max="16" step="0.5" inputmode="decimal"><span class="set-unit">px</span></div>
+        <button class="tbtn" id="set_fs_reset" title="إعادة الأحجام الثلاثة إلى الافتراضي">استعادة الأحجام الافتراضية</button>
       </div>
     </div>
     <div class="np-body" id="np_body"></div>
@@ -506,9 +543,9 @@ body.colseldrag *{cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMA
   <div class="window" id="win-fatora">
     <div class="win-head"><span class="dot"></span>فاتورة مشتريات</div>
     <div class="win-body">
-      <div class="groupbox fatora-head" style="margin-top:6px">
+      <div class="groupbox fatora-head">
         <span class="gtitle">بيانات الفاتورة</span>
-        <div class="grid3">
+        <div class="grid6">
           <div class="field"><label>من</label><div class="ctl"><input class="i" id="f_from" list="dl_from"></div><datalist id="dl_from"></datalist></div>
           <div class="field"><label>التاريخ</label><div class="ctl"><input class="i" id="f_date" type="date"></div></div>
           <div class="field"><label>المستخدم</label><div class="ctl"><input class="i" id="f_user" list="dl_users"></div><datalist id="dl_users"></datalist></div>
@@ -518,11 +555,8 @@ body.colseldrag *{cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMA
         </div>
       </div>
 
-      <div class="sheettools">
-        <button class="tbtn" id="btn_cpy_rows" disabled title="نسخ السطور المحددة إلى الحافظة (Ctrl+C) — صف العناوين ثم السطور، وتُلصق كجدول منسّق بخطوط فاصلة في Word أو Excel أو أي برنامج — لا تُدرج في الجدول كما في أكسس">نسخ السطور المحددة</button>
-        <button class="tbtn" id="btn_cpy_cols" disabled title="نسخ بيانات الأعمدة المحددة إلى الحافظة (Ctrl+C) — صف العناوين ثم كل السطور، وتُلصق كجدول منسّق بخطوط فاصلة في Word أو Excel أو أي برنامج">نسخ الأعمدة المحددة</button>
-        <span class="hint">لنقل سطر أو أكثر: حدّدها من خانة # ثم اسحب محدد أحدها إلى الموضع الجديد — مثل نقل الأعمدة من رأس العمود</span>
-      </div>
+      <!-- زرا «نسخ السطور المحددة / نسخ الأعمدة المحددة» حُذفا لتوفير مساحة الجدول —
+           النسخ متاح من لوحة المفاتيح فقط: Ctrl+C داخل ورقة البيانات (sheetNavKey ← copySheetSelection) -->
       <div class="sheetwrap" id="fatora_sheet"></div>
     </div>
   </div>
@@ -679,7 +713,8 @@ NumLock: لازم يكون مضاءً لكتابة الأرقام بلوحة ا�
   </span>
   <span class="st flex1"></span>
   <span class="st" style="cursor:pointer;text-decoration:underline" onclick="resetAll()" title="حذف البيانات المحفوظة محليًا والعودة للبيانات الأصلية من قاعدة Access">⟲ استعادة البيانات الأصلية</span>
-  <span class="st">اختصارات: <span class="kbd">Enter</span> سطر جديد | <span class="kbd">Del</span> حذف السطور المحددة (بعد تحديدها من خانة #) | <span class="kbd">Ctrl+2</span> مراجعة الفاتورة | <span class="kbd">Ctrl+3</span> مشتريات | <span class="kbd">Ctrl+4</span> الحاسبة</span>
+  <span class="st">اختصارات: <span class="kbd">Enter</span> سطر جديد | <span class="kbd">Del</span> حذف السطور المحددة (بعد تحديدها من خانة #) | <span class="kbd">Ctrl+C</span> نسخ المحدد | <span class="kbd">Ctrl+2</span> مراجعة الفاتورة | <span class="kbd">Ctrl+3</span> مشتريات | <span class="kbd">Ctrl+4</span> الحاسبة</span>
+  <span class="st">نقل السطور: حدّدها من خانة # ثم اسحب محدد أحدها إلى الموضع الجديد — ونقل الأعمدة بسحب رأسها</span>
 </div>
 
 <div id="modal-back"><div class="dialog" id="dialog"></div></div>
@@ -823,7 +858,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 3;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-03g';
+const APP_VER = '2026-11-03j';   /* j: الافتراضي = ما على لابتوب المستخدم: أحجام الخط الأصلية (13/11.5) + المادة الحالية تتبع السجل الحالي + الأعمدة الجديدة تُدرَج بموضعها الافتراضي لا آخر الجدول */
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
@@ -1440,8 +1475,18 @@ function applyColOrder(gridId, cols) {
   const order = loadColOrders()[gridId];
   if (!Array.isArray(order) || !order.length) return cols;
   const known = order.filter((c, i) => cols.includes(c) && order.indexOf(c) === i);   /* بلا تكرار */
-  const rest = cols.filter(c => !order.includes(c));
-  return [...known, ...rest];
+  /* الأعمدة غير الموجودة في الترتيب المحفوظ (مضافة في تحديث أحدث) تُدرَج في موضعها
+     الافتراضي — قبل أول عمود موجود يقع بعدَها في الترتيب الافتراضي — لا مُلحقةً
+     في نهاية الجدول، فيبقى الشكل كما يعرفه المستخدم لا تبددًا بعدها أعمدة غريبة */
+  const out = [...known];
+  for (const c of cols) {
+    if (out.includes(c)) continue;
+    let at = out.length;
+    for (let k = 0; k < out.length; k++)
+      if (cols.indexOf(out[k]) > cols.indexOf(c)) { at = k; break; }
+    out.splice(at, 0, c);
+  }
+  return out;
 }
 let sheetDragCol = null;   /* {grid, col, cols[]} أثناء سحب رأس عمود — cols = الأعمدة المحددة المنقولة */
 let colPressMove = false;  /* الضغط حاليًا على رأس عمود محدد مسبقًا — السحب بعده ينقل بدل تمديد التحديد */
@@ -1726,13 +1771,8 @@ async function copyTextToClipboard(txt, htmlTxt) {
   } catch (e) { return false; }
 }
 function updateSelButtons() {
-  const br = $('btn_cpy_rows'), bc = $('btn_cpy_cols');
-  if ((!br && !bc)) return;
-  const fs = $('fatora_sheet');
-  if (!fs) return;
-  const rs = rowSelFor(fs.id), cs = colSelFor(fs.id);
-  if (br) br.disabled = !(rs && rs.rows.size);
-  if (bc) bc.disabled = !(cs && cs.cols.size);
+  /* زرا «نسخ السطور المحددة / نسخ الأعمدة المحددة» حُذفا من الشريط — النسخ عبر Ctrl+C فقط.
+     بقيت الدالة فارغة لأن مواضع عدة تستدعيها بعد تغيير التحديد */
 }
 function sheetNavKey(e, container) {
   const opts = container._sheetOpts;
@@ -2393,6 +2433,10 @@ function entryFromRow(r) {
     if (E_DATE_FIELDS.includes(id)) v = arDateToInput(v);
     el.value = v ?? '';
   }
+  /* المادة الحالية في شريط الحالة تتبع السجل الحالي — مثل حدث On Current في أكسس:
+   عند التنقل (نقر/أسهم/Enter) وعند تحميل فاتورة تُعرض مادة السجل الواقف عليه */
+  const sm = $('st_mat');
+  if (sm) sm.textContent = (r && r['المادة']) || '—';
   $('st_cur').textContent = APP.curRow >= 0 ? (APP.curRow + 1) : '—';
   $('st_count').textContent = DB.invoice.length;
 }
@@ -2587,14 +2631,6 @@ function moveInvoiceRows(moving, targetIdx, after) {
   updateSelButtons();
   toast(n === 1 ? 'تم نقل السطر إلى موضعه الجديد' : `تم نقل ${n} سطور ككتلة بترتيبها إلى موضعها الجديد`, 'ok');
 }
-/* ---------- زرا النسخ في شريط ورقة الفاتورة (سطور/أعمدة): كلاهما إلى الحافظة كما في أكسس ----------
-   النسخ لا يُدرج شيئًا في الجدول — السطور تبقى في الحافظة للصقها في Excel أو أي برنامج */
-(function () {
-  const br = $('btn_cpy_rows'), bc = $('btn_cpy_cols');
-  if (br) br.onclick = () => { const fs = $('fatora_sheet'); if (fs) copySheetRowsToClipboard(fs); };
-  if (bc) bc.onclick = () => { const fs = $('fatora_sheet'); if (fs) copySelectedColsToClipboard(fs); };
-})();
-
 /* ---------- تعديلات عبر InputBox (كما في Access) ---------- */
 async function editMaterialName(r) {
   const msg = await InputBox('أدخل اسم المادة الجديد', 'تحديث اسم مادة', r['المادة']);
@@ -3053,6 +3089,48 @@ $('ctrlgrp').querySelector('.ngrp-h').addEventListener('click', () => {
   const c = $('ctrlgrp').classList.toggle('collapsed');
   saveUIPrefs({ ctrlCollapsed: c });
 });
+/* قسم الإعدادات: تمديد/تقليص بالنقر على العنوان — كقسم التحكم */
+$('setgrp').querySelector('.ngrp-h').addEventListener('click', () => {
+  const c = $('setgrp').classList.toggle('collapsed');
+  saveUIPrefs({ setgrpCollapsed: c });
+});
+/* ---------- الإعدادات: أحجام الخط في الجدول وبيانات الفاتورة وشريط الحالة ----------
+   تتغير فورًا أثناء الكتابة عبر متغيرات CSS (--fs-sheet / --fs-head / --fs-status)
+   وتُحفظ في خيارات المستخدم (localStorage) وتُستعاد عند فتح البرنامج */
+/* الافتراضي = أحجام النسخة الأصلية على لابتوب المستخدم (الجدول 12.5 / بيانات الفاتورة 13 / شريط الحالة 11.5) */
+const FS_DEFAULTS = { fs_sheet: 12.5, fs_head: 13, fs_status: 11.5 };
+const FS_LIMITS = { fs_sheet: [9, 20], fs_head: [9, 18], fs_status: [8, 16] };
+const FS_INPUTS = { fs_sheet: 'set_fs_sheet', fs_head: 'set_fs_head', fs_status: 'set_fs_status' };
+function applyFontSizes(fs) {
+  const st = document.documentElement.style;
+  for (const k of Object.keys(FS_INPUTS)) {
+    let v = parseFloat(fs[k]);
+    if (!isFinite(v)) v = FS_DEFAULTS[k];
+    const [mn, mx] = FS_LIMITS[k];
+    v = Math.min(mx, Math.max(mn, v));
+    st.setProperty('--' + k.replace('_', '-'), v + 'px');   /* fs_sheet ← --fs-sheet */
+  }
+}
+function setFontInputs(fs) {
+  for (const k of Object.keys(FS_INPUTS)) $(FS_INPUTS[k]).value = fs[k];
+}
+for (const k of Object.keys(FS_INPUTS)) {
+  $(FS_INPUTS[k]).addEventListener('input', () => {
+    const fs = {};
+    for (const kk of Object.keys(FS_INPUTS)) {
+      const v = parseFloat($(FS_INPUTS[kk]).value);
+      fs[kk] = isFinite(v) ? v : FS_DEFAULTS[kk];   /* خانة فارغة = الافتراضي */
+    }
+    applyFontSizes(fs);
+    saveUIPrefs({ fs });
+  });
+}
+$('set_fs_reset').addEventListener('click', () => {
+  setFontInputs(FS_DEFAULTS);
+  applyFontSizes(FS_DEFAULTS);
+  saveUIPrefs({ fs: FS_DEFAULTS });
+  toast('أُعيدت أحجام الخط إلى الافتراضي', 'ok');
+});
 /* الحاسبة السريعة: إظهار/إخفاء بالنقر على عنوانها — مثل مجموعات الكائنات */
 $('sc_head').addEventListener('click', () => {
   const c = $('sidecalc').classList.toggle('collapsed');
@@ -3098,6 +3176,13 @@ function restoreUIPrefs() {
     $('sidecalc').classList.toggle('collapsed', p.calcCollapsed);
   if (p.calcLogCollapsed === true)                                  /* سجل الحاسبة: مخفي */
     $('sidecalc').classList.add('log-collapsed');
+  if (typeof p.setgrpCollapsed === 'boolean')                       /* قسم الإعدادات */
+    $('setgrp').classList.toggle('collapsed', p.setgrpCollapsed);
+  if (p.fs && typeof p.fs === 'object') {                           /* الإعدادات: أحجام الخط */
+    const fs = Object.assign({}, FS_DEFAULTS, p.fs);
+    setFontInputs(fs);
+    applyFontSizes(fs);
+  } else setFontInputs(FS_DEFAULTS);                                /* أول تشغيل: اعرض الافتراضي في الخانات */
 }
 
 /* ---------- اللوحة الجانبية: تُفتح وتُغلق بالنقر فقط، وتنزلق من أساس الشريط الأحمر الذي يبقى ظاهرًا بجانبها ---------- */
@@ -3740,6 +3825,20 @@ function bindEvents() {
   });
   /* --- حذف السطور المحددة بمفتاح Delete: يُعالج داخل sheetNavKey لكل ورقة —
      الحذف لا يُفعّل إلا عند تحديد السطر كاملًا من خانة «#» (كما في أكسس) --- */
+
+  /* --- تمرير شريط الحالة يمينًا/يسارًا بعجلة الفأرة: بياناته في سطر واحد يفيض عرضه،
+     فتتحول العجلة العمودية إلى تمرير أفقي (RTL: القيم السالبة تكشف ما على اليسار).
+     لا تدخل عند لا فيض كي لا تعطّل تمرير الصفحة، وShift+العجلة أصلًا أفقي في المتصفح --- */
+  const sb = document.getElementById('statusbar');
+  if (sb) {
+    sb.addEventListener('wheel', e => {
+      if (sb.scrollWidth <= sb.clientWidth + 1) return;
+      const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      if (!d) return;
+      e.preventDefault();
+      sb.scrollLeft -= d;
+    }, { passive: false });
+  }
 }
 
 function entryFromEntryDates(r) { entryFromRow(r); }
