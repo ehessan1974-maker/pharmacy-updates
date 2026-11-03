@@ -515,8 +515,7 @@ body.colseldrag *{cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMA
           <div class="field"><label>إلى</label><div class="ctl"><input class="i" id="f_to" list="dl_to"></div><datalist id="dl_to"></datalist></div>
           <div class="field"><label>الوقت</label><div class="ctl"><input class="i" id="f_time" type="time" step="1"></div></div>
           <div class="field"><label>رقم الفاتورة</label><div class="ctl"><input class="i" id="f_invoiceno" list="dl_invoices" placeholder="مستودع ... التاريخ الوقت"><datalist id="dl_invoices"></datalist></div></div>
-          <div class="field"><label>تحميل جميع مشتريات مستودع</label><div class="ctl"><select class="i" id="f_loadwh"><option value="">— اختر مستودعًا —</option></select></div></div>
-          <div class="field"><label>إجمالي الفاتورة بعد حسم الفاتورة</label><div class="ctl"><input class="i" id="f_whole_disc" inputmode="decimal" placeholder="أدخل الإجمالي المستهدف..."></div></div>
+          <div class="field"><label>إجمالي الفاتورة بعد حسم الفاتورة</label><div class="ctl"><input class="i" id="f_whole_disc" readonly title="يُحدَّث تلقائيًا = مجموع «الإجمالي بعد الحسم» في الجدول — لاشتقاق حسم% من إجمالي مستهدف: انقر دبل كليك على خانة «الإجمالي بعد الحسم» في سطر Σ أسفل الجدول"></div></div>
         </div>
       </div>
 
@@ -825,7 +824,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 3;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-03e';
+const APP_VER = '2026-11-03f';
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
@@ -997,6 +996,7 @@ function renderSheet(container, opts) {
     numericCols = [], editableCols = [], page = 0, pageSize = 200, onSelectHeader = null,
     totalsCols = [], newRecord = null, onCellClick = null, onDeleteRows = null,
     onHeaderDblClick = null, headerDblTips = null,
+    onTotalsDblClick = null, totalsDblTips = null, totalsComputed = null,
   } = opts;
   container.innerHTML = '';
   container._sheetOpts = opts;   /* يستخدمه مستقبِل أسهم وضع التنقل */
@@ -1363,19 +1363,28 @@ function renderSheet(container, opts) {
     tdh.textContent = 'Σ';
     tdh.title = 'سطر الإجمالي — مجموع الأعمدة الرقمية';
     trf.appendChild(tdh);
+    const totalsMap = {};
     showCols.forEach(c => {
       const td = document.createElement('td');
       td.dataset.col = c;   /* تمييز عمود محدد (colsel) يشمل سطر الإجمالي */
       if (totalsCols.includes(c)) {
         td.classList.add('num');
         const s = rows.reduce((acc, r) => acc + (parseFloat(r[c]) || 0), 0);
+        totalsMap[c] = s;
         td.textContent = fmt(s);
         td.title = 'الإجمالي: ' + c;
+        /* دبل كليك على خانة إجمالي في سطر Σ — يمرر العمود للمعالج المرتبط
+           (إجمالي الفاتورة بعد حسم الفاتورة في ورقة فاتورة مشتريات) */
+        if (onTotalsDblClick && totalsDblTips && totalsDblTips[c]) {
+          td.title += ' — ' + totalsDblTips[c];
+          td.ondblclick = e => { e.preventDefault(); e.stopPropagation(); onTotalsDblClick(c); };
+        }
       }
       trf.appendChild(td);
     });
     tfoot.appendChild(trf);
     tbl.appendChild(tfoot);
+    if (totalsComputed) totalsComputed(totalsMap);   /* تحديث ما يتعلق بالمجاميع خارج الجدول */
   }
   if (!slice.length && !newRecord) {
     const d = document.createElement('div');
@@ -2475,6 +2484,15 @@ function renderFatoraSheet(page) {
     headerDblTips: { 'ترتيب': 'نقر مزدوج: إعادة ترقيم السطور 1..n (كما في أكسس)' },
     numericCols: ['ترتيب','الكمية','المجاني','سعر الشراء','حسم %','قيمة الحسم','الإجمالي قبل الحسم','الإجمالي بعد الحسم','إجمالي الكمية','سعر العميل','السعر الأساسي','عموم معتمد','أساس العرض','مجاني العرض','حسم العرض','السعر الصافي بعد العرض','رقم الطبخة'],
     totalsCols: ['الكمية','المجاني','قيمة الحسم','الإجمالي قبل الحسم','الإجمالي بعد الحسم','إجمالي الكمية'],
+    /* دبل كليك على «الإجمالي بعد الحسم» في سطر Σ = ميزة إجمالي الفاتورة بعد حسم الفاتورة
+       (نُقلت من الخانة المخصصة في الرأس بعد إلغائها منها) */
+    onTotalsDblClick: c => { if (c === 'الإجمالي بعد الحسم') hismLilkamilFatoora(); },
+    totalsDblTips: { 'الإجمالي بعد الحسم': 'دبل كليك: إدخال الإجمالي المستهدف بعد حسم الفاتورة فيُشتق حسم% للفاتورة كاملة' },
+    /* الخانة المخصصة «إجمالي الفاتورة بعد حسم الفاتورة» تعرض المجموع تلقائيًا (للقراءة فقط) */
+    totalsComputed: m => {
+      const el = $('f_whole_disc');
+      if (el) el.value = DB.invoice.length ? fmt(m['الإجمالي بعد الحسم'] || 0) : '';
+    },
     newRecord: {
       make: c => {
         const r = newInvoiceRow();
@@ -2763,28 +2781,23 @@ function loadInvoiceByNo(rno) {
   renderFatoraSheet();
 }
 
-/* ---------- تحميل جميع مشتريات مستودع — تحميل_جميع_مشتريات_مستودع_AfterUpdate ---------- */
-function loadWarehouseAll(wh) {
-  if (!wh) return;
-  const rows = DB.purchases.filter(p => p['من'] === wh);
-  if (!rows.length) { MsgBox('لا توجد مشتريات محفوظة لهذا المستودع', 'warn', 'تحميل جميع مشتريات مستودع'); return; }
-  rows.forEach(p => { const r = { ...p }; r._committed = true; DB.invoice.push(r); });
-  /* ضبط الرأس كما في أكسس (س486-490): مدير/المستودع/صيدلية إحسان العبد الله/التاريخ والوقت الآن — وتصفير حسم الفاتورة الكاملة */
-  $('f_user').value = 'مدير';
-  $('f_from').value = wh;
-  $('f_to').value = 'صيدلية إحسان العبد الله';
-  $('f_date').value = today();
-  $('f_time').value = nowTime();
-  $('f_whole_disc').value = '';
-  APP.curRow = DB.invoice.length ? 0 : -1;
-  entryFromRow(curInvoiceRow()); renderFatoraSheet(); saveDB();
-  toast(`تم تحميل ${rows.length} سجلًا من مستودع «${wh}» إلى الفاتورة`, 'ok');
-}
-
-/* ---------- إجمالي الفاتورة بعد حسم الفاتورة — إجمالي_الفاتورة_بعد_حسم_الفاتورة_AfterUpdate / حسم_لكامل_الفاتورة ---------- */
-function hismLilkamilFatoora() {
-  const target = parseFloat($('f_whole_disc').value);
-  if (isNaN(target) || !DB.invoice.length) return;
+/* ---------- إجمالي الفاتورة بعد حسم الفاتورة — حسم_لكامل_الفاتورة ----------
+   كانت الميزة تُنفّذ من الخانة المخصصة في الرأس (إجمالي_الفاتورة_بعد_حسم_الفاتورة_AfterUpdate)
+   وأُلغي ذلك: الخانة صارت للعرض فقط (تجميع «الإجمالي بعد الحسم»)، وصار الحساب يُنفّذ
+   بدبل كليك على خانة «الإجمالي بعد الحسم» في سطر Σ أسفل الجدول — حوار إدخال الإجمالي
+   المستهدف ← اشتقاق حسم% = 100 − (الهدف×100 ÷ مجموع قبل الحسم) وتطبيقه على كل السطور */
+async function hismLilkamilFatoora() {
+  if (!DB.invoice.length) { toast('لا توجد سطور في الفاتورة — أدخل مادة أولًا', 'warn'); return; }
+  const cur = DB.invoice.reduce((s, r) => s + nz(r['الإجمالي بعد الحسم']), 0);
+  const inp = await InputBox('أدخل الإجمالي المستهدف بعد حسم الفاتورة — يُشتق حسم% ويُطبَّق على كل السطور:',
+    'إجمالي الفاتورة بعد حسم الفاتورة', fmt(cur));
+  if (inp === null || String(inp).trim() === '') return;   /* إلغاء أو فراغ: لا تغيير */
+  /* تطبيع الإدخال: أرقام عربية-هندية → لاتينية، الفاصلة العشرية العربية ٫، وحذف فواصل الآلاف */
+  const norm = String(inp).trim()
+    .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+    .replace(/٫/g, '.').replace(/[,٬\s]/g, '');
+  const target = parseFloat(norm);
+  if (isNaN(target)) { toast('قيمة غير صحيحة — أدخل رقمًا', 'warn'); return; }
   const base = DB.invoice.reduce((s, r) => s + nz(r['الإجمالي قبل الحسم']), 0);
   if (!base) { toast('لا يمكن اشتقاق حسم% — مجموع الإجمالي قبل الحسم = 0', 'warn'); return; }
   const pct = 100 - (target * 100 / base);            /* UPDATE a: حسم% = 100 − (الهدف×100 ÷ مجموع قبل الحسم) */
@@ -3548,9 +3561,6 @@ function bindEvents() {
   $('f_invoiceno').addEventListener('change', () => {
     loadInvoiceByNo($('f_invoiceno').value.trim());
   });
-  /* تحميل جميع مشتريات مستودع + إجمالي الفاتورة بعد حسم الفاتورة */
-  $('f_loadwh').addEventListener('change', () => loadWarehouseAll($('f_loadwh').value));
-  $('f_whole_disc').addEventListener('change', hismLilkamilFatoora);
   $('btn-updtime').onclick = () => { $('f_time').value = nowTime(); $('f_date').value = today(); rebuildInvoiceNo(); };
   $('btn-save').onclick = saveFatoora;
   $('btn-newinvoice').onclick = async () => {
@@ -3815,8 +3825,6 @@ function fillDatalists() {
   $('c_comp').innerHTML = '<option value="">— الكل —</option>' + comps.map(u => `<option value="${escHtml(u)}">${escHtml(u)}</option>`).join('');
   // مستودعات مشتريات
   $('p_wh').innerHTML = '<option value="">— الكل —</option>' + [...new Set(DB.purchases.map(p => p['من']).filter(Boolean))].map(u => `<option value="${escHtml(u)}">${escHtml(u)}</option>`).join('');
-  // قائمة «تحميل جميع مشتريات مستودع»
-  $('f_loadwh').innerHTML = '<option value="">— اختر مستودعًا —</option>' + [...new Set(DB.purchases.map(p => p['من']).filter(Boolean))].map(u => `<option value="${escHtml(u)}">${escHtml(u)}</option>`).join('');
 }
 function escHtml(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
