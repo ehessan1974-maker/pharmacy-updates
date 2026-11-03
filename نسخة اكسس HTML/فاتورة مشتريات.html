@@ -521,8 +521,8 @@ body.colseldrag *{cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMA
       </div>
 
       <div class="sheettools">
-        <button class="tbtn" id="btn_cpy_rows" disabled title="نسخ السطور المحددة (Ctrl+C) — تُدرج نسخة طبق الأصل بعد آخر سطر محدد بترتيبها">نسخ السطور المحددة</button>
-        <button class="tbtn" id="btn_cpy_cols" disabled title="نسخ بيانات الأعمدة المحددة إلى الحافظة (Ctrl+C) — كل سطر في سطر والخلايا بفواصل جدولة، للصقها في Excel أو أي برنامج">نسخ الأعمدة المحددة</button>
+        <button class="tbtn" id="btn_cpy_rows" disabled title="نسخ السطور المحددة إلى الحافظة (Ctrl+C) — صف العناوين ثم السطور بفواصل جدولة، للصقها في Excel أو أي برنامج — لا تُدرج في الجدول كما في أكسس">نسخ السطور المحددة</button>
+        <button class="tbtn" id="btn_cpy_cols" disabled title="نسخ بيانات الأعمدة المحددة إلى الحافظة (Ctrl+C) — صف العناوين ثم كل السطور والخلايا بفواصل جدولة، للصقها في Excel أو أي برنامج">نسخ الأعمدة المحددة</button>
         <span class="hint">لنقل سطر أو أكثر: حدّدها من خانة # ثم اسحب محدد أحدها إلى الموضع الجديد — مثل نقل الأعمدة من رأس العمود</span>
       </div>
       <div class="sheetwrap" id="fatora_sheet"></div>
@@ -825,7 +825,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 3;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-03b';
+const APP_VER = '2026-11-03c';
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
@@ -1619,32 +1619,46 @@ function selectCols(container, opts, col, mode = 'set') {
   container.focus({ preventScroll: true });
   updateSelButtons();
 }
-/* ===== نسخ المحدد — مثل نسخ السجلات/الأعمدة في أكسس:
-   نسخ السطور المحددة = إدراج نسخة طبق الأصل منها بعد آخر سطر محدد بترتيبها،
-   نسخ الأعمدة المحددة = بياناتها كاملة إلى الحافظة (TSV) للصقها في Excel أو أي برنامج.
-   في الأوراق التي لا تدعم التكرار: نسخ السطور يذهب إلى الحافظة أيضًا ===== */
+/* ===== نسخ المحدد — كما في أكسس حرفيًا: النسخ يضع السطور في الحافظة ولا يُدرج شيئًا في الجدول
+   (الإدراج في أكسس يكون فقط عبر «لصق إلحاق»، أما Ctrl+C فتنسخ للصقها في أي برنامج):
+   نسخ السطور المحددة = صف العناوين (أسماء الحقول كما تنسخ أكسس السجلات) ثم قيمها بترتيبها،
+   نسخ الأعمدة المحددة = صف العناوين ثم كل السطور.
+   الصيغة: نص بفواصل جدولة (TSV) + جدول HTML معًا — للصقها في Excel أو Word أو المفكرة أو أي برنامج ===== */
 function copySheetSelection(container, opts) {
   const rs = rowSelFor(container.id), cs = colSelFor(container.id);
-  if (rs && rs.rows.size) {
-    const idxs = [...rs.rows].filter(i => i >= 0 && i < (opts.rows || []).length).sort((a, b) => a - b);
-    if (!idxs.length) return;
-    if (opts.onCopyRows) { opts.onCopyRows(idxs); return; }
-    copyTextToClipboard(rowsSelectionToTsv(container, idxs)).then(ok =>
-      toast(ok ? `تم نسخ ${idxs.length} سطر إلى الحافظة` : 'تعذر النسخ إلى الحافظة', ok ? 'ok' : 'warn'));
-    return;
-  }
-  if (cs && cs.cols.size) copySelectedColsToClipboard(container);
+  if (rs && rs.rows.size) copySheetRowsToClipboard(container);
+  else if (cs && cs.cols.size) copySelectedColsToClipboard(container);
 }
-function rowsSelectionToTsv(container, idxs) {
+function sheetTsvEsc(v) {
+  if (v === null || v === undefined) v = '';
+  return String(v).replace(/\t/g, ' ').replace(/[\r\n]+/g, ' ');
+}
+function sheetHtmlEsc(v) {
+  if (v === null || v === undefined) v = '';
+  return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\t/g, ' ').replace(/[\r\n]+/g, ' ');
+}
+function rowsSelectionToHtmlTable(order, rows) {
+  const head = order.length ? '<tr>' + order.map(c => '<th>' + sheetHtmlEsc(c) + '</th>').join('') + '</tr>' : '';
+  const body = rows.map(r => '<tr>' + order.map(c => '<td>' + sheetHtmlEsc(r[c]) + '</td>').join('') + '</tr>').join('');
+  return '<table>' + (head ? '<thead>' + head + '</thead>' : '') + (body ? '<tbody>' + body + '</tbody>' : '') + '</table>';
+}
+/* نسخ السطور المحددة إلى الحافظة — لا إدراج في الجدول إطلاقًا */
+async function copySheetRowsToClipboard(container) {
+  const rs = rowSelFor(container.id);
   const opts = container._sheetOpts || {};
-  const order = applyColOrder(container.id, opts.cols || []);
   const src = opts.rows || [];
-  return idxs.filter(i => i >= 0 && i < src.length).map(i => order.map(c => {
-    let v = src[i][c];
-    if (v === null || v === undefined) v = '';
-    return String(v).replace(/\t/g, ' ').replace(/[\r\n]+/g, ' ');
-  }).join('\t')).join('\n');
+  const idxs = rs ? [...rs.rows].filter(i => i >= 0 && i < src.length).sort((a, b) => a - b) : [];
+  if (!idxs.length) return false;
+  const order = applyColOrder(container.id, opts.cols || []);   /* ترتيب العرض الحالي بعد أي نقل */
+  const tsv = [order.map(sheetTsvEsc).join('\t')]
+    .concat(idxs.map(i => order.map(c => sheetTsvEsc(src[i][c])).join('\t'))).join('\n');
+  const html = rowsSelectionToHtmlTable(order, idxs.map(i => src[i]));
+  const ok = await copyTextToClipboard(tsv, html);
+  toast(ok ? `تم نسخ ${idxs.length} سطر إلى الحافظة — لم تُدرج في الجدول؛ الصقها في Excel أو أي برنامج`
+           : 'تعذر النسخ إلى الحافظة', ok ? 'ok' : 'warn');
+  return ok;
 }
+/* نسخ الأعمدة المحددة إلى الحافظة: صف العناوين ثم كل السطور — كما عند نسخ أعمدة ورقة بيانات في أكسس */
 async function copySelectedColsToClipboard(container) {
   const cs = colSelFor(container.id);
   if (!cs || !cs.cols.size) return;
@@ -1653,16 +1667,25 @@ async function copySelectedColsToClipboard(container) {
   const cols = order.filter(c => cs.cols.has(c));
   if (!cols.length) return;
   const src = opts.rows || [];
-  const lines = src.map(r => cols.map(c => {
-    let v = r[c];
-    if (v === null || v === undefined) v = '';
-    return String(v).replace(/\t/g, ' ').replace(/[\r\n]+/g, ' ');
-  }).join('\t'));
-  const ok = await copyTextToClipboard(lines.join('\n'));
+  const tsv = [cols.map(sheetTsvEsc).join('\t')]
+    .concat(src.map(r => cols.map(c => sheetTsvEsc(r[c])).join('\t'))).join('\n');
+  const html = rowsSelectionToHtmlTable(cols, src);
+  const ok = await copyTextToClipboard(tsv, html);
   const nm = cols.length === 1 ? `العمود «${cols[0]}»` : `${cols.length} أعمدة`;
   toast(ok ? `تم نسخ بيانات ${nm} (${src.length} سطرًا) إلى الحافظة — الصقها في Excel أو أي برنامج` : 'تعذر النسخ إلى الحافظة', ok ? 'ok' : 'warn');
 }
-async function copyTextToClipboard(txt) {
+async function copyTextToClipboard(txt, htmlTxt) {
+  /* أكسس يضع عدة تنسيقات في الحافظة معًا — نكتب النص الجدولي + جدول HTML،
+     وإلا النص وحده، ثم بديل textarea للمتصفحات/السياقات غير الآمنة */
+  if (htmlTxt && navigator.clipboard && navigator.clipboard.write && window.ClipboardItem) {
+    try {
+      await navigator.clipboard.write([new ClipboardItem({
+        'text/plain': new Blob([txt], { type: 'text/plain' }),
+        'text/html': new Blob([htmlTxt], { type: 'text/html' })
+      })]);
+      return true;
+    } catch (e) { /* بديل أدناه */ }
+  }
   try {
     if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(txt); return true; }
   } catch (e) { /* بديل أدناه */ }
@@ -1724,7 +1747,7 @@ function sheetNavKey(e, container) {
     else if (cur) { e.preventDefault(); clearSelCell(container, opts); }
   }
   else if ((e.ctrlKey || e.metaKey) && !e.altKey && (k === 'c' || k === 'C')) {
-    /* Ctrl+C — نسخ المحدد: السطور المحددة (تكرارها في الفاتورة) أو الأعمدة المحددة (إلى الحافظة) */
+    /* Ctrl+C — نسخ المحدد إلى الحافظة: السطور المحددة (صف عناوين + قيمها) أو الأعمدة المحددة — لا إدراج في الجدول، كما في أكسس */
     e.preventDefault();
     copySheetSelection(container, opts);
   }
@@ -2460,7 +2483,6 @@ function renderFatoraSheet(page) {
     },
     onDeleteRows: idxs => deleteInvoiceRows(idxs),
     onMoveRows: (moving, targetIdx, after) => moveInvoiceRows(moving, targetIdx, after),
-    onCopyRows: idxs => duplicateInvoiceRows(idxs),
     onRowClick: i => { APP.curRow = i; entryFromRow(DB.invoice[i]); renderFatoraSheet(); },
     onCellDblClick: async (r, c) => {
       // نقر مزدوج على الخلايا الخاصة
@@ -2529,30 +2551,11 @@ function moveInvoiceRows(moving, targetIdx, after) {
   updateSelButtons();
   toast(n === 1 ? 'تم نقل السطر إلى موضعه الجديد' : `تم نقل ${n} سطور ككتلة بترتيبها إلى موضعها الجديد`, 'ok');
 }
-/* ---------- نسخ السطور المحددة — إدراج نسخة طبق الأصل بعد آخر سطر محدد بترتيبها ---------- */
-function duplicateInvoiceRows(idxs) {
-  idxs = [...new Set(idxs || [])].filter(i => i >= 0 && i < DB.invoice.length).sort((a, b) => a - b);
-  if (!idxs.length) return;
-  const n = idxs.length;
-  const clones = idxs.map(i => { const c = { ...DB.invoice[i] }; delete c._newPending; delete c._dirty; return c; });
-  const at = idxs[n - 1] + 1;   /* بعد آخر سطر محدد مباشرة */
-  DB.invoice.splice(at, 0, ...clones);
-  renumberOrder();
-  sheetRowSel = { containerId: 'fatora_sheet', rows: new Set(clones.map((_, k) => at + k)), anchor: at };
-  APP.curRow = at;
-  entryFromRow(curInvoiceRow());
-  renderFatoraSheet();
-  saveDB();
-  updateSelButtons();
-  toast(n === 1 ? 'تم نسخ السطر — أُدرجت النسخة بعده مباشرة' : `تم نسخ ${n} سطور — أُدرجت النسخ بعد السطر ${idxs[n - 1] + 1} بترتيبها`, 'ok');
-}
-/* ---------- أزرار نسخ المحدد في شريط ورقة الفاتورة (سطور/أعمدة) ---------- */
+/* ---------- زرا النسخ في شريط ورقة الفاتورة (سطور/أعمدة): كلاهما إلى الحافظة كما في أكسس ----------
+   النسخ لا يُدرج شيئًا في الجدول — السطور تبقى في الحافظة للصقها في Excel أو أي برنامج */
 (function () {
   const br = $('btn_cpy_rows'), bc = $('btn_cpy_cols');
-  if (br) br.onclick = () => {
-    const fs = $('fatora_sheet'); const rs = fs && rowSelFor(fs.id);
-    if (rs && rs.rows.size) duplicateInvoiceRows([...rs.rows].sort((a, b) => a - b));
-  };
+  if (br) br.onclick = () => { const fs = $('fatora_sheet'); if (fs) copySheetRowsToClipboard(fs); };
   if (bc) bc.onclick = () => { const fs = $('fatora_sheet'); if (fs) copySelectedColsToClipboard(fs); };
 })();
 
