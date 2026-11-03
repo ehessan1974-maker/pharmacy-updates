@@ -515,7 +515,6 @@ body.colseldrag *{cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMA
           <div class="field"><label>إلى</label><div class="ctl"><input class="i" id="f_to" list="dl_to"></div><datalist id="dl_to"></datalist></div>
           <div class="field"><label>الوقت</label><div class="ctl"><input class="i" id="f_time" type="time" step="1"></div></div>
           <div class="field"><label>رقم الفاتورة</label><div class="ctl"><input class="i" id="f_invoiceno" list="dl_invoices" placeholder="مستودع ... التاريخ الوقت"><datalist id="dl_invoices"></datalist></div></div>
-          <div class="field"><label>إجمالي الفاتورة بعد حسم الفاتورة</label><div class="ctl"><input class="i" id="f_whole_disc" readonly title="يُحدَّث تلقائيًا = مجموع «الإجمالي بعد الحسم» في الجدول — لاشتقاق حسم% من إجمالي مستهدف: انقر دبل كليك على خانة «الإجمالي بعد الحسم» في سطر Σ أسفل الجدول"></div></div>
         </div>
       </div>
 
@@ -824,7 +823,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 3;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-03f';
+const APP_VER = '2026-11-03g';
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
@@ -996,7 +995,7 @@ function renderSheet(container, opts) {
     numericCols = [], editableCols = [], page = 0, pageSize = 200, onSelectHeader = null,
     totalsCols = [], newRecord = null, onCellClick = null, onDeleteRows = null,
     onHeaderDblClick = null, headerDblTips = null,
-    onTotalsDblClick = null, totalsDblTips = null, totalsComputed = null,
+    onTotalsDblClick = null, totalsDblTips = null,
   } = opts;
   container.innerHTML = '';
   container._sheetOpts = opts;   /* يستخدمه مستقبِل أسهم وضع التنقل */
@@ -1363,14 +1362,12 @@ function renderSheet(container, opts) {
     tdh.textContent = 'Σ';
     tdh.title = 'سطر الإجمالي — مجموع الأعمدة الرقمية';
     trf.appendChild(tdh);
-    const totalsMap = {};
     showCols.forEach(c => {
       const td = document.createElement('td');
       td.dataset.col = c;   /* تمييز عمود محدد (colsel) يشمل سطر الإجمالي */
       if (totalsCols.includes(c)) {
         td.classList.add('num');
         const s = rows.reduce((acc, r) => acc + (parseFloat(r[c]) || 0), 0);
-        totalsMap[c] = s;
         td.textContent = fmt(s);
         td.title = 'الإجمالي: ' + c;
         /* دبل كليك على خانة إجمالي في سطر Σ — يمرر العمود للمعالج المرتبط
@@ -1384,7 +1381,6 @@ function renderSheet(container, opts) {
     });
     tfoot.appendChild(trf);
     tbl.appendChild(tfoot);
-    if (totalsComputed) totalsComputed(totalsMap);   /* تحديث ما يتعلق بالمجاميع خارج الجدول */
   }
   if (!slice.length && !newRecord) {
     const d = document.createElement('div');
@@ -2485,14 +2481,9 @@ function renderFatoraSheet(page) {
     numericCols: ['ترتيب','الكمية','المجاني','سعر الشراء','حسم %','قيمة الحسم','الإجمالي قبل الحسم','الإجمالي بعد الحسم','إجمالي الكمية','سعر العميل','السعر الأساسي','عموم معتمد','أساس العرض','مجاني العرض','حسم العرض','السعر الصافي بعد العرض','رقم الطبخة'],
     totalsCols: ['الكمية','المجاني','قيمة الحسم','الإجمالي قبل الحسم','الإجمالي بعد الحسم','إجمالي الكمية'],
     /* دبل كليك على «الإجمالي بعد الحسم» في سطر Σ = ميزة إجمالي الفاتورة بعد حسم الفاتورة
-       (نُقلت من الخانة المخصصة في الرأس بعد إلغائها منها) */
+       (حُذفت الخانة المخصصة من الرأس ولا يتم الحساب إلا من هنا) */
     onTotalsDblClick: c => { if (c === 'الإجمالي بعد الحسم') hismLilkamilFatoora(); },
     totalsDblTips: { 'الإجمالي بعد الحسم': 'دبل كليك: إدخال الإجمالي المستهدف بعد حسم الفاتورة فيُشتق حسم% للفاتورة كاملة' },
-    /* الخانة المخصصة «إجمالي الفاتورة بعد حسم الفاتورة» تعرض المجموع تلقائيًا (للقراءة فقط) */
-    totalsComputed: m => {
-      const el = $('f_whole_disc');
-      if (el) el.value = DB.invoice.length ? fmt(m['الإجمالي بعد الحسم'] || 0) : '';
-    },
     newRecord: {
       make: c => {
         const r = newInvoiceRow();
@@ -2783,9 +2774,9 @@ function loadInvoiceByNo(rno) {
 
 /* ---------- إجمالي الفاتورة بعد حسم الفاتورة — حسم_لكامل_الفاتورة ----------
    كانت الميزة تُنفّذ من الخانة المخصصة في الرأس (إجمالي_الفاتورة_بعد_حسم_الفاتورة_AfterUpdate)
-   وأُلغي ذلك: الخانة صارت للعرض فقط (تجميع «الإجمالي بعد الحسم»)، وصار الحساب يُنفّذ
-   بدبل كليك على خانة «الإجمالي بعد الحسم» في سطر Σ أسفل الجدول — حوار إدخال الإجمالي
-   المستهدف ← اشتقاق حسم% = 100 − (الهدف×100 ÷ مجموع قبل الحسم) وتطبيقه على كل السطور */
+   ثم أُلغيت منها ثم حُذفت الخانة نفسها، ولا يتم الحساب إلا بدبل كليك على خانة
+   «الإجمالي بعد الحسم» في سطر Σ أسفل الجدول — حوار إدخال الإجمالي المستهدف ←
+   اشتقاق حسم% = 100 − (الهدف×100 ÷ مجموع قبل الحسم) وتطبيقه على كل السطور */
 async function hismLilkamilFatoora() {
   if (!DB.invoice.length) { toast('لا توجد سطور في الفاتورة — أدخل مادة أولًا', 'warn'); return; }
   const cur = DB.invoice.reduce((s, r) => s + nz(r['الإجمالي بعد الحسم']), 0);
