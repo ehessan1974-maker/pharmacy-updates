@@ -374,10 +374,11 @@ body.colseldrag *{cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMA
   min-width:88px;padding:5px 14px;border:1px solid var(--btn-b);border-radius:3px;background:linear-gradient(180deg,#fdfcfa,#eceae6);
   font-family:inherit;font-size:12.5px;cursor:pointer;
 }
-.dlg-btn:hover{background:#fff}
+.dlg-btn:not(:disabled):hover{background:#fff}
+.dlg-btn:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.35)}
 .dlg-btn.default{background:linear-gradient(180deg,#c2484c,#a4373a);border-color:#7c2325;color:#fff;font-weight:600}
 /* toast */
-#toasts{position:fixed;bottom:14px;inset-inline-start:14px;z-index:120;display:flex;flex-direction:column;gap:8px}
+#toasts{position:fixed;bottom:14px;inset-inline-start:14px;z-index:10000;display:flex;flex-direction:column;gap:8px}
 .toast{
   background:#323232;color:#fff;border-radius:4px;padding:9px 16px;font-size:12.5px;
   box-shadow:0 4px 14px rgba(0,0,0,.3);animation:tin .25s ease;max-width:380px;
@@ -872,7 +873,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 3;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-03n';   /* n: حوار «الاتصال بقاعدة البيانات» عند أول فتح (اقتراح المستخدم): الاتصال بالجسر / اختيار ملف قاعدة آخر بنافذة أصلية عبر /pick / العمل محليًا — الاختيار يُحفظ ولا يُسأل ثانية ويتغير من الإعدادات أو شريط الحالة + إصلاح فقدان بيانات حقيقي: عند إعادة حفظ فاتورة موجودة كانت الإضافة تحدث قبل الحذف فمحا DELETE من القاعدة الصفوف الجديدة والقديمة معًا (الترتيب الآن: حذف ← تعديل ← إدراج) + شبكة أمان: أي فاتورة فشلت كتابتها في القاعدة تُحفظ معلّقة وتُكتب تلقائيًا عند توفر الجسر + الحفظ مزامنة فورية برسالة صادقة (كُتبت في القاعدة فعلاً أم مؤقتة) + الجسر: /pick و/api/config والعمل بلا قاعدة عند الإقلاع ووقت/تاريخ أذكى وأرقام عربية. m: ربط قاعدة البيانات الأصلية MDB_be.accdb بدون تحويل — جسر محلي (جسر_أكسس.py) يكتشفه البرنامج تلقائيًا عند الإقلاع: التحميل من الجداول الحقيقية (مشتريات/بطاقات المواد) والكتابة فيها فورًا (إضافة/تعديل/حذف حقيقية عبر ODBC) وتبقى localStorage للفاتورة الجارية فقط، وغياب الجسر = العمل المحلي كالسابق مع تنبيه. l: إسدال خانات رأس الفاتورة (من/إلى/المستخدم/رقم الفاتورة) يعرض جميع البيانات عند الفتح لا ما يطابق النص المكتوب فقط — قائمة خاصة بديلة عن datalist (المتصفح يصفّيها بالنص): الفتح = مصدر الصف كاملًا كما في Form_Load (أزواج من+التاريخ مرتبة بالتاريخ) والفواتير برقمها ومستودعها وإجماليها وتاريخها، والكتابة = تصفية كما في نص_من_Change (DISTINCT + Like) */
+const APP_VER = '2026-11-04a';   /* 04a: أزرار حوار «الاتصال بقاعدة البيانات» لا تبدو ميتة بعد الآن: تنسيق واضح للزر المعطّل (بهتان + منع المؤشر) وتلميح يشرح السبب، الزر الأحمر الافتراضي يتبع الخطوة التالية المنطقية (الاتصال ← اختيار ملف ← العمل محليًا)، «إعادة الفحص» تعرض تقدمها وتنبه إذا بقي الجسر مفقودًا، اكتشاف الجسر أثناء فتح الحوار يُعلن برسالة، الرسائل فوق الحوارات لا تحتها، والحوار يتمرر على الشاشات الصغيرة. n: حوار «الاتصال بقاعدة البيانات» عند أول فتح (اقتراح المستخدم) + إصلاح فقدان بيانات: إعادة حفظ فاتورة موجودة كانت الإضافة تسبق الحذف فمحا DELETE الصفوف الجديدة والقديمة معًا (الترتيب الآن: حذف ← تعديل ← إدراج) + شبكة أمان المعلّقات: فاتورة فشلت كتابتها تُكتب تلقائيًا عند عودة الجسر + حفظ فوري برسالة صادقة + الجسر: /pick و/api/config والعمل بلا قاعدة عند الإقلاع. m: ربط قاعدة الأكسس الأصلية MDB_be.accdb بدون تحويل عبر جسر محلي يكتشفه البرنامج تلقائيًا. l: إسدال خانات الرأس يعرض جميع البيانات عند الفتح والكتابة تصفّي كما في نص_من_Change */
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
@@ -4322,7 +4323,7 @@ function dbConnDialog(initialProbe, fromSettings) {
   return new Promise(resolve => {
     const back = document.createElement('div');
     back.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9998;display:flex;align-items:center;justify-content:center;direction:rtl';
-    back.innerHTML = `<div class="dialog" style="min-width:440px;max-width:560px">
+    back.innerHTML = `<div class="dialog" style="min-width:440px;max-width:560px;max-height:86vh;overflow:auto">
       <div class="d-title">الاتصال بقاعدة البيانات</div>
       <div class="d-body" style="line-height:1.9">
         <div style="margin-bottom:8px">يعمل البرنامج مباشرة على قاعدة أكسس الأصلية <b>بدون تحويل</b> عبر جسر محلي
@@ -4342,30 +4343,46 @@ function dbConnDialog(initialProbe, fromSettings) {
     let lastProbe = initialProbe, stop = false;
     const st = back.querySelector('#dbd_state'), hint = back.querySelector('#dbd_hint');
     const bConn = back.querySelector('#dbd_conn'), bPick = back.querySelector('#dbd_pick');
+    const bRe = back.querySelector('#dbd_re'), bLocal = back.querySelector('#dbd_local');
     function render() {
       if (lastProbe && lastProbe.connected) {
         st.innerHTML = '<b style="color:#1a6b2f">✓ الجسر متصل</b> — قاعدة البيانات الحالية:<br><span dir="ltr" style="font-size:12px">' + escHtml(lastProbe.db || '—') + '</span>';
         hint.textContent = 'اترك الاختيار كما هو إن كان هذا هو الملف الصحيح، أو اختر ملفًا آخر بنافذة أصلية.';
         bConn.disabled = false; bPick.disabled = false;
+        bConn.classList.add('default'); bPick.classList.remove('default'); bLocal.classList.remove('default');
+        bConn.title = ''; bPick.title = '';
       } else if (lastProbe) {
         st.innerHTML = '<b style="color:#8a6d00">⚠ الجسر يعمل لكن لم تُختر قاعدة بعد</b>' + (lastProbe.db ? '<br><span dir="ltr" style="font-size:12px">' + escHtml(lastProbe.db) + '</span>' : '');
         hint.textContent = 'اضغط «اختيار قاعدة أخرى…» لاختيار ملف .accdb بنافذة على هذا الجهاز.';
         bConn.disabled = true; bPick.disabled = false;
+        bConn.classList.remove('default'); bPick.classList.add('default'); bLocal.classList.remove('default');
+        bConn.title = 'اختر ملف قاعدة البيانات أولاً'; bPick.title = '';
       } else {
         st.innerHTML = '<b style="color:#a00000">✗ لم يُكتشف الجسر على هذا الجهاز</b>';
         hint.innerHTML = 'شغّل <b dir="ltr">تشغيل_الجسر.bat</b> بجانب البرنامج (نقرة واحدة) ثم اضغط «إعادة الفحص» — أو اعمل محليًا الآن ويمكنك الاتصال لاحقًا من الإعدادات.';
         bConn.disabled = true; bPick.disabled = true;
+        bConn.classList.remove('default'); bPick.classList.remove('default'); bLocal.classList.add('default');
+        bConn.title = 'الجسر غير مشغّل — شغّل تشغيل_الجسر.bat ثم اضغط «إعادة الفحص»';
+        bPick.title = 'نافذة اختيار الملف تعمل من داخل الجسر — شغّله أولاً';
       }
     }
     function done(res) { stop = true; back.remove(); resolve(res); }
     async function reprobe() {
+      bRe.disabled = true; const reTxt = bRe.textContent; bRe.textContent = '⏳ جارٍ الفحص…';
       st.textContent = 'جارٍ فحص الجسر…';
       lastProbe = await probeBridge(true);   /* فحص قسري — حتى لو كان الجسر معطّلًا باختيار محلي */
       render();
+      bRe.disabled = false; bRe.textContent = reTxt;
+      if (!lastProbe) toast('لم يُكتشف الجسر بعد — تأكد أن نافذة «تشغيل_الجسر.bat» مفتوحة وأن بايثون مثبت', 'warn');
       return lastProbe;
     }
     render();
-    const iv = setInterval(async () => { if (stop) { clearInterval(iv); return; } lastProbe = await probeBridge(true); render(); }, 3500);
+    const iv = setInterval(async () => {
+      if (stop) { clearInterval(iv); return; }
+      const was = !!(lastProbe && lastProbe.connected);
+      lastProbe = await probeBridge(true); render();
+      if (!was && lastProbe && lastProbe.connected) toast('تم اكتشاف جسر قاعدة البيانات ✓ — يمكنك الاتصال الآن', 'ok');
+    }, 3500);
     bConn.onclick = () => {
       writeDbChoice({ mode: 'bridge', db: lastProbe ? lastProbe.db : '', t: Date.now() });
       setBridgeDisabled(false);
@@ -4399,8 +4416,8 @@ function dbConnDialog(initialProbe, fromSettings) {
       }
       bPick.disabled = false;
     };
-    back.querySelector('#dbd_re').onclick = reprobe;
-    back.querySelector('#dbd_local').onclick = () => {
+    bRe.onclick = reprobe;
+    bLocal.onclick = () => {
       writeDbChoice({ mode: 'local', t: Date.now() });
       setBridgeDisabled(true);
       done({ mode: 'local' });
