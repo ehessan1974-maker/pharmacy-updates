@@ -717,6 +717,7 @@ body.colseldrag *{cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMA
   <span class="st">السجل الحالي: <b id="st_cur">—</b></span>
   <span class="st">المادة الحالية: <b id="st_mat">—</b></span>
   <span class="st" id="st_ver" title="إصدار البرنامج — تأكد أنه آخر إصدار عند كل تحديث">الإصدار: <b id="st_ver_num">—</b></span>
+  <span class="st" id="st_src" title="مصدر البيانات: قاعدة أكسس الأصلية عبر الجسر المحلي (بدون تحويل) أو نسخة محلية عند غياب الجسر" style="display:none">المصدر: <b id="st_src_txt">—</b></span>
   <span class="st" id="st_keys" title="موديول حالة المفاتيح — حالة أقفال لوحة المفاتيح لحظة بلحظة
 NumLock: لازم يكون مضاءً لكتابة الأرقام بلوحة الأرقام (كما يفرضه أكسس عند الفتح)" style="gap:6px">
     <span class="keylamp" id="kl_num" title="NumLock — لوحة الأرقام"><span class="dot"></span>NumLock</span>
@@ -870,7 +871,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 3;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-03l';   /* l: إسدال خانات رأس الفاتورة (من/إلى/المستخدم/رقم الفاتورة) يعرض جميع البيانات عند الفتح لا ما يطابق النص المكتوب فقط — قائمة خاصة بديلة عن datalist (المتصفح يصفّيها بالنص): الفتح = مصدر الصف كاملًا كما في Form_Load (أزواج من+التاريخ مرتبة بالتاريخ) والفواتير برقمها ومستودعها وإجماليها وتاريخها، والكتابة = تصفية كما في نص_من_Change (DISTINCT + Like) */
+const APP_VER = '2026-11-03m';   /* m: ربط قاعدة البيانات الأصلية MDB_be.accdb بدون تحويل — جسر محلي (جسر_أكسس.py) يكتشفه البرنامج تلقائيًا عند الإقلاع: التحميل من الجداول الحقيقية (مشتريات/بطاقات المواد) والكتابة فيها فورًا (إضافة/تعديل/حذف حقيقية عبر ODBC) وتبقى localStorage للفاتورة الجارية فقط، وغياب الجسر = العمل المحلي كالسابق مع تنبيه. l: إسدال خانات رأس الفاتورة (من/إلى/المستخدم/رقم الفاتورة) يعرض جميع البيانات عند الفتح لا ما يطابق النص المكتوب فقط — قائمة خاصة بديلة عن datalist (المتصفح يصفّيها بالنص): الفتح = مصدر الصف كاملًا كما في Form_Load (أزواج من+التاريخ مرتبة بالتاريخ) والفواتير برقمها ومستودعها وإجماليها وتاريخها، والكتابة = تصفية كما في نص_من_Change (DISTINCT + Like) */
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
@@ -898,6 +899,7 @@ function seedNorm(v) {
   return s;
 }
 async function saveDB() {
+  if (BRIDGE.on) { persistLight(); scheduleBridgeSync(); return; }
   try {
     const payload = JSON.stringify({
       cards: DB.cards, purchases: DB.purchases, invoice: DB.invoice,
@@ -3879,11 +3881,40 @@ async function init() {
     toast('فشل فك ضغط البيانات: ' + e.message, 'err');
     return;
   }
-  const loaded = await loadDB();
+  let loaded = false;
+  const br = await probeBridge();
+  if (br) {
+    try {
+      await loadFromBridge(br);
+      showBridgeChip();
+    } catch (e) {
+      toast('تعذر التحميل من جسر الأكسس: ' + (e && e.message ? e.message : e) + ' — يعمل الآن على نسخة محلية', 'err');
+      loaded = await loadDB();
+    }
+  } else {
+    loaded = await loadDB();
+    if (localStorage.getItem('fatora_bridge_last')) {
+      toast('تعذر الوصول إلى جسر قاعدة الأكسس (شغّل تشغيل_الجسر.bat) — سأحاول مجددًا خلال ثوانٍ...', 'err');
+      setTimeout(async () => {
+        const b2 = await probeBridge();
+        if (!b2) return;
+        try {
+          await loadFromBridge(b2);
+          showBridgeChip();
+          fillDatalists();
+          renderFatoraSheet();
+          toast('تم الاتصال بقاعدة الأكسس الأصلية عبر الجسر — بدون تحويل', 'ok');
+        } catch (e2) {
+          toast('تعذر التحميل من جسر الأكسس: ' + (e2 && e2.message ? e2.message : e2), 'err');
+        }
+      }, 6000);
+    }
+  }
   if (upgradePurchasesCols()) await saveDB();   /* مطابقة جدول فاتورة مشتريات: 31 عمودًا */
-  if (!loaded) await saveDB();
-  /* Form_Load — تحديث أرقام فواتير المشتريات: رقم الفاتورة = من & ' ' & التاريخ & ' ' & الوقت */
-  DB.purchases.forEach(p => { p['رقم الفاتورة'] = canonInvoiceNo(p); });
+  if (!loaded && !BRIDGE.on) await saveDB();
+  /* Form_Load — تحديث أرقام فواتير المشتريات: رقم الفاتورة = من & ' ' & التاريخ & ' ' & الوقت
+     في وضع الجسر: قيم قاعدة الأكسس هي المرجع فلا تُعاد كتابتها على كل الإقلاع */
+  if (!BRIDGE.on) DB.purchases.forEach(p => { p['رقم الفاتورة'] = canonInvoiceNo(p); });
   // تعبئة القوائم
   fillDatalists();
   // autoexec: فتح فاتورة مشتريات
@@ -3898,7 +3929,7 @@ async function init() {
   renderFatoraSheet();
   $('toasts').innerHTML = '';
   $('st_ver_num').textContent = APP_VER;
-  toast((loaded ? 'تم استعادة بياناتك المحفوظة' : 'تم تحميل البيانات الأولية من قاعدة Access') + ' — إصدار ' + APP_VER, 'ok');
+  toast((BRIDGE.on ? 'متصل بقاعدة الأكسس الأصلية عبر الجسر — بدون تحويل' : (loaded ? 'تم استعادة بياناتك المحفوظة' : 'تم تحميل البيانات الأولية من قاعدة Access')) + ' — إصدار ' + APP_VER, 'ok');
   if (mergedCardsMsg) { toast(mergedCardsMsg, 'ok'); mergedCardsMsg = ''; }
   /* التخزين الذاتي: البرنامج يحفظ نسخته الحالية ليستخدمها المشغّل كأحدث إصدار معروف —
      فتح الملف المُنزَّل مرة واحدة واحدة يجعل المشغّل يعرض هذا الإصدار لاحقًا حتى لو كانت
@@ -4047,6 +4078,128 @@ function headCombos() {
     render: v => `<span class="hval">${escHtml(v.no)}</span><span class="hsub">${escHtml([v.from, fmt(v.total), arDateToInput(v.date)].filter(Boolean).join(' — '))}</span>`,
     text: v => v.no,
   });
+}
+/* ================= جسر قاعدة البيانات الأصلية MDB_be.accdb — بدون تحويل =================
+   جسر محلي (جسر_أكسس.py) يفتح ملف الأكسس نفسه قراءةً وكتابةً عبر ODBC/OLE DB.
+   البرنامج يكتشفه عند الإقلاع (127.0.0.1:8765) — إن وُجد صارت القاعدة الأصلية هي
+   المصدر الوحيد: التحميل منها وكتابة التعديلات فيها فورًا (إضافة/تعديل/حذف حقيقية)،
+   وتبقى localStorage للفاتورة الجارية والأعداد الصغيرة فقط. غياب الجسر = العمل
+   المحلي كالسابق مع تنبيه واضح. التعديلات تُلتقط بمقارنة بصمة كل صف (بأعمدة الجدول
+   الحقيقية فقط — الأعمدة المشتقة للعرض مثل شهر/سنة لا تُكتب في القاعدة). */
+const BRIDGE = { on: false, base: '', db: '', ro: false, fp: null, fpC: null, pc: [], cc: [], timer: 0, busy: false, errN: 0 };
+const BRIDGE_KEYS = { 'مشتريات': ['رقم الفاتورة', 'ترتيب', 'المادة'], 'بطاقات المواد': ['المادة'] };
+function bridgeBases() {
+  try { const c = JSON.parse(localStorage.getItem('fatora_bridge_cfg') || '{}'); if (c.base) return [c.base]; } catch (e) {}
+  return ['http://127.0.0.1:8765', 'http://localhost:8765'];
+}
+async function probeBridge() {
+  for (const b of bridgeBases()) {
+    try {
+      const ctl = ('AbortController' in window) ? new AbortController() : null;
+      const to = setTimeout(() => { if (ctl) ctl.abort(); }, 2500);
+      const r = await fetch(b + '/ping', { signal: ctl ? ctl.signal : undefined, cache: 'no-store' });
+      clearTimeout(to);
+      if (r.ok) { const j = await r.json(); if (j && j.ok) return { base: b, db: j.db || '', ro: !!j.read_only }; }
+    } catch (e) {}
+  }
+  return null;
+}
+async function bridgeLoadTable(t) {
+  const r = await fetch(BRIDGE.base + '/api/table/' + encodeURIComponent(t), { cache: 'no-store' });
+  const j = await r.json();
+  if (!j || !j.ok) throw new Error((j && j.error) || ('فشل تحميل ' + t));
+  return j;
+}
+function bridgePost(url, obj) {
+  return fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify(obj) }).then(r => r.json());
+}
+function fpHash(s) { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return h; }
+function rowFP(row, cols) {
+  let s = '';
+  for (const c of cols) { const v = row[c]; s += (v === null || v === undefined ? '\u0001' : String(v)) + '\u0002'; }
+  return fpHash(s);
+}
+function rowKeys(row, keys) { const o = {}; for (const k of keys) o[k] = row[k] === undefined ? null : row[k]; return o; }
+function pickReal(row, cols) { const o = {}; for (const c of cols) { if (row[c] !== undefined) o[c] = (row[c] === undefined ? null : row[c]); } return o; }
+function bridgeFileName(p) { const s = String(p || '').replace(/[\\/]+$/, ''); const i = Math.max(s.lastIndexOf('\\'), s.lastIndexOf('/')); return i >= 0 ? s.slice(i + 1) : s; }
+function buildFingerprints() {
+  BRIDGE.fp = new Map();
+  for (const r of DB.purchases) BRIDGE.fp.set(r, { h: rowFP(r, BRIDGE.pc), k: rowKeys(r, BRIDGE_KEYS['مشتريات']) });
+  BRIDGE.fpC = new Map();
+  for (const r of DB.cards) BRIDGE.fpC.set(r, { h: rowFP(r, BRIDGE.cc), k: rowKeys(r, BRIDGE_KEYS['بطاقات المواد']) });
+}
+async function loadFromBridge(ping) {
+  BRIDGE.base = ping.base;   /* أولًا! كل الطلبات التالية تعتمده */
+  const pur = await bridgeLoadTable('مشتريات');
+  const cards = await bridgeLoadTable('بطاقات المواد');
+  DB.purchasesCols = pur.cols;
+  DB.purchases = pur.rows;
+  DB.cards = cards.rows;
+  BRIDGE.pc = pur.cols; BRIDGE.cc = cards.cols;
+  DB.sales = []; DB.invoice = []; DB.pharmacy = [];
+  DB.batches = [...new Set(DB.purchases.map(p => p['رقم الطبخة']).filter(v => v !== null && v !== undefined && String(v).trim() !== ''))].map(String);
+  BRIDGE.on = true; BRIDGE.base = ping.base; BRIDGE.db = ping.db; BRIDGE.ro = ping.ro;
+  try { localStorage.removeItem(LS_KEY); localStorage.removeItem(LS_KEY + '_nopurch'); } catch (e) {}
+  try { localStorage.setItem('fatora_bridge_last', JSON.stringify({ db: ping.db, t: Date.now() })); } catch (e) {}
+  buildFingerprints();
+}
+function persistLight() {
+  /* في وضع الجسر: القاعدة الأصلية تحفظ المشتريات والبطاقات — المحلي للفاتورة الجارية والأعداد الصغيرة فقط */
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      invoice: DB.invoice, sales: DB.sales, batches: DB.batches, pharmacy: DB.pharmacy,
+      purchasesCols: DB.purchasesCols, bridgeMode: 1, cardsSeedV: CARDS_SEED_V
+    }));
+  } catch (e) { /* الذاكرة فقط */ }
+}
+function showBridgeChip() {
+  const s = $('st_src'), t = $('st_src_txt');
+  if (!s) return;
+  s.style.display = '';
+  t.textContent = bridgeFileName(BRIDGE.db) + ' عبر الجسر' + (BRIDGE.ro ? ' (قراءة فقط)' : '');
+  t.title = BRIDGE.db;
+}
+function scheduleBridgeSync() { if (BRIDGE.timer) clearTimeout(BRIDGE.timer); BRIDGE.timer = setTimeout(bridgeSync, 800); }
+async function bridgeSync() {
+  if (!BRIDGE.on || BRIDGE.busy) { if (BRIDGE.on) scheduleBridgeSync(); return; }
+  BRIDGE.busy = true;
+  try {
+    await syncTable('مشتريات', DB.purchases, BRIDGE.fp, BRIDGE.pc);
+    await syncTable('بطاقات المواد', DB.cards, BRIDGE.fpC, BRIDGE.cc);
+    BRIDGE.errN = 0;
+  } catch (e) {
+    if (++BRIDGE.errN <= 2) toast('تعذر حفظ التعديل في قاعدة الأكسس: ' + (e && e.message ? e.message : e), 'err');
+  }
+  BRIDGE.busy = false;
+}
+async function syncTable(t, arr, fp, cols) {
+  const keys = BRIDGE_KEYS[t];
+  const cur = new Set(arr);
+  const ins = [], upd = [], del = [];
+  for (const r of arr) {
+    const e = fp.get(r);
+    if (!e) ins.push(pickReal(r, cols));
+    else if (rowFP(r, cols) !== e.h) upd.push({ keys: e.k, set: pickReal(r, cols) });
+  }
+  for (const [r, e] of fp) if (!cur.has(r)) del.push(e.k);
+  if (ins.length) {
+    if (BRIDGE.ro) throw new Error('القاعدة مفتوحة بوضع القراءة فقط');
+    const j = await bridgePost(BRIDGE.base + '/api/' + encodeURIComponent(t) + '/insert', { rows: ins });
+    if (!j.ok) throw new Error(j.error || 'فشل الإضافة');
+    for (const r of arr) if (!fp.has(r)) fp.set(r, { h: rowFP(r, cols), k: rowKeys(r, keys) });
+  }
+  if (upd.length) {
+    if (BRIDGE.ro) throw new Error('القاعدة مفتوحة بوضع القراءة فقط');
+    const j = await bridgePost(BRIDGE.base + '/api/' + encodeURIComponent(t) + '/update', { rows: upd });
+    if (!j.ok) throw new Error(j.error || 'فشل التعديل');
+    for (const r of arr) { const e = fp.get(r); if (e) { e.h = rowFP(r, cols); e.k = rowKeys(r, keys); } }
+  }
+  if (del.length) {
+    if (BRIDGE.ro) throw new Error('القاعدة مفتوحة بوضع القراءة فقط');
+    const j = await bridgePost(BRIDGE.base + '/api/' + encodeURIComponent(t) + '/delete', { rows: del });
+    if (!j.ok) throw new Error(j.error || 'فشل الحذف');
+    for (const [r, e] of [...fp]) if (!cur.has(r)) fp.delete(r);
+  }
 }
 function escHtml(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
