@@ -54,3 +54,4 @@ static/ستايل.css
 جسر_أكسس.py
 access_bridge.py
 تشغيل_الجسر.bat
+start_bridge.bat
