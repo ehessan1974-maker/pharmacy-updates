@@ -11,13 +11,18 @@
     port       = منفذ الخادم المحلي (الافتراضي 8765)
     read_only  = true لمنع أي كتابة (الافتراضي false)
 
-البرنامج (HTML) يكتشف الجسر تلقائيًا عند فتحه على نفس الجهاز.
+البرنامج (HTML) يكتشف الجسر تلقائيًا عند فتحه، وفي أول فتح يعرض حوار
+«الاتصال بقاعدة البيانات» حيث يمكن للمستخدم اختيار ملف القاعدة بنافذة
+أصلية (زر «اختيار قاعدة أخرى…» يستدعي /pick الذي يفتح نافذة اختيار ملف
+على هذا الجهاز) — والاختيار يُحفظ في إعدادات_الجسر.json.
+إن لم تُختر قاعدة بعد يعمل الجسر رغم ذلك ليصلك حوار الاختيار في البرنامج.
 """
 import json
 import os
 import sys
 import threading
 import datetime
+import queue
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 try:
@@ -35,6 +40,14 @@ ALLOWED_TABLES = ["مشتريات", "بطاقات المواد", "المستخد
 
 CFG = {"db_path": DEFAULT_DB, "port": DEFAULT_PORT, "read_only": False}
 
+# طلبات فتح نافذة اختيار الملف — تُنفَّذ في الخيط الرئيسي (متطلب tkinter)
+PICK_Q = queue.Queue()
+TK_OK = True
+try:
+    import tkinter  # noqa: F401
+except Exception:
+    TK_OK = False
+
 
 def load_cfg():
     global CFG
@@ -50,9 +63,20 @@ def load_cfg():
         json.dump(CFG, f, ensure_ascii=False, indent=2)
 
 
+def save_cfg():
+    try:
+        with open(CFG_PATH, "w", encoding="utf-8") as f:
+            json.dump(CFG, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+
 # ================== طبقة الوصول لقاعدة الأكسس ==================
 class Dao:
     """واجهة موحدة فوق pyodbc (ODBC) أو adodbapi (OLE DB) — تُجرّب بالترتيب"""
+
+    # أكسس يخزّن القيم الزمنية «وقتًا فقط» فوق تاريخ أساس 1899-12-30
+    ACCESS_EPOCH = datetime.datetime(1899, 12, 30)
 
     def __init__(self, db_path):
         self.db_path = db_path
@@ -79,7 +103,7 @@ class Dao:
         if not os.path.exists(self.db_path):
             raise FileNotFoundError(
                 "لا يوجد ملف قاعدة البيانات في المسار:\n  " + self.db_path +
-                "\nصحّح المسار في ملف إعدادات_الجسر.json")
+                "\nاختر الملف الصحيح من زر «اختيار قاعدة أخرى…» في البرنامج")
         errs = []
         for label, kind, cs in self._candidates():
             try:
@@ -147,37 +171,68 @@ class Dao:
         except Exception:
             return False
 
+    @staticmethod
+    def _norm_digits(s):
+        """تحويل الأرقام العربية-الهندية ٠-٩ / ۰-۹ إلى لاتينية قبل التحليل"""
+        return str(s).translate(str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹",
+                                              "01234567890123456789"))
+
     def _conv_in(self, col, t, v):
         """قيمة قادمة من البرنامج → قيمة تُكتب في أكسس"""
         if v is None or v == "":
             return None
         if self._is_num(t):
-            s = str(v).replace("،", "").replace(",", "").strip()
+            s = self._norm_digits(v).replace("،", "").replace(",", "").strip()
             f = float(s)
             return int(f) if f == int(f) and t in (2, 4, 5, 16, 17, 18, 19, 20, 21, -5, -6) else f
         if self._is_date(t):
-            s = str(v).strip()
+            s = self._norm_digits(v).strip()
+            if not s:
+                return None
+            # وقت فقط؟ (12/24 ساعة، مع ص/م أو AM/PM — تدعم الصيغ العربية)
+            tstr = s
+            for ar, en in (("صباحًا", "AM"), ("صباحا", "AM"), ("ص", "AM"),
+                           ("مساءً", "PM"), ("مساء", "PM"), ("م", "PM")):
+                if tstr.endswith(ar):
+                    tstr = tstr[:-len(ar)].strip() + " " + en
+                    break
+            for fmt in ("%H:%M:%S", "%H:%M", "%I:%M:%S %p", "%I:%M %p"):
+                try:
+                    d = datetime.datetime.strptime(tstr, fmt)
+                    return self.ACCESS_EPOCH + datetime.timedelta(
+                        hours=d.hour, minutes=d.minute, seconds=d.second)
+                except ValueError:
+                    pass
             for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d",
-                        "%d/%m/%Y %H:%M:%S", "%d/%m/%Y"):
+                        "%Y-%m-%dT%H:%M:%S", "%Y/%m/%d %H:%M:%S", "%Y/%m/%d",
+                        "%d/%m/%Y %H:%M:%S", "%d/%m/%Y", "%d-%m-%Y", "%d.%m.%Y"):
                 try:
                     return datetime.datetime.strptime(s, fmt)
                 except ValueError:
                     pass
-            raise ValueError("تاريخ غير مفهوم: " + s)
+            raise ValueError("تاريخ/وقت غير مفهوم: " + s)
         return str(v)
 
     @staticmethod
     def _conv_out(v):
-        if isinstance(v, (datetime.datetime, datetime.date)):
-            if isinstance(v, datetime.datetime) and (v.hour or v.minute or v.second):
+        """قيمة قادمة من أكسس → قيمة JSON للبرنامج"""
+        if isinstance(v, datetime.datetime):
+            if v.date() == Dao.ACCESS_EPOCH.date():   # «وقت فقط» بصيغة أكسس الداخلية
+                return v.strftime("%H:%M:%S")
+            if v.hour or v.minute or v.second:
                 return v.strftime("%Y-%m-%d %H:%M:%S")
+            return v.strftime("%Y-%m-%d")
+        if isinstance(v, datetime.time):              # بعض المحركات تُرجع وقتًا صريحًا
+            return v.strftime("%H:%M:%S")
+        if isinstance(v, datetime.date):
             return v.strftime("%Y-%m-%d")
         return v
 
     # ---------- العمليات ----------
     def ping(self):
         with self.lock:
-            return {"ok": True, "db": self.db_path, "backend": self.backend,
+            return {"ok": True, "connected": True, "db": self.db_path,
+                    "backend": self.backend,
                     "read_only": bool(CFG.get("read_only")),
                     "tables": [t for t in ALLOWED_TABLES if t in self.cols]}
 
@@ -262,7 +317,53 @@ class Dao:
         return {"ok": True, "count": n}
 
 
-DAO = None
+DAO = None          # يبقى None حتى ينجح الاتصال — يمكن اختيار القاعدة من البرنامج
+
+
+def connect_dao(path):
+    """اتصال جديد بمسار قاعدة — يُستخدم عند الإقلاع وعند اختيار ملف من البرنامج"""
+    global DAO
+    d = Dao(path)
+    DAO = d
+    return d
+
+
+# ================== نافذة اختيار الملف الأصلية (tkinter في الخيط الرئيسي) ==================
+def pick_loop():
+    """حلقة الخيط الرئيسي: تفتح نافذة اختيار ملف أكسس عند طلب /pick"""
+    while True:
+        req = PICK_Q.get()
+        if req is None:
+            break
+        ev, out = req
+        path, err = None, None
+        try:
+            import tkinter as tk
+            from tkinter import filedialog
+            root = tk.Tk()
+            root.withdraw()
+            try:
+                root.attributes("-topmost", True)
+            except Exception:
+                pass
+            initdir = ""
+            try:
+                d = os.path.dirname(CFG.get("db_path") or "")
+                if os.path.isdir(d):
+                    initdir = d
+            except Exception:
+                pass
+            path = filedialog.askopenfilename(
+                title="اختر ملف قاعدة بيانات أكسس",
+                initialdir=initdir,
+                filetypes=[("قواعد بيانات أكسس", "*.accdb *.mdb"),
+                           ("كل الملفات", "*.*")])
+            root.destroy()
+        except Exception as e:
+            err = str(e)
+        out["path"] = path
+        out["err"] = err
+        ev.set()
 
 
 # ================== خادم HTTP المحلي ==================
@@ -285,8 +386,17 @@ class Handler(BaseHTTPRequestHandler):
         p = self.path.split("?")[0]
         try:
             if p in ("/", "/ping"):
-                self._send(DAO.ping())
+                if DAO is not None:
+                    self._send(DAO.ping())
+                else:
+                    self._send({"ok": True, "connected": False, "db": CFG.get("db_path", ""),
+                                "backend": "", "read_only": bool(CFG.get("read_only")),
+                                "tables": []})
+            elif p == "/pick":
+                self._pick()
             elif p.startswith("/api/table/"):
+                if DAO is None:
+                    raise ValueError("لم يتم اختيار قاعدة البيانات بعد — استخدم زر اختيار القاعدة في البرنامج")
                 from urllib.parse import unquote
                 self._send(DAO.table(unquote(p[len("/api/table/"):])))
             else:
@@ -294,17 +404,43 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             self._send({"ok": False, "error": str(e)[:300]}, 500)
 
+    def _pick(self):
+        """يفتح نافذة اختيار ملف القاعدة على هذا الجهاز ويعيد المسار"""
+        if not TK_OK:
+            self._send({"ok": False,
+                        "error": "نافذة الاختيار غير متاحة (tkinter غير مثبت) — "
+                                 "اكتب المسار يدويًا في ملف إعدادات_الجسر.json"}, 500)
+            return
+        ev = threading.Event()
+        out = {}
+        PICK_Q.put((ev, out))
+        if not ev.wait(300):   # 5 دقائق كحد أقصى لاختيار الملف
+            self._send({"ok": False, "error": "انتهت مهلة اختيار الملف"}, 500)
+            return
+        if out.get("err"):
+            self._send({"ok": False, "error": str(out["err"])[:300]}, 500)
+            return
+        if not out.get("path"):
+            self._send({"ok": True, "canceled": True})
+            return
+        self._send({"ok": True, "path": out["path"]})
+
     def do_POST(self):
         p = self.path.split("?")[0]
         try:
             ln = int(self.headers.get("Content-Length") or 0)
             body = json.loads(self.rfile.read(ln).decode("utf-8") or "{}")
+            if p == "/api/config":
+                self._config(body)
+                return
             parts = [x for x in p.split("/") if x]  # api/<table>/<op>
             if len(parts) != 3:
                 raise ValueError("مسار غير صحيح")
             _, t, op = parts
             from urllib.parse import unquote
             t = unquote(t)
+            if DAO is None:
+                raise ValueError("لم يتم اختيار قاعدة البيانات بعد — استخدم زر اختيار القاعدة في البرنامج")
             if op == "insert":
                 self._send(DAO.insert(t, body.get("rows", [])))
             elif op == "update":
@@ -316,27 +452,43 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             self._send({"ok": False, "error": str(e)[:300]}, 500)
 
+    def _config(self, body):
+        """اختيار قاعدة من البرنامج: db_path (إلزامي) + read_only (اختياري)"""
+        global CFG
+        p = str(body.get("db_path") or "").strip().strip('"')
+        if not p:
+            raise ValueError("لم يُرسل مسار قاعدة البيانات")
+        if not os.path.exists(p):
+            raise ValueError("الملف غير موجود: " + p)
+        ro = bool(body.get("read_only", CFG.get("read_only") or False))
+        connect_dao(p)          # يرمي خطأ واضحًا إن فشل الاتصال — يصل الحوار في البرنامج
+        CFG["db_path"] = p
+        CFG["read_only"] = ro
+        save_cfg()
+        print("✓ تغيّرت قاعدة البيانات من البرنامج إلى: " + p)
+        self._send(DAO.ping())
+
 
 def main():
-    global DAO
     load_cfg()
     print("=" * 56)
     print("   جسر قاعدة البيانات — فاتورة مشتريات (أكسس بدون تحويل)")
     print("=" * 56)
     print("القاعدة: " + CFG["db_path"])
     try:
-        DAO = Dao(CFG["db_path"])
+        connect_dao(CFG["db_path"])
     except Exception as e:
         print(str(e))
-        input("اضغط Enter للإغلاق...")
-        return 1
+        print("الجسر سيعمل رغم ذلك — اختر ملف القاعدة من داخل البرنامج")
+        print("(حوار «الاتصال بقاعدة البيانات» عند أول فتح، أو من الإعدادات).")
     port = int(CFG.get("port") or DEFAULT_PORT)
     srv = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
     print("الجسر يعمل الآن: http://127.0.0.1:%d" % port)
     print("افتح «فاتورة مشتريات.html» كالمعتاد — سيكتشف الجسر تلقائيًا.")
     print("(اترك هذه النافذة مفتوحة أثناء العمل — إغلاقها يفصل البرنامج عن القاعدة)")
     try:
-        srv.serve_forever()
+        pick_loop()   # الخيط الرئيسي حصريًا لنوافذ اختيار الملف
     except KeyboardInterrupt:
         print("\nأُغلق الجسر.")
     return 0

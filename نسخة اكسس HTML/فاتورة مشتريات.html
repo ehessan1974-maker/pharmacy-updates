@@ -507,6 +507,7 @@ body.colseldrag *{cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMA
         <div class="set-row"><label title="حجم الخط في حقول «بيانات الفاتورة» أعلى الجدول">خط بيانات الفاتورة</label><input type="number" id="set_fs_head" min="8" max="18" step="0.5" inputmode="decimal"><span class="set-unit">px</span></div>
         <div class="set-row"><label title="حجم الخط في شريط الحالة أسفل الشاشة">خط شريط الحالة</label><input type="number" id="set_fs_status" min="8" max="16" step="0.5" inputmode="decimal"><span class="set-unit">px</span></div>
         <button class="tbtn" id="set_fs_reset" title="إعادة الأحجام الثلاثة إلى الافتراضي">استعادة الأحجام الافتراضية</button>
+        <button class="tbtn" id="set_dbconn" title="اختيار قاعدة بيانات أكسس (عبر الجسر المحلي) أو العمل بدون قاعدة — يُعرض عند أول فتح أيضًا">قاعدة البيانات والاتصال…</button>
       </div>
     </div>
     <div class="np-body" id="np_body"></div>
@@ -871,7 +872,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 3;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-03m';   /* m: ربط قاعدة البيانات الأصلية MDB_be.accdb بدون تحويل — جسر محلي (جسر_أكسس.py) يكتشفه البرنامج تلقائيًا عند الإقلاع: التحميل من الجداول الحقيقية (مشتريات/بطاقات المواد) والكتابة فيها فورًا (إضافة/تعديل/حذف حقيقية عبر ODBC) وتبقى localStorage للفاتورة الجارية فقط، وغياب الجسر = العمل المحلي كالسابق مع تنبيه. l: إسدال خانات رأس الفاتورة (من/إلى/المستخدم/رقم الفاتورة) يعرض جميع البيانات عند الفتح لا ما يطابق النص المكتوب فقط — قائمة خاصة بديلة عن datalist (المتصفح يصفّيها بالنص): الفتح = مصدر الصف كاملًا كما في Form_Load (أزواج من+التاريخ مرتبة بالتاريخ) والفواتير برقمها ومستودعها وإجماليها وتاريخها، والكتابة = تصفية كما في نص_من_Change (DISTINCT + Like) */
+const APP_VER = '2026-11-03n';   /* n: حوار «الاتصال بقاعدة البيانات» عند أول فتح (اقتراح المستخدم): الاتصال بالجسر / اختيار ملف قاعدة آخر بنافذة أصلية عبر /pick / العمل محليًا — الاختيار يُحفظ ولا يُسأل ثانية ويتغير من الإعدادات أو شريط الحالة + إصلاح فقدان بيانات حقيقي: عند إعادة حفظ فاتورة موجودة كانت الإضافة تحدث قبل الحذف فمحا DELETE من القاعدة الصفوف الجديدة والقديمة معًا (الترتيب الآن: حذف ← تعديل ← إدراج) + شبكة أمان: أي فاتورة فشلت كتابتها في القاعدة تُحفظ معلّقة وتُكتب تلقائيًا عند توفر الجسر + الحفظ مزامنة فورية برسالة صادقة (كُتبت في القاعدة فعلاً أم مؤقتة) + الجسر: /pick و/api/config والعمل بلا قاعدة عند الإقلاع ووقت/تاريخ أذكى وأرقام عربية. m: ربط قاعدة البيانات الأصلية MDB_be.accdb بدون تحويل — جسر محلي (جسر_أكسس.py) يكتشفه البرنامج تلقائيًا عند الإقلاع: التحميل من الجداول الحقيقية (مشتريات/بطاقات المواد) والكتابة فيها فورًا (إضافة/تعديل/حذف حقيقية عبر ODBC) وتبقى localStorage للفاتورة الجارية فقط، وغياب الجسر = العمل المحلي كالسابق مع تنبيه. l: إسدال خانات رأس الفاتورة (من/إلى/المستخدم/رقم الفاتورة) يعرض جميع البيانات عند الفتح لا ما يطابق النص المكتوب فقط — قائمة خاصة بديلة عن datalist (المتصفح يصفّيها بالنص): الفتح = مصدر الصف كاملًا كما في Form_Load (أزواج من+التاريخ مرتبة بالتاريخ) والفواتير برقمها ومستودعها وإجماليها وتاريخها، والكتابة = تصفية كما في نص_من_Change (DISTINCT + Like) */
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 let seedData = null;
@@ -2705,7 +2706,8 @@ function renameMaterialEverywhere(oldName, newName) {
 /* ---------- فاتورة جديدة ---------- */
 async function fatooraJadida() {
   // UPDATE مشتريات SET رقم الفاتورة = من & التاريخ & الوقت
-  DB.purchases.forEach(p => { p['رقم الفاتورة'] = canonInvoiceNo(p); });
+  // في وضع الجسر: قيم القاعدة الأصلية هي المرجع فلا تُعاد كتابة أرقامها (كما في init)
+  if (!BRIDGE.on) DB.purchases.forEach(p => { p['رقم الفاتورة'] = canonInvoiceNo(p); });
   DB.invoice = [];
   APP.curRow = -1;
   $('f_date').value = today();
@@ -2738,7 +2740,7 @@ async function saveFatoora() {
   if (ss === 'yes') {
     if (!DB.invoice.length) { MsgBox('الفاتورة فارغة', 'warn'); return; }
     // حذف المشتريات السابقة بنفس رقم الفاتورة
-    DB.purchases = DB.purchases.filter(p => p['رقم الفاتورة'] !== rno);
+    DB.purchases = DB.purchases.filter(p => String(p['رقم الفاتورة'] ?? '') !== String(rno));
     // إضافة السجلات
     DB.invoice.forEach(r => {
       const p = {
@@ -2761,7 +2763,14 @@ async function saveFatoora() {
       DB.purchases.push(p);
     });
     await fatooraJadida();
-    toast('تم حفظ الفاتورة في جدول المشتريات', 'ok');
+    if (BRIDGE.on) {
+      armPendingInvoice(rno);              /* شبكة الأمان حتى تنجح الكتابة في القاعدة */
+      const ok = await flushBridgeSync();  /* كتابة فورية للقاعدة الأصلية لا مزامنة مؤجلة */
+      if (ok) toast('تم حفظ الفاتورة في جدول المشتريات وقاعدة الأكسس الأصلية', 'ok');
+      else toast('حُفظت الفاتورة مؤقتًا داخل البرنامج وستُكتب في القاعدة تلقائيًا — تأكد أن تشغيل_الجسر.bat يعمل', 'warn');
+    } else {
+      toast('تم حفظ الفاتورة في جدول المشتريات', 'ok');
+    }
   } else if (ss === 'no') {
     /* vbYesNo ثانٍ كما في أكسس — لا: خروج بلا حذف */
     const ok = await vbYesNoCancel('سيتم حذف الفاتورة الحالية. هل أنت متأكد؟', 'حذف فاتورة');
@@ -3147,6 +3156,8 @@ $('set_fs_reset').addEventListener('click', () => {
   saveUIPrefs({ fs: FS_DEFAULTS });
   toast('أُعيدت أحجام الخط إلى الافتراضي', 'ok');
 });
+/* قاعدة البيانات والاتصال — حوار الاختيار نفسه المعروض عند أول فتح (اقتراح المستخدم) */
+$('set_dbconn').addEventListener('click', () => { openDbConnDialog(true); });
 /* الحاسبة السريعة: إظهار/إخفاء بالنقر على عنوانها — مثل مجموعات الكائنات */
 $('sc_head').addEventListener('click', () => {
   const c = $('sidecalc').classList.toggle('collapsed');
@@ -3882,32 +3893,33 @@ async function init() {
     return;
   }
   let loaded = false;
-  const br = await probeBridge();
-  if (br) {
+  let br = await probeBridge();
+  let choice = readDbChoice();
+  /* حوار «الاتصال بقاعدة البيانات» — أول فتح فقط (اقتراح المستخدم)، لاحقًا من الإعدادات أو شريط الحالة */
+  if (!choice) {
+    choice = await dbConnDialog(br, false);
+    br = await probeBridge();   /* قد تغيّر الحالة أثناء الحوار (اختيار ملف/تشغيل الجسر) */
+  }
+  if (choice.mode === 'bridge') setBridgeDisabled(false);
+  if (br && br.connected && choice.mode === 'bridge') {
     try {
       await loadFromBridge(br);
       showBridgeChip();
     } catch (e) {
       toast('تعذر التحميل من جسر الأكسس: ' + (e && e.message ? e.message : e) + ' — يعمل الآن على نسخة محلية', 'err');
       loaded = await loadDB();
+      showBridgeChip();
     }
   } else {
     loaded = await loadDB();
-    if (localStorage.getItem('fatora_bridge_last')) {
-      toast('تعذر الوصول إلى جسر قاعدة الأكسس (شغّل تشغيل_الجسر.bat) — سأحاول مجددًا خلال ثوانٍ...', 'err');
-      setTimeout(async () => {
-        const b2 = await probeBridge();
-        if (!b2) return;
-        try {
-          await loadFromBridge(b2);
-          showBridgeChip();
-          fillDatalists();
-          renderFatoraSheet();
-          toast('تم الاتصال بقاعدة الأكسس الأصلية عبر الجسر — بدون تحويل', 'ok');
-        } catch (e2) {
-          toast('تعذر التحميل من جسر الأكسس: ' + (e2 && e2.message ? e2.message : e2), 'err');
-        }
-      }, 6000);
+    showBridgeChip();
+    if (choice.mode === 'bridge') {
+      if (br && !br.connected) {
+        toast('الجسر يعمل لكن لم تُختر قاعدة البيانات فيه — افتح «الإعدادات ← قاعدة البيانات والاتصال» لاختيار الملف', 'warn');
+      } else {
+        toast('تعذر الوصول إلى جسر قاعدة الأكسس (شغّل تشغيل_الجسر.bat) — سأحاول مجددًا خلال ثوانٍ...', 'err');
+        setTimeout(retryBridgeConnect, 6000);
+      }
     }
   }
   if (upgradePurchasesCols()) await saveDB();   /* مطابقة جدول فاتورة مشتريات: 31 عمودًا */
@@ -4088,18 +4100,22 @@ function headCombos() {
    الحقيقية فقط — الأعمدة المشتقة للعرض مثل شهر/سنة لا تُكتب في القاعدة). */
 const BRIDGE = { on: false, base: '', db: '', ro: false, fp: null, fpC: null, pc: [], cc: [], timer: 0, busy: false, errN: 0 };
 const BRIDGE_KEYS = { 'مشتريات': ['رقم الفاتورة', 'ترتيب', 'المادة'], 'بطاقات المواد': ['المادة'] };
-function bridgeBases() {
-  try { const c = JSON.parse(localStorage.getItem('fatora_bridge_cfg') || '{}'); if (c.base) return [c.base]; } catch (e) {}
-  return ['http://127.0.0.1:8765', 'http://localhost:8765'];
+function bridgeBaseList(force) {
+  const def = ['http://127.0.0.1:8765', 'http://localhost:8765'];
+  try { const c = JSON.parse(localStorage.getItem('fatora_bridge_cfg') || '{}');
+    if (!force && c.disabled) return [];               /* اختار المستخدم العمل بدون قاعدة */
+    if (c.base) return [c.base]; } catch (e) {}
+  return def;
 }
-async function probeBridge() {
-  for (const b of bridgeBases()) {
+function bridgeBases() { return bridgeBaseList(false); }
+async function probeBridge(force) {
+  for (const b of bridgeBaseList(force)) {
     try {
       const ctl = ('AbortController' in window) ? new AbortController() : null;
       const to = setTimeout(() => { if (ctl) ctl.abort(); }, 2500);
       const r = await fetch(b + '/ping', { signal: ctl ? ctl.signal : undefined, cache: 'no-store' });
       clearTimeout(to);
-      if (r.ok) { const j = await r.json(); if (j && j.ok) return { base: b, db: j.db || '', ro: !!j.read_only }; }
+      if (r.ok) { const j = await r.json(); if (j && j.ok) return { base: b, db: j.db || '', ro: !!j.read_only, connected: j.connected !== false }; }
     } catch (e) {}
   }
   return null;
@@ -4142,6 +4158,7 @@ async function loadFromBridge(ping) {
   try { localStorage.removeItem(LS_KEY); localStorage.removeItem(LS_KEY + '_nopurch'); } catch (e) {}
   try { localStorage.setItem('fatora_bridge_last', JSON.stringify({ db: ping.db, t: Date.now() })); } catch (e) {}
   buildFingerprints();
+  mergePendingOnBoot();   /* فاتورة لم تكتمل كتابتها في القاعدة سابقًا؟ أكملها الآن */
 }
 function persistLight() {
   /* في وضع الجسر: القاعدة الأصلية تحفظ المشتريات والبطاقات — المحلي للفاتورة الجارية والأعداد الصغيرة فقط */
@@ -4156,21 +4173,40 @@ function showBridgeChip() {
   const s = $('st_src'), t = $('st_src_txt');
   if (!s) return;
   s.style.display = '';
-  t.textContent = bridgeFileName(BRIDGE.db) + ' عبر الجسر' + (BRIDGE.ro ? ' (قراءة فقط)' : '');
-  t.title = BRIDGE.db;
+  s.style.cursor = 'pointer';
+  s.style.textDecoration = 'underline';
+  s.onclick = () => openDbConnDialog(true);
+  if (BRIDGE.on) {
+    t.textContent = bridgeFileName(BRIDGE.db) + ' عبر الجسر' + (BRIDGE.ro ? ' (قراءة فقط)' : '');
+    t.title = BRIDGE.db + '\nانقر لتغيير قاعدة البيانات';
+  } else {
+    t.textContent = 'نسخة محلية (بدون اتصال بقاعدة)';
+    t.title = 'انقر لاختيار قاعدة بيانات أكسس والاتصال بها';
+  }
 }
 function scheduleBridgeSync() { if (BRIDGE.timer) clearTimeout(BRIDGE.timer); BRIDGE.timer = setTimeout(bridgeSync, 800); }
 async function bridgeSync() {
-  if (!BRIDGE.on || BRIDGE.busy) { if (BRIDGE.on) scheduleBridgeSync(); return; }
+  if (!BRIDGE.on || BRIDGE.busy) { if (BRIDGE.on) scheduleBridgeSync(); return false; }
   BRIDGE.busy = true;
+  let ok = true;
   try {
     await syncTable('مشتريات', DB.purchases, BRIDGE.fp, BRIDGE.pc);
     await syncTable('بطاقات المواد', DB.cards, BRIDGE.fpC, BRIDGE.cc);
     BRIDGE.errN = 0;
+    clearPendingInvoice();   /* كل شيء كُتب في القاعدة — لا شيء معلّق */
   } catch (e) {
+    ok = false;
     if (++BRIDGE.errN <= 2) toast('تعذر حفظ التعديل في قاعدة الأكسس: ' + (e && e.message ? e.message : e), 'err');
+    if (BRIDGE.errN <= 6) setTimeout(bridgeSync, 10000);   /* إعادة محاولة تلقائية */
   }
   BRIDGE.busy = false;
+  return ok;
+}
+async function flushBridgeSync() {
+  /* مزامنة فورية بعد الحفظ — تنتظر انتهاء مزامنة جارية إن وُجدت */
+  let tries = 0;
+  while (BRIDGE.busy && tries++ < 50) await new Promise(r => setTimeout(r, 100));
+  return await bridgeSync();
 }
 async function syncTable(t, arr, fp, cols) {
   const keys = BRIDGE_KEYS[t];
@@ -4182,11 +4218,14 @@ async function syncTable(t, arr, fp, cols) {
     else if (rowFP(r, cols) !== e.h) upd.push({ keys: e.k, set: pickReal(r, cols) });
   }
   for (const [r, e] of fp) if (!cur.has(r)) del.push(e.k);
-  if (ins.length) {
+  /* الترتيب حاسم: الحذف قبل الإدراج — عند إعادة حفظ فاتورة موجودة تُحذف صفوفها القديمة
+     أولاً (بنفس مفاتيح الجديدة) ثم تُدرج الجديدة؛ لو دخل الإدراج قبل الحذف لَحَذف
+     DELETE من القاعدة الصفوف الجديدة والقديمة معًا (لا يوجد مفتاح أساسي في الجداول) */
+  if (del.length) {
     if (BRIDGE.ro) throw new Error('القاعدة مفتوحة بوضع القراءة فقط');
-    const j = await bridgePost(BRIDGE.base + '/api/' + encodeURIComponent(t) + '/insert', { rows: ins });
-    if (!j.ok) throw new Error(j.error || 'فشل الإضافة');
-    for (const r of arr) if (!fp.has(r)) fp.set(r, { h: rowFP(r, cols), k: rowKeys(r, keys) });
+    const j = await bridgePost(BRIDGE.base + '/api/' + encodeURIComponent(t) + '/delete', { rows: del });
+    if (!j.ok) throw new Error(j.error || 'فشل الحذف');
+    for (const [r, e] of [...fp]) if (!cur.has(r)) fp.delete(r);
   }
   if (upd.length) {
     if (BRIDGE.ro) throw new Error('القاعدة مفتوحة بوضع القراءة فقط');
@@ -4194,12 +4233,181 @@ async function syncTable(t, arr, fp, cols) {
     if (!j.ok) throw new Error(j.error || 'فشل التعديل');
     for (const r of arr) { const e = fp.get(r); if (e) { e.h = rowFP(r, cols); e.k = rowKeys(r, keys); } }
   }
-  if (del.length) {
+  if (ins.length) {
     if (BRIDGE.ro) throw new Error('القاعدة مفتوحة بوضع القراءة فقط');
-    const j = await bridgePost(BRIDGE.base + '/api/' + encodeURIComponent(t) + '/delete', { rows: del });
-    if (!j.ok) throw new Error(j.error || 'فشل الحذف');
-    for (const [r, e] of [...fp]) if (!cur.has(r)) fp.delete(r);
+    const j = await bridgePost(BRIDGE.base + '/api/' + encodeURIComponent(t) + '/insert', { rows: ins });
+    if (!j.ok) throw new Error(j.error || 'فشل الإضافة');
+    for (const r of arr) if (!fp.has(r)) fp.set(r, { h: rowFP(r, cols), k: rowKeys(r, keys) });
   }
+}
+/* ---------- شبكة أمان: فاتورة لم تكتمل كتابتها في قاعدة الأكسس تُحفظ معلّقة حتى تنجح ----------
+   في وضع الجسر القاعدة الأصلية هي المصدر الوحيد؛ إن فشلت الكتابة (الجسر مغلق، القاعدة
+   مقفولة في أكسس، خطأ تحويل…) كانت الفاتورة ستضيع عند إعادة الفتح. الآن تُخزن صفوفها
+   في localStorage لحين نجاح المزامنة، وعند الإقلاع تُدمج وتُعاد كتابتها تلقائيًا. */
+function armPendingInvoice(rno) {
+  try {
+    const rows = DB.purchases.filter(p => String(p['رقم الفاتورة'] ?? '') === String(rno));
+    const prev = JSON.parse(localStorage.getItem('fatora_bridge_pending') || '[]');
+    const kept = prev.filter(x => String(x['رقم الفاتورة'] ?? '') !== String(rno));
+    localStorage.setItem('fatora_bridge_pending', JSON.stringify(kept.concat(rows)));
+  } catch (e) { /* الذاكرة فقط */ }
+}
+function clearPendingInvoice() { try { localStorage.removeItem('fatora_bridge_pending'); } catch (e) {} }
+function mergePendingOnBoot() {
+  let pend = null;
+  try { pend = JSON.parse(localStorage.getItem('fatora_bridge_pending') || 'null'); } catch (e) {}
+  if (!pend || !pend.length) { clearPendingInvoice(); return; }
+  const keyOf = r => [r['رقم الفاتورة'], r['ترتيب'], r['المادة']].map(v => String(v ?? '')).join('\u0001');
+  const byKey = new Map(DB.purchases.map(r => [keyOf(r), r]));
+  let n = 0;
+  for (const pr of pend) {
+    const k = keyOf(pr);
+    const ex = byKey.get(k);
+    if (ex) Object.assign(ex, pr);        /* الصف موجود (فشل بعد الحذف؟) — قيمه الجديدة تُحدّث */
+    else { DB.purchases.push(pr); byKey.set(k, pr); }
+    n++;
+  }
+  /* انتبه: لا يُعاد بناء البصمات هنا — البصمات بُنيت في loadFromBridge قبل الدمج،
+     فتبقى الصفوف المدمجة الجديدة بلا بصمة فيرصدها syncTable كإضافات (INSERT) حقيقية،
+     والصفوف المحدّثة (Object.assign) تغيّرت بصمتها فتُكتَب UPDATE.
+     إعادة البناء هنا كانت ستُسلّمها كصفوف «غير متغيرة» فلا تُكتب أبدًا وتنمسح معلّقاتها! */
+  scheduleBridgeSync();
+  toast('وُجدت فاتورة لم تكتمل كتابتها في قاعدة الأكسس (' + n + ' صفًا) — جارٍ كتابتها الآن', 'warn');
+}
+
+/* ---------- اختيار قاعدة البيانات — حوار أول فتح + إعدادات ----------
+   اقتراح المستخدم: خيار اتصال بقاعدة يختارها المستخدم عند فتح البرنامج لأول مرة فقط.
+   الاختيار يُحفظ ولا يُسأل ثانية؛ ويمكن تغييره من «الإعدادات ← قاعدة البيانات والاتصال»
+   أو بالنقر على «المصدر» في شريط الحالة. اختيار الملف يتم بنافذة أصلية عبر /pick للجسر. */
+function readDbChoice() { try { return JSON.parse(localStorage.getItem('fatora_db_choice') || 'null'); } catch (e) { return null; } }
+function writeDbChoice(c) { try { localStorage.setItem('fatora_db_choice', JSON.stringify(c)); } catch (e) {} }
+function setBridgeDisabled(d) {
+  let c = {}; try { c = JSON.parse(localStorage.getItem('fatora_bridge_cfg') || '{}'); } catch (e) {}
+  if (d) c.disabled = 1; else delete c.disabled;
+  if (!c.disabled && !c.base) { try { localStorage.removeItem('fatora_bridge_cfg'); } catch (e) {} return; }
+  try { localStorage.setItem('fatora_bridge_cfg', JSON.stringify(c)); } catch (e) {}
+}
+async function retryBridgeConnect() {
+  /* إعادة محاولة الاتصال بالجسر في الخلفية — حتى ينجح (لمن اختار الاتصال وقُطع) */
+  if (BRIDGE.on) return;
+  const b2 = await probeBridge();
+  if (!b2 || !b2.connected) { setTimeout(retryBridgeConnect, 10000); return; }
+  try {
+    await loadFromBridge(b2);
+    showBridgeChip();
+    fillDatalists();
+    renderFatoraSheet();
+    toast('تم الاتصال بقاعدة الأكسس الأصلية عبر الجسر — بدون تحويل', 'ok');
+  } catch (e2) {
+    toast('تعذر التحميل من جسر الأكسس: ' + (e2 && e2.message ? e2.message : e2), 'err');
+    setTimeout(retryBridgeConnect, 15000);
+  }
+}
+async function openDbConnDialog(fromSettings = false) {
+  /* يعرض الحوار ويعيد الاختيار {mode:'bridge'|'local', db, changed} — عند التغيير
+     من داخل الجلسة يُعاد فتح البرنامج لتطبيقه بأمان */
+  const prev = readDbChoice();
+  const res = await dbConnDialog(await probeBridge(true), fromSettings);   /* فحص قسري حتى مع اختيار محلي سابق */
+  if (fromSettings) {
+    const changed = !prev || prev.mode !== res.mode ||
+      (res.mode === 'bridge' && res.db && prev.db !== res.db);
+    if (changed || res.reload) {
+      toast('تطبيق تغيير الاتصال — سيُعاد فتح البرنامج...', 'ok');
+      setTimeout(() => location.reload(), 900);
+    }
+  }
+  return res;
+}
+function dbConnDialog(initialProbe, fromSettings) {
+  return new Promise(resolve => {
+    const back = document.createElement('div');
+    back.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9998;display:flex;align-items:center;justify-content:center;direction:rtl';
+    back.innerHTML = `<div class="dialog" style="min-width:440px;max-width:560px">
+      <div class="d-title">الاتصال بقاعدة البيانات</div>
+      <div class="d-body" style="line-height:1.9">
+        <div style="margin-bottom:8px">يعمل البرنامج مباشرة على قاعدة أكسس الأصلية <b>بدون تحويل</b> عبر جسر محلي
+        (<span dir="ltr">تشغيل_الجسر.bat</span>) — أو بدون قاعدة (نسخة محلية داخل المتصفح).</div>
+        <div id="dbd_state" style="border:1px solid #b9c4d0;background:#f4f7fa;border-radius:6px;padding:8px 10px;min-height:44px">جارٍ فحص الجسر…</div>
+        <div style="font-size:12px;color:#5a6a7a;margin-top:6px" id="dbd_hint"></div>
+      </div>
+      <div class="d-btns" style="flex-wrap:wrap">
+        <button class="dlg-btn default" id="dbd_conn">✓ الاتصال بهذه القاعدة</button>
+        <button class="dlg-btn" id="dbd_pick">📂 اختيار قاعدة أخرى…</button>
+        <button class="dlg-btn" id="dbd_re">⟳ إعادة الفحص</button>
+        <button class="dlg-btn" id="dbd_local">💻 العمل بدون قاعدة (محلي)</button>
+        ${fromSettings ? '<button class="dlg-btn" id="dbd_cancel">إلغاء</button>' : ''}
+      </div>
+    </div>`;
+    document.body.appendChild(back);
+    let lastProbe = initialProbe, stop = false;
+    const st = back.querySelector('#dbd_state'), hint = back.querySelector('#dbd_hint');
+    const bConn = back.querySelector('#dbd_conn'), bPick = back.querySelector('#dbd_pick');
+    function render() {
+      if (lastProbe && lastProbe.connected) {
+        st.innerHTML = '<b style="color:#1a6b2f">✓ الجسر متصل</b> — قاعدة البيانات الحالية:<br><span dir="ltr" style="font-size:12px">' + escHtml(lastProbe.db || '—') + '</span>';
+        hint.textContent = 'اترك الاختيار كما هو إن كان هذا هو الملف الصحيح، أو اختر ملفًا آخر بنافذة أصلية.';
+        bConn.disabled = false; bPick.disabled = false;
+      } else if (lastProbe) {
+        st.innerHTML = '<b style="color:#8a6d00">⚠ الجسر يعمل لكن لم تُختر قاعدة بعد</b>' + (lastProbe.db ? '<br><span dir="ltr" style="font-size:12px">' + escHtml(lastProbe.db) + '</span>' : '');
+        hint.textContent = 'اضغط «اختيار قاعدة أخرى…» لاختيار ملف .accdb بنافذة على هذا الجهاز.';
+        bConn.disabled = true; bPick.disabled = false;
+      } else {
+        st.innerHTML = '<b style="color:#a00000">✗ لم يُكتشف الجسر على هذا الجهاز</b>';
+        hint.innerHTML = 'شغّل <b dir="ltr">تشغيل_الجسر.bat</b> بجانب البرنامج (نقرة واحدة) ثم اضغط «إعادة الفحص» — أو اعمل محليًا الآن ويمكنك الاتصال لاحقًا من الإعدادات.';
+        bConn.disabled = true; bPick.disabled = true;
+      }
+    }
+    function done(res) { stop = true; back.remove(); resolve(res); }
+    async function reprobe() {
+      st.textContent = 'جارٍ فحص الجسر…';
+      lastProbe = await probeBridge(true);   /* فحص قسري — حتى لو كان الجسر معطّلًا باختيار محلي */
+      render();
+      return lastProbe;
+    }
+    render();
+    const iv = setInterval(async () => { if (stop) { clearInterval(iv); return; } lastProbe = await probeBridge(true); render(); }, 3500);
+    bConn.onclick = () => {
+      writeDbChoice({ mode: 'bridge', db: lastProbe ? lastProbe.db : '', t: Date.now() });
+      setBridgeDisabled(false);
+      done({ mode: 'bridge', db: lastProbe ? lastProbe.db : '' });
+    };
+    bPick.onclick = async () => {
+      if (!lastProbe) return;
+      bPick.disabled = true;
+      try {
+        const r = await fetch(lastProbe.base + '/pick', { cache: 'no-store' });
+        const j = await r.json();
+        if (j && j.ok && j.path) {
+          const r2 = await bridgePost(lastProbe.base + '/api/config', { db_path: j.path });
+          if (r2 && r2.ok) {
+            lastProbe = { base: lastProbe.base, db: r2.db || j.path, ro: !!r2.read_only, connected: true };
+            render();
+            writeDbChoice({ mode: 'bridge', db: lastProbe.db, t: Date.now() });
+            setBridgeDisabled(false);
+            done({ mode: 'bridge', db: lastProbe.db });
+            return;
+          } else {
+            st.innerHTML = '<b style="color:#a00000">✗ تعذر الاتصال بالملف المختار</b><br><span style="font-size:12px">' + escHtml((r2 && r2.error) || 'خطأ غير معروف') + '</span>';
+          }
+        } else if (j && j.ok && j.canceled) {
+          /* ألغى المستخدم نافذة الاختيار — لا شيء */
+        } else {
+          st.innerHTML = '<b style="color:#a00000">✗ ' + escHtml((j && j.error) || 'تعذر فتح نافذة الاختيار') + '</b>';
+        }
+      } catch (e) {
+        st.innerHTML = '<b style="color:#a00000">✗ ' + escHtml(e && e.message ? e.message : e) + '</b>';
+      }
+      bPick.disabled = false;
+    };
+    back.querySelector('#dbd_re').onclick = reprobe;
+    back.querySelector('#dbd_local').onclick = () => {
+      writeDbChoice({ mode: 'local', t: Date.now() });
+      setBridgeDisabled(true);
+      done({ mode: 'local' });
+    };
+    const bc = back.querySelector('#dbd_cancel');
+    if (bc) bc.onclick = () => done({ mode: prev ? prev.mode : 'local', canceled: true });
+  });
 }
 function escHtml(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
