@@ -1,32 +1,46 @@
 @echo off
-title جسر قاعدة البيانات - فاتورة مشتريات
+title Access DB Bridge - Purchase Invoice
 cd /d "%~dp0"
-chcp 65001 >nul
+setlocal
 
 echo ==========================================================
-echo    جسر قاعدة البيانات — فاتورة مشتريات (أكسس بدون تحويل)
-echo    يشغل قاعدة MDB_be.accdb نفسها للقراءة والكتابة
+echo    Access Database Bridge - Purchase Invoice (HTML app)
+echo    Opens the original .accdb database for read and write
 echo ==========================================================
 echo.
 
-where python >nul 2>&1
-if errorlevel 1 goto no_python
-
-python -c "import pyodbc" >nul 2>&1
-if errorlevel 1 (
-    echo تثبيت pyodbc مرة واحدة فقط...
-    python -m pip install pyodbc --quiet
+rem --- locate the bridge python file (Arabic filename safe) ---
+set "PYF="
+if exist "access_bridge.py" set "PYF=access_bridge.py"
+if not defined PYF for %%f in (*.py) do set "PYF=%%f"
+if not defined PYF (
+    echo [X] Bridge file not found - put access_bridge.py next to this .bat
+    pause
+    exit /b 1
 )
 
-echo تشغيل الجسر...
-python "جسر_أكسس.py"
+rem --- find python (python or py launcher) ---
+set "PYCMD="
+where python >nul 2>&1 && set "PYCMD=python"
+if not defined PYCMD where py >nul 2>&1 && set "PYCMD=py"
+if not defined PYCMD (
+    echo [X] Python is not installed or not in PATH.
+    echo     Download it from https://www.python.org/downloads/
+    echo     IMPORTANT: tick "Add python.exe to PATH" during setup.
+    pause
+    exit /b 1
+)
+
+rem --- pyodbc once ---
+%PYCMD% -c "import pyodbc" >nul 2>&1
+if errorlevel 1 (
+    echo Installing pyodbc - one time only...
+    %PYCMD% -m pip install pyodbc --quiet
+)
+
+echo Starting bridge with %PYCMD% "%PYF%" ...
+%PYCMD% "%PYF%"
+echo.
+echo Bridge stopped.
 pause
 exit /b 0
-
-:no_python
-echo.
-echo    مشكلة: بايثون غير مثبت أو غير موجود في PATH.
-echo    الحل: شغّل start.bat مرة واحدة — سيخبرك بما يجب تثبيته.
-echo.
-pause
-exit /b 1
