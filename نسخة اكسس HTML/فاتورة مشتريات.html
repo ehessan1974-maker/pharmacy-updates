@@ -408,7 +408,7 @@ body.selgrab table.sheet th.colsel,body.selgrab table.sheet tr.rowsel td.rowh{cu
 .dlg-btn.default{background:linear-gradient(180deg,#c2484c,#a4373a);border-color:#7c2325;color:#fff;font-weight:600}
 .dlg-btn.default:not(:disabled):hover{background:linear-gradient(180deg,#cf5357,#b04145);color:#fff}   /* إصلاح 04d: hover العام كان يبيض الخلفية ويخفي النص الأبيض للزر الافتراضي */
 /* toast */
-#toasts{position:fixed;bottom:14px;inset-inline-start:14px;z-index:20001;   /* 06y-2: فوق الحوار نفسه */display:flex;flex-direction:column;gap:8px}
+#toasts{position:fixed;bottom:14px;inset-inline-start:14px;z-index:20001;   /* 06y-2: فوق الحوار نفسه */pointer-events:none;   /* 06ak: بلا معالجات نقر — لا تحجب إشعاراتها الفارغة ركنَي تحجيم العائمة السفليَّين */display:flex;flex-direction:column;gap:8px}
 .toast{
   background:#323232;color:#fff;border-radius:4px;padding:9px 16px;font-size:12.5px;
   box-shadow:0 4px 14px rgba(0,0,0,.3);animation:tin .25s ease;max-width:380px;
@@ -500,7 +500,7 @@ body.selgrab table.sheet th.colsel,body.selgrab table.sheet tr.rowsel td.rowh{cu
 .mt6{margin-top:6px}
 .hidden{display:none!important}
 
-/* ===== 06s: النموذجان العائمان (المنبثقان) — بطاقة المادة وسجل مشترياتها ===== */
+/* ===== 06s: النماذج العائمة (المنبثقة) — بطاقة المادة وسجل مشترياتها — 06ak: وفاتورة مشتريات نفسها أصبحت الثالثة منها ===== */
 .fwin{
   position:fixed;z-index:90;background:#f4f2ef;border:1px solid #7d7a74;border-radius:6px;
   overflow:hidden;box-shadow:0 18px 48px rgba(0,0,0,.35),0 3px 10px rgba(0,0,0,.18);
@@ -508,6 +508,10 @@ body.selgrab table.sheet th.colsel,body.selgrab table.sheet tr.rowsel td.rowh{cu
 }
 #fc-card{top:56px;right:16px;width:min(1180px,calc(100vw - 32px))}
 #fc-purch{top:96px;right:44px;width:min(1180px,calc(100vw - 48px))}
+/* 06ak: إطار «فاتورة مشتريات» العائمة — بارتفاع واضح والورقة تملأ البقية */
+#fc-fatora{top:36px;right:70px;width:min(1180px,calc(100vw - 86px));height:min(84vh,820px)}
+#fc-fatora .fwin-body{flex:1;min-height:0}
+#fc-fatora .sheetwrap{flex:1;min-height:120px}
 .fwin.hidden{display:none!important}
 .fwin-head{
   display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:move;user-select:none;
@@ -610,6 +614,8 @@ body.selgrab table.sheet th.colsel,body.selgrab table.sheet tr.rowsel td.rowh{cu
   </div>
 
   <!-- ================= فاتورة مشتريات ================= -->
+<!-- 06ak: النموذج صار عائمًا أيضًا — ⤢ في تبويبه (يظهر بمرور المؤشر) ينقل محتواه إلى الإطار العائم #fc-fatora أدناه،
+     و─ في رأس العائم يعيده تبويبًا في شريط تبويبات المستندات، و✕ يغلق فاتورة مشتريات كليًّا، والموضع والحجم والحالة تُحفظ في الجلسة -->
   <div class="window" id="win-fatora">
     <div class="win-head"><span class="dot"></span>فاتورة مشتريات</div>
     <div class="win-body">
@@ -748,6 +754,17 @@ NumLock: لازم يكون مضاءً لكتابة الأرقام بلوحة ا�
     <div class="sheetwrap" id="fcp_sheet" style="max-height:340px"></div>
     <div class="hint">06ad: عاد العائم إلى أعمدته الخمسة والعشرين وحُذفت إضافات 06ab — 06ae: وحُذف نموذج «الرصيد» منه بكل ما يتعلق به</div>
   </div>
+</div>
+
+<!-- ===== 06ak: نموذج عائم (3) — فاتورة مشتريات نفسها: ⤢ في تبويبها ينقل محتواها إلى هذا الإطار ===== -->
+<div id="fc-fatora" class="fwin hidden" role="dialog" aria-label="نموذج عائم — فاتورة مشتريات">
+  <div class="fwin-head" id="fcf_head" title="اسحب من الرأس لتحريك النموذج العائم ومن حوافه وأركانه لتغيير أبعاده — النقر في أي موضع يجلب النموذج إلى المقدمة — والتصغير يعيد فاتورة مشتريات تبويبًا في شريط تبويبات المستندات — يغلق بـ ✕ أو Esc">
+    <span class="fwin-dot"></span>
+    <span class="fwin-title" id="fcf_title">نموذج عائم — فاتورة مشتريات</span>
+    <button class="tbtn" id="fcf_min" title="تصغير — العودة بفاتورة مشتريات إلى تبويبها في شريط تبويبات المستندات">─</button>
+    <button class="tbtn" id="fcf_close" title="إغلاق النموذج العائم — يغلق فاتورة مشتريات كليًّا (Esc)">✕</button>
+  </div>
+  <div class="fwin-body" id="fcf_body"></div>
 </div>
 
 <div id="modal-back"><div class="dialog" id="dialog"></div></div>
@@ -908,7 +925,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 3;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-10g';   /* 06aj: بطلب المستخدم «أريد أن يظهر ⤢ فقط عند مرور المؤشر على التبويب (لتقليل النقر الخاطئ عليه) وأريد أن يظهر اسم النموذج في التبويب» — رمز الطفو (dfx) في تبويب النافذة المرسَّبة صار مخفيًا افتراضيًا ولا يظهر إلا بمرور المؤشر على التبويب: قاعدة CSS تجعله visibility:hidden ويُظهره عند hover على التبويب، وحيزه محجوز دائمًا بمقاس ✕ كي لا يتحرك ✕ ولا يتغير عرض التبويب لحظة ظهوره، والعنصر المخفي بvisibility لا يلتقط النقر أصلًا فلا نقرة خاطئة عليه، وعاد اسم النموذج (بطاقات المواد / سجل المشتريات) ظاهرًا في التبويب المرسَّب بأيقونته وبتقصير عند الضيق (dname) كما في تبويبات الكائنات السائرة بدل أن يكون رمز الكائن وحده، وحُدث تلميح التبويب ليذكر أن ⤢ يظهر بمرور المؤشر، وأضيفت العبارة نفسها إلى تلميحات زرَّي التصغير (─) وزرَّي قسم التحكم، والنقر على ⤢ يستدعي undockFloat كما في 06ai وعلى ✕ closeWindow كما كان — 06ai: بطلب المستخدم «نعم قم بنقل زر طفو إلى تبويب النافذة بشرط أن لا يزداد حجم تبويب النافذة (مثلا بدل كلمة تبويب ضع رمز مناسب)» — زرّا «⤢ طفو» (fcc_dock_float وfcp_dock_float) اللذان كانا في صف البحث داخل النافذتين المرسَّبتين حُذفا من HTML مع ربطَيهما وفَضِّ قاعدتَي docked-only، وصار طفو المرسَّبة من رمز ⤢ صغير (dfx) داخل تبويب النافذة نفسه بجنب ✕ يستدعي undockFloat مباشرة، والتبويب المرسَّب يعرض رمز الكائن (🗂️ بطاقات المواد / 📜 سجل المشتريات) بدل كلمته تنفيذًا لشرط المستخدم «بدل كلمة التبويب رمز مناسب» فلا يزداد حجم التبويب بل يصغر، والاسم الكامل يبقى في تلميح التبويب مع بيان أن ⤢ للطفو و✕ للإغلاق، وحُدثت تلميحات زرَّي التصغير (─) وزرَّي قسم التحكم لتُرشد إلى رمز ⤢ في التبويب — وكل ما في 06ah و06ag (جلسة المستخدم saveSession/restoreSession وحذف رأس النافذة المرسَّبة) و06af و06ae و06ad و06ac و06ab و06aa و06z و06y و06x و06v و06u و06t و06s و06r و06q و06m و06i و06o باقٍ ما لم يُذكر خلاف ذلك. — 06ah: بطلب المستخدم «ما في داعي لزر x جانب زر طفو في النماذج العائمة» — حُذف زرا ✕ (fcc_dock_close وfcp_dock_close) الذي كان 06ag وضعه بجوار زر «طفو» في الصف الأول من النموذج (صف البحث) داخل النافذة المرسَّبة، مع ربطَيه في closeWindow وحذف ذكره من تعليقَي HTML ورأس قاعدة CSS — فبقي في صف البحث المرسَّب زر «طفو» وحده والإغلاق يبقى من ✕ تبويب النافذة في شريط تبويبات المستندات (dx) الذي يغلق الكائن المرسَّب عبر closeWindow نفسه فيعيد المحتوى إلى النموذج العائم ويغلقه (سلوك 06y) — وكل ما في 06ag (جلسة المستخدم saveSession/restoreSession وحذف رأس النافذة المرسَّبة) و06af و06ae و06ad و06ac و06ab و06aa و06z و06y و06x و06v و06u و06t و06s و06r و06q و06m و06i و06o باقٍ ما لم يُذكر خلاف ذلك. — 06ag: بطلب المستخدم «1.اجعل زر طفو وزر إغلاق في رأس النموذج واحذفهما من داخل النموذج (في النماذج العائمة بعد تكبيرها) ومافي داعي تكتب تحت رأس النموذج اسم النموذج والكلمة المبحوث عنها (لتوفير المساحة) 2.يجب حفظ جميع خيارات المستخدم بما فيها النماذج المفتوحة وحالاتها كلها» — (1) رأس النافذتين المرسَّبتين (win-floatcard وwin-floatpurch بعد تكبير النموذجين العائَمَين بالتصغير ─) حُذف كليًّا من HTML: كان يكتب تحت شريط تبويبات المستندات اسم النموذج والكلمة المبحوث عنها فيستهلك سطرًا كاملًا والتبويب يعرض الاسم أصلًا وخانة البحث تعرض الكلمة، وحُذفت معه قاعدة CSS الخاصة به ومفاتيح fcc_dock_title/fcp_dock_title من openCardFloat وopenPurchFloat وfcDockParts — وزرا «⤢ طفو» و✕ انتقلا إلى الصف الأول من النموذج نفسه (صف البحث) داخل نافذة المرسَّب بصنف docked-only لا يظهر إلا والنموذج مرسَّب (صنف docked يُضاف للنافذة عند dockFloat ويُزال عند undockFloat)، و✕ الجديد يغلق الكائن المرسَّب عبر closeWindow كما ✕ التبويب تمامًا — (2) جلسة المستخدم saveSession/restoreSession في خيارات المستخدم نفسها: الكائنات المفتوحة بترتيبها (docs) والكائن المعروض (active)، وحالة كل من «بطاقات المواد» و«سجل المشتريات» العائَمَين (مغلق/عائم/مرسَّب) مع نص بحثه الملتزم به ورقم صفحته، تُحفظ عند كل تغيير حالة (فتح/إغلاق/ترسيف/طفو/بحث Enter أو change) وعند beforeunload/pagehide وإخفاء التبويب، مع بوابة SESSION_READY كي لا يطيح الإقلاع بالحالة المحفوظة، والاستعادة في init بعد استعادة المسودة ورسم الفاتورة: العائَمَان يُفتحان بحالتهما ونصّيهما وصفحتيهما (والترسيف يعيد النافذة المرسَّبة)، ثم الكائنات المفتوحة بترتيبها المحفوظ (وثابت: إن لم تكن فاتورة مشتريات ضمن الجلسة فهي مغلقة بإرادة المستخدم تُغلق حتى هي)، ثم يُعاد عرض الكائن المعروض عند الخروج — ومواضع النموذجين وحجماهما وخيارات القائمة والأحجام والخطوط تُحفظ وتُستعاد كما في السابق — وكل ما في 06af (البحث بضغط Enter لا أثناء الكتابة) و06ae و06ad و06ac و06ab و06aa و06z و06y و06x و06v و06u و06t و06s و06r و06q و06m و06i و06o باقٍ ما لم يُذكر خلاف ذلك. — 06af: بطلب المستخدم «في النماذج العائمة لا تجعل البحث يبدأ بمجرد بدء الكتابة لأن هذا يبطئ الاستجابة بل إجعل البحث يبدأ بعد ضغط إنتر» — خانتا بحث «بطاقات المواد» و«سجل المشتريات» العائمان لم تعودا تُصفّيان حيًّا مع كل ضغطة مفتاح: أُزيل مستمعا input واستُبدلا بمستمع keydown يشغّل البحث عند Enter ومستمع change يشغّله عند اختيار مادة من قائمة الإكمال dl_cards_all أو مغادرة الخانة بعد تغيير نصها، فالكتابة وحدها لا تُطلق أي استعلام ولا يُعاد رسم الجدول إلا مرة واحدة عند الالتزام — تفريغ الخانة ثم Enter يعرض جميع السجلات كما كان — وحُدث تلميحا الخانتين ليوضحا «يبدأ البحث بضغط Enter لا أثناء الكتابة» — وبقية سلوك البحث كما هو: البحث في جميع الحقول/الأعمدة المعروضة بلا مطابقة تامة مع دعم نمط نجمة أكسس * و? وإعادة الترقيم إلى الصفحة الأولى عند البحث والمتابعة مع السجل الحالي — وكل ما في 06ae (حذف الرصيد من العائم وحذف أزرار الجداول الأربعة ومجموعة الجداول كاملة) و06ad و06ac و06ab و06aa و06z و06y و06x و06v و06u و06t و06s و06r و06q و06m و06i و06o باقٍ ما لم يُذكر خلاف ذلك. — 06ae: بطلب المستخدم «1.احذف من نموذج عائم سجل المشتريات زر الرصيد وكل ما يتعلق به 2.احذف زر مبيعات في القائمة الجانبية في قسم الجداول وكل ما يتعلق به 3.احذف زر الرصيد في القائمة الجانبية في قسم الجداول وكل ما يتعلق به 4.احذف زر نسخة من مشتريات في القائمة الجانبية في قسم الجداول وكل ما يتعلق به 5.احذف زر ضبط المشتريات في القائمة الجانبية في قسم الجداول وكل ما يتعلق به 6.احذف قسم الجداول في القائمة الجانبية وكل ما يتعلق به» — (1) «سجل المشتريات (عائم)»: حُذف groupbox «الرصيد» بكامله (المادة b2_mat وزرا b2_calc/b2_clear وورقة b2_sheet) مع دواله balanceOf/calcBalanceInto/calcBalance/calcBalance2 وربطَي b2_calc/b2_clear في bindEvents وتحديث مادة الرصيد من السطر المحدد في onRowClick ومن مادة الفتح في openPurchFloat ومن الترسيف في dockFloat، وبقي النقر على سطر الجدول يسجل رقم السطر (APP.curPurchaseRow) بلا نموذج رصيد — (2+3+4+5) حُذفت نوافذ «مبيعات» (win-sales بـ renderSales وخانا s_search وزر s_add وورقة sales_sheet وربطهما) و«الرصيد» (win-balance بـ b_mat/b_calc/b_clear/balance_sheet) و«نسخة من مشتريات» (win-copypurch بـ renderCopyPurch وخانا cp_search وpager cp_prev/cp_page/cp_next وورقة copypurch_sheet وربطها وAPP.cpPage) و«ضبط المشتريات — تكرار في مشتريات» (win-dups بـ baghithAnTakrarFiMushtariat وTAKRAR_COLS وrenderTakrarSheet وزر btn_dups وورقة takrar_sheet وربطه) بكل ما يتعلق بها من HTML وWINDOWS وopenWindow وbindEvents، و«dl_cards_all» الذي كان معرَّفًا داخل win-balance نُقل إلى المستوى الأعلى لأن خانتَي بحث «بطاقات المواد» و«سجل المشتريات» العائَمَين تعتمدان عليه ولم يُمس تعبئته — (6) مجموعة «الجداول» حُذفت من GRP_ORDER فلوحة الكائنات صارت مجموعتين (الفواتير، العروض والحسابات) بثلاثة مداخل (فاتورة مشتريات، نموذج حساب العروض، تعديل العروض) وعدّادات الصفحات الميتة fPage/cPage/cpPage أُزيلت من APP — وبيانات DB.sales وsalesCols بقيتا في القاعدة المحلية لأن إعادة تسمية المادة وتحرير بطاقات المواد والحفظ والمسودة تستخدمها — وكل ما في 06ad و06ac (العائم بأعمدته الخمسة والعشرين والتصغير حتى سجل واحد والبحث بنمط * في كل النماذج وبحث الكائنات) والمقابض الثمانية وحفظ الحجم والموضع والترسيف بجنب فاتورة مشتريات وCtrl+2/Ctrl+3 للعائم وCtrl+4 للحاسبة والترقيم والمتابعة مع السجل الحالي باقية كما هي — تحقق حي 28/28 بنقرة فأرة حقيقية (القائمة مجموعتان وثلاثة مداخل بلا «الجداول»، لا groupbox رصيد داخل العائم ورأسه 26 خانة، dl_cards_all معبأ 5000، نجمة *ا* في العائم والبطاقات، ترسيف (─) وتبويب «📜 سجل المشتريات» بجنب فاتورة مشتريات وطفو وCtrl+2/Ctrl+3 وCtrl+4 للحاسبة، فتح حساب العروض وتعديل العروض من القائمة بنقرات حقيقية وتعديل العروض يعرض سطور الفاتورة، بحث الكائنات يصفّي ويُعيد المجموعتين، بلا أي خطأ صفحات) — و06ad و06ac و06ab و06aa و06z و06y و06x و06v و06u و06t و06s و06r و06q و06m و06i و06o باقية ما لم يُذكر خلاف ذلك. */
+const APP_VER = '2026-11-10h';   /* 06ak: بطلب المستخدم «فيما يتعلق بميزة ( الطفو والرجوع إلى التبويبات ) طبق هذه الميزة على نموذج فاتورة مشتريات» — نموذج فاتورة مشتريات نفسه صار قابلًا للطفو والعودة إلى التبويبات مثل العائَمَين: رمز ⤢ في تبويبه (يظهر بمرور المؤشر على التبويب كما في المرسَّبتين 06aj) ينقل محتوى النافذة كله (رأس الفاتورة وورقة سطورها) إلى إطار عائم ثالث fc-fatora برأس «نموذج عائم — فاتورة مشتريات» يُسحب منه إلى أي موضع وتُحجَّم حوافه وأركانه الثمانية (بحدّي أدنى 560×320 يناسبَي نموذج الإدخال — امتداد fcMakeResizable/fcMakeDraggable وIIFE استعادة المواضع بحدّي أدنى لكل نموذج) بموضع وحجم يُحفظَان في خيارات المستخدم (fcPosFatora/fcSizeFatora) ويستعادان، وعنوان العائم يعرض رقم الفاتورة الحالي، وتبويب «فاتورة مشتريات» يُزال من الشريط أثناء الطفو وينشط التبويب البديل (أو الحالة الفارغة إن لم يبق كائن)، وزر ─ في رأس العائم يعيده تبويبًا وينشّطه، و✕ يغلق فاتورة مشتريات كليًّا، وEsc يغلق النموذج العائم الأمامي أيًّا كان الثلاثة (fwTopmost تشمل الإطار الثالث)، والنقر في أي موضع منه يجلبه إلى المقدمة، ومدخل «فاتورة مشتريات» في القائمة الجانبية وهو عائم يعيده تبويبًا (dockFatora) بدل فتحه مكررًا، وجلسة المستخدم 06ag تحفظ حالته الثالثة (fatora.st = docked/float/closed) وتستعيده عائمًا كما أُطفئ مع بقية حالات العائَمَين، والبناء في buildDocTabs صار canFloat = المرسَّبة أو فاتورة مشتريات لعرض ⤢ وتلميحه، وحاوية الإشعارات toasts صارت pointer-events:none كي لا تحجب إشعاراتها الفارغة ركنَي تحجيم النماذج العائمة السفليَّين (كانت تغطي أسفل اليمين وتمنع الإمساك بالركن) — 06aj: بطلب المستخدم «أريد أن يظهر ⤢ فقط عند مرور المؤشر على التبويب (لتقليل النقر الخاطئ عليه) وأريد أن يظهر اسم النموذج في التبويب» — رمز الطفو (dfx) في تبويب النافذة المرسَّبة صار مخفيًا افتراضيًا ولا يظهر إلا بمرور المؤشر على التبويب: قاعدة CSS تجعله visibility:hidden ويُظهره عند hover على التبويب، وحيزه محجوز دائمًا بمقاس ✕ كي لا يتحرك ✕ ولا يتغير عرض التبويب لحظة ظهوره، والعنصر المخفي بvisibility لا يلتقط النقر أصلًا فلا نقرة خاطئة عليه، وعاد اسم النموذج (بطاقات المواد / سجل المشتريات) ظاهرًا في التبويب المرسَّب بأيقونته وبتقصير عند الضيق (dname) كما في تبويبات الكائنات السائرة بدل أن يكون رمز الكائن وحده، وحُدث تلميح التبويب ليذكر أن ⤢ يظهر بمرور المؤشر، وأضيفت العبارة نفسها إلى تلميحات زرَّي التصغير (─) وزرَّي قسم التحكم، والنقر على ⤢ يستدعي undockFloat كما في 06ai وعلى ✕ closeWindow كما كان — 06ai: بطلب المستخدم «نعم قم بنقل زر طفو إلى تبويب النافذة بشرط أن لا يزداد حجم تبويب النافذة (مثلا بدل كلمة تبويب ضع رمز مناسب)» — زرّا «⤢ طفو» (fcc_dock_float وfcp_dock_float) اللذان كانا في صف البحث داخل النافذتين المرسَّبتين حُذفا من HTML مع ربطَيهما وفَضِّ قاعدتَي docked-only، وصار طفو المرسَّبة من رمز ⤢ صغير (dfx) داخل تبويب النافذة نفسه بجنب ✕ يستدعي undockFloat مباشرة، والتبويب المرسَّب يعرض رمز الكائن (🗂️ بطاقات المواد / 📜 سجل المشتريات) بدل كلمته تنفيذًا لشرط المستخدم «بدل كلمة التبويب رمز مناسب» فلا يزداد حجم التبويب بل يصغر، والاسم الكامل يبقى في تلميح التبويب مع بيان أن ⤢ للطفو و✕ للإغلاق، وحُدثت تلميحات زرَّي التصغير (─) وزرَّي قسم التحكم لتُرشد إلى رمز ⤢ في التبويب — وكل ما في 06ah و06ag (جلسة المستخدم saveSession/restoreSession وحذف رأس النافذة المرسَّبة) و06af و06ae و06ad و06ac و06ab و06aa و06z و06y و06x و06v و06u و06t و06s و06r و06q و06m و06i و06o باقٍ ما لم يُذكر خلاف ذلك. — 06ah: بطلب المستخدم «ما في داعي لزر x جانب زر طفو في النماذج العائمة» — حُذف زرا ✕ (fcc_dock_close وfcp_dock_close) الذي كان 06ag وضعه بجوار زر «طفو» في الصف الأول من النموذج (صف البحث) داخل النافذة المرسَّبة، مع ربطَيه في closeWindow وحذف ذكره من تعليقَي HTML ورأس قاعدة CSS — فبقي في صف البحث المرسَّب زر «طفو» وحده والإغلاق يبقى من ✕ تبويب النافذة في شريط تبويبات المستندات (dx) الذي يغلق الكائن المرسَّب عبر closeWindow نفسه فيعيد المحتوى إلى النموذج العائم ويغلقه (سلوك 06y) — وكل ما في 06ag (جلسة المستخدم saveSession/restoreSession وحذف رأس النافذة المرسَّبة) و06af و06ae و06ad و06ac و06ab و06aa و06z و06y و06x و06v و06u و06t و06s و06r و06q و06m و06i و06o باقٍ ما لم يُذكر خلاف ذلك. — 06ag: بطلب المستخدم «1.اجعل زر طفو وزر إغلاق في رأس النموذج واحذفهما من داخل النموذج (في النماذج العائمة بعد تكبيرها) ومافي داعي تكتب تحت رأس النموذج اسم النموذج والكلمة المبحوث عنها (لتوفير المساحة) 2.يجب حفظ جميع خيارات المستخدم بما فيها النماذج المفتوحة وحالاتها كلها» — (1) رأس النافذتين المرسَّبتين (win-floatcard وwin-floatpurch بعد تكبير النموذجين العائَمَين بالتصغير ─) حُذف كليًّا من HTML: كان يكتب تحت شريط تبويبات المستندات اسم النموذج والكلمة المبحوث عنها فيستهلك سطرًا كاملًا والتبويب يعرض الاسم أصلًا وخانة البحث تعرض الكلمة، وحُذفت معه قاعدة CSS الخاصة به ومفاتيح fcc_dock_title/fcp_dock_title من openCardFloat وopenPurchFloat وfcDockParts — وزرا «⤢ طفو» و✕ انتقلا إلى الصف الأول من النموذج نفسه (صف البحث) داخل نافذة المرسَّب بصنف docked-only لا يظهر إلا والنموذج مرسَّب (صنف docked يُضاف للنافذة عند dockFloat ويُزال عند undockFloat)، و✕ الجديد يغلق الكائن المرسَّب عبر closeWindow كما ✕ التبويب تمامًا — (2) جلسة المستخدم saveSession/restoreSession في خيارات المستخدم نفسها: الكائنات المفتوحة بترتيبها (docs) والكائن المعروض (active)، وحالة كل من «بطاقات المواد» و«سجل المشتريات» العائَمَين (مغلق/عائم/مرسَّب) مع نص بحثه الملتزم به ورقم صفحته، تُحفظ عند كل تغيير حالة (فتح/إغلاق/ترسيف/طفو/بحث Enter أو change) وعند beforeunload/pagehide وإخفاء التبويب، مع بوابة SESSION_READY كي لا يطيح الإقلاع بالحالة المحفوظة، والاستعادة في init بعد استعادة المسودة ورسم الفاتورة: العائَمَان يُفتحان بحالتهما ونصّيهما وصفحتيهما (والترسيف يعيد النافذة المرسَّبة)، ثم الكائنات المفتوحة بترتيبها المحفوظ (وثابت: إن لم تكن فاتورة مشتريات ضمن الجلسة فهي مغلقة بإرادة المستخدم تُغلق حتى هي)، ثم يُعاد عرض الكائن المعروض عند الخروج — ومواضع النموذجين وحجماهما وخيارات القائمة والأحجام والخطوط تُحفظ وتُستعاد كما في السابق — وكل ما في 06af (البحث بضغط Enter لا أثناء الكتابة) و06ae و06ad و06ac و06ab و06aa و06z و06y و06x و06v و06u و06t و06s و06r و06q و06m و06i و06o باقٍ ما لم يُذكر خلاف ذلك. — 06af: بطلب المستخدم «في النماذج العائمة لا تجعل البحث يبدأ بمجرد بدء الكتابة لأن هذا يبطئ الاستجابة بل إجعل البحث يبدأ بعد ضغط إنتر» — خانتا بحث «بطاقات المواد» و«سجل المشتريات» العائمان لم تعودا تُصفّيان حيًّا مع كل ضغطة مفتاح: أُزيل مستمعا input واستُبدلا بمستمع keydown يشغّل البحث عند Enter ومستمع change يشغّله عند اختيار مادة من قائمة الإكمال dl_cards_all أو مغادرة الخانة بعد تغيير نصها، فالكتابة وحدها لا تُطلق أي استعلام ولا يُعاد رسم الجدول إلا مرة واحدة عند الالتزام — تفريغ الخانة ثم Enter يعرض جميع السجلات كما كان — وحُدث تلميحا الخانتين ليوضحا «يبدأ البحث بضغط Enter لا أثناء الكتابة» — وبقية سلوك البحث كما هو: البحث في جميع الحقول/الأعمدة المعروضة بلا مطابقة تامة مع دعم نمط نجمة أكسس * و? وإعادة الترقيم إلى الصفحة الأولى عند البحث والمتابعة مع السجل الحالي — وكل ما في 06ae (حذف الرصيد من العائم وحذف أزرار الجداول الأربعة ومجموعة الجداول كاملة) و06ad و06ac و06ab و06aa و06z و06y و06x و06v و06u و06t و06s و06r و06q و06m و06i و06o باقٍ ما لم يُذكر خلاف ذلك. — 06ae: بطلب المستخدم «1.احذف من نموذج عائم سجل المشتريات زر الرصيد وكل ما يتعلق به 2.احذف زر مبيعات في القائمة الجانبية في قسم الجداول وكل ما يتعلق به 3.احذف زر الرصيد في القائمة الجانبية في قسم الجداول وكل ما يتعلق به 4.احذف زر نسخة من مشتريات في القائمة الجانبية في قسم الجداول وكل ما يتعلق به 5.احذف زر ضبط المشتريات في القائمة الجانبية في قسم الجداول وكل ما يتعلق به 6.احذف قسم الجداول في القائمة الجانبية وكل ما يتعلق به» — (1) «سجل المشتريات (عائم)»: حُذف groupbox «الرصيد» بكامله (المادة b2_mat وزرا b2_calc/b2_clear وورقة b2_sheet) مع دواله balanceOf/calcBalanceInto/calcBalance/calcBalance2 وربطَي b2_calc/b2_clear في bindEvents وتحديث مادة الرصيد من السطر المحدد في onRowClick ومن مادة الفتح في openPurchFloat ومن الترسيف في dockFloat، وبقي النقر على سطر الجدول يسجل رقم السطر (APP.curPurchaseRow) بلا نموذج رصيد — (2+3+4+5) حُذفت نوافذ «مبيعات» (win-sales بـ renderSales وخانا s_search وزر s_add وورقة sales_sheet وربطهما) و«الرصيد» (win-balance بـ b_mat/b_calc/b_clear/balance_sheet) و«نسخة من مشتريات» (win-copypurch بـ renderCopyPurch وخانا cp_search وpager cp_prev/cp_page/cp_next وورقة copypurch_sheet وربطها وAPP.cpPage) و«ضبط المشتريات — تكرار في مشتريات» (win-dups بـ baghithAnTakrarFiMushtariat وTAKRAR_COLS وrenderTakrarSheet وزر btn_dups وورقة takrar_sheet وربطه) بكل ما يتعلق بها من HTML وWINDOWS وopenWindow وbindEvents، و«dl_cards_all» الذي كان معرَّفًا داخل win-balance نُقل إلى المستوى الأعلى لأن خانتَي بحث «بطاقات المواد» و«سجل المشتريات» العائَمَين تعتمدان عليه ولم يُمس تعبئته — (6) مجموعة «الجداول» حُذفت من GRP_ORDER فلوحة الكائنات صارت مجموعتين (الفواتير، العروض والحسابات) بثلاثة مداخل (فاتورة مشتريات، نموذج حساب العروض، تعديل العروض) وعدّادات الصفحات الميتة fPage/cPage/cpPage أُزيلت من APP — وبيانات DB.sales وsalesCols بقيتا في القاعدة المحلية لأن إعادة تسمية المادة وتحرير بطاقات المواد والحفظ والمسودة تستخدمها — وكل ما في 06ad و06ac (العائم بأعمدته الخمسة والعشرين والتصغير حتى سجل واحد والبحث بنمط * في كل النماذج وبحث الكائنات) والمقابض الثمانية وحفظ الحجم والموضع والترسيف بجنب فاتورة مشتريات وCtrl+2/Ctrl+3 للعائم وCtrl+4 للحاسبة والترقيم والمتابعة مع السجل الحالي باقية كما هي — تحقق حي 28/28 بنقرة فأرة حقيقية (القائمة مجموعتان وثلاثة مداخل بلا «الجداول»، لا groupbox رصيد داخل العائم ورأسه 26 خانة، dl_cards_all معبأ 5000، نجمة *ا* في العائم والبطاقات، ترسيف (─) وتبويب «📜 سجل المشتريات» بجنب فاتورة مشتريات وطفو وCtrl+2/Ctrl+3 وCtrl+4 للحاسبة، فتح حساب العروض وتعديل العروض من القائمة بنقرات حقيقية وتعديل العروض يعرض سطور الفاتورة، بحث الكائنات يصفّي ويُعيد المجموعتين، بلا أي خطأ صفحات) — و06ad و06ac و06ab و06aa و06z و06y و06x و06v و06u و06t و06s و06r و06q و06m و06i و06o باقية ما لم يُذكر خلاف ذلك. */
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 const DRAFT_KEY = 'fatora_mushtariat_draft_v1';   /* مسودة الفاتورة الجارية (سطور + رأس) — تُستعاد عند تحديث الصفحة أو تغيير قاعدة البيانات (06a) */
@@ -3227,18 +3244,19 @@ function buildDocTabs() {
   bar.innerHTML = '';
   openDocs.forEach(id => {
     const isDock = !WINDOWS.some(x => x.id === id) && !!DOCK_TABS[id];   /* 06aj: المرسَّبة تُعرض تبويبًا باسم النموذج و⤢ لا يظهر إلا بمرور المؤشر */
+    const canFloat = isDock || id === 'win-fatora';   /* 06ak: فاتورة مشتريات نفسها قابلة للطفو من رمز ⤢ في تبويبها */
     const w = WINDOWS.find(x => x.id === id) || DOCK_TABS[id];   /* 06z: المرسَّبة بلا مدخل قائمة */
     if (!w) return;
     const t = document.createElement('div');
     t.className = 'dtab' + (id === activeDoc ? ' active' : '');
     t.dataset.win = id;
-    t.title = w.name + (isDock ? ' (مرسَّبة)' : '') + ' — انقر للعرض' + (isDock ? '، ⤢ طفو يظهر بمرور المؤشر على التبويب ويعيد النموذج عائمًا، ✕ للإغلاق' : '، ✕ للإغلاق');;
-    t.innerHTML = isDock
-      ? `<span class="ico">${w.ico}</span><span class="dname">${w.name}</span><span class="dfx" title="طفو — إعادة «${w.name}» نموذجًا عائمًا بموضعه وحجمه المحفوظَين">⤢</span><span class="dx" title="إغلاق هذا الكائن">✕</span>`   /* 06aj: اسم النموذج في التبويب و⤢ لا يظهر إلا بمرور المؤشر */
+    t.title = w.name + (isDock ? ' (مرسَّبة)' : '') + ' — انقر للعرض' + (canFloat ? '، ⤢ طفو يظهر بمرور المؤشر على التبويب ويعيد النموذج عائمًا، ✕ للإغلاق' : '، ✕ للإغلاق');;
+    t.innerHTML = canFloat   /* 06aj: المرسَّبة — 06ak: وفاتورة مشتريات — تحمل ⤢ (بمرور المؤشر) بجنب ✕ */
+      ? `<span class="ico">${w.ico}</span><span class="dname">${w.name}</span><span class="dfx" title="طفو — إعادة «${w.name}» نموذجًا عائمًا بموضعه وحجمه المحفوظَين">⤢</span><span class="dx" title="إغلاق هذا الكائن">✕</span>`   /* 06aj: اسم النموذج في التبويب و⤢ لا يظهر إلا بمرور المؤشر — 06ak: ونفسه لتبويب فاتورة مشتريات */
       : `<span class="ico">${w.ico}</span><span class="dname">${w.name}</span><span class="dx" title="إغلاق هذا الكائن">✕</span>`;;
     t.onclick = e => {
       if (e.target.classList.contains('dx')) closeWindow(id);
-      else if (e.target.classList.contains('dfx')) undockFloat(id === 'win-floatcard' ? 'card' : 'purch');   /* 06ai: طفو من رمز التبويب */
+      else if (e.target.classList.contains('dfx')) { if (id === 'win-fatora') floatFatora(); else undockFloat(id === 'win-floatcard' ? 'card' : 'purch'); }   /* 06ai: طفو المرسَّبة من رمز التبويب — 06ak: وطفو فاتورة مشتريات من تبويبها */
       else openWindow(id);
     };
     bar.appendChild(t);
@@ -3256,6 +3274,7 @@ function openWindow(id) {
   activateDoc(id);
   if (id === 'win-floatcard' && !fccDocked) dockFloat('card');   /* 06z: الترسيف من الفتح وهو غير مرسَّب فقط — حماية من الاستدعاء المتبادل */
   if (id === 'win-floatpurch' && !fcpDocked) dockFloat('purch');
+  if (id === 'win-fatora' && fcfFloated) { dockFatora(); return; }   /* 06ak: طلبها من القائمة وهي عائمة يعيدها تبويبًا */
   if (id === 'win-editoffers') renderOffersSheet();
   /* 06ae: استدعاءات renderSales وrenderCopyPurch وrenderTakrarSheet للنوافذ المحذوفة أُزيلت معها */
   saveSession();   /* 06ag: فتح كائن حالة جلسة تُحفظ */
@@ -3433,6 +3452,7 @@ function saveSession() {
       floats: {
         card: { st: fstate(fccDocked, $('fc-card')), q: matCard, page: fccPage },
         purch: { st: fstate(fcpDocked, $('fc-purch')), q: matPurch, page: fcpPage },
+        fatora: { st: fcfFloated ? 'float' : (openDocs.includes('win-fatora') ? 'docked' : 'closed') },   /* 06ak */
       },
     } });
   } catch (e) {}
@@ -3464,7 +3484,8 @@ function restoreSession() {
     const docs = Array.isArray(s.docs) ? s.docs.filter(valid) : [];
     docs.forEach(id => { if (!openDocs.includes(id)) openWindow(id); });
     /* فاتورة مشتريات فُتحت في autoexec — إن لم تكن ضمن الجلسة المحفوظة فهي مغلقة بإرادة المستخدم */
-    if (!docs.includes('win-fatora') && openDocs.includes('win-fatora')) closeWindow('win-fatora');
+    if (fl.fatora && fl.fatora.st === 'float') floatFatora();   /* 06ak: العائمة تُستعاد عائمةً — المحتوى إلى إطارها وتبويبها يُزال */
+    else if (!docs.includes('win-fatora') && openDocs.includes('win-fatora')) closeWindow('win-fatora');
     if (s.active && openDocs.includes(s.active)) activateDoc(s.active);
   } catch (e) {}
 }
@@ -5324,6 +5345,8 @@ $('fcc_close').onclick = closeCardFloat;
 $('fcc_refresh').onclick = () => { openCardFloat(matCard); toast('أُعيد استعلام بطاقة المادة', 'ok'); };
 $('fcp_close').onclick = closePurchFloat;
 $('fcp_refresh').onclick = () => { openPurchFloat(matPurch); toast('أُعيد استعلام سجل المشتريات', 'ok'); };
+$('fcf_min').onclick = () => dockFatora();     /* 06ak: ─ يعيد فاتورة مشتريات تبويبًا في شريط التبويبات */
+$('fcf_close').onclick = closeFatoraFloat;     /* 06ak: ✕ يغلق فاتورة مشتريات كليًّا من العائم */
 /* ترقيم صفحات النموذجين العائمان — كما في نوافذ المشتريات وبطاقات المواد */
 $('fcc_prev').onclick = () => { if (fccPage > 0) { fccPage--; renderCardFloat(); } };
 $('fcc_next').onclick = () => { fccPage++; renderCardFloat(); };
@@ -5370,12 +5393,13 @@ function fcMakeDraggable(head, el, prefKey) {
 }
 fcMakeDraggable($('fcc_head'), $('fc-card'), 'fcPosCard');
 fcMakeDraggable($('fcp_head'), $('fc-purch'), 'fcPosPurch');
+fcMakeDraggable($('fcf_head'), $('fc-fatora'), 'fcPosFatora');   /* 06ak */
 
 /* ---------- 06y: مقدمة النموذجين العائمان (من 06t) — وزر التكبير أُلغي بطلب المستخدم ---------- */
 let FW_Z = 91;   /* عدّاد طبقات النوافذ العائمة — كل تركيز يرفع النموذج درجة فوق الآخر */
 function floatFront(el) { FW_Z++; el.style.zIndex = String(FW_Z); }
 /* النقر في أي موضع من النموذج (رأسه أو محتواه أو خاناتها) يجلب به إلى المقدمة */
-['fc-card', 'fc-purch'].forEach(id => {
+['fc-card', 'fc-purch', 'fc-fatora'].forEach(id => {
   const el = $(id);
   el.addEventListener('pointerdown', () => floatFront(el), true);
 });
@@ -5426,11 +5450,42 @@ function undockFloat(which, keepClosed) {
   saveSession();   /* 06ag: الطفو حالة جلسة تُحفظ */
 }
 
+/* ---------- 06ak: طفو فاتورة مشتريات نفسها — المحتوى ينتقل إلى الإطار العائم وتبويبها يُزال، ----------
+   ---------- والعودة من ─ في رأس العائم أو من مدخل القائمة الجانبية، و✕ أو Esc يغلقان كليًّا ---------- */
+var fcfFloated = false;
+function floatFatora() {
+  if (fcfFloated) return;
+  fcfFloated = true;
+  const body = $('win-fatora').querySelector('.win-body');
+  Array.from(body.children).forEach(n => $('fcf_body').appendChild(n));
+  closeWindow('win-fatora');   /* يزيل التبويب وينشّط البديل ويحفظ الجلسة (الحالة آنذاك float) */
+  $('fcf_title').textContent = 'نموذج عائم — فاتورة مشتريات' + ($('f_invoiceno').value ? ' : ' + $('f_invoiceno').value : '');
+  $('fc-fatora').classList.remove('hidden');
+  floatFront($('fc-fatora'));   /* الفتح يجلب النموذج إلى المقدمة */
+  saveSession();
+}
+function dockFatora() {
+  if (!fcfFloated) return;
+  fcfFloated = false;
+  const body = $('win-fatora').querySelector('.win-body');
+  Array.from($('fcf_body').children).forEach(n => body.appendChild(n));
+  $('fc-fatora').classList.add('hidden');
+  openWindow('win-fatora');   /* يعيد التبويب وينشّطه ويحفظ الجلسة */
+}
+function closeFatoraFloat() {
+  if (!fcfFloated) return;
+  fcfFloated = false;
+  const body = $('win-fatora').querySelector('.win-body');
+  Array.from($('fcf_body').children).forEach(n => body.appendChild(n));
+  $('fc-fatora').classList.add('hidden');
+  saveSession();   /* فاتورة مشتريات لم تكن في openDocs أصلًا وهي عائمة — صارت مغلقة */
+}
+
 /* 06y: التحجيم بالسحب من الحواف والأركان الثمانية — والحجم يُحفظ في خيارات المستخدم ويُستعاد */
-function fcMakeResizable(el, prefKey) {
+function fcMakeResizable(el, prefKey, MINW, MINH) {   /* 06ak: حدّا أدنى لكل نموذج — الافتراضي 380×132 */
   /* 06ac: حرية التصغير حتى ظهور سجل واحد من الجدول بطلب المستخدم — أدنى ارتفاع =
      الرأس + خانة البحث + رأس الجدول + صف سجل واحد (ومنها min-height:40px للورقة أدناه) */
-  const MINW = 380, MINH = 132;
+  MINW = MINW || 380; MINH = MINH || 132;
   ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].forEach(dir => {
     const hnd = document.createElement('div');
     hnd.className = 'fwin-rz fwin-rz-' + dir;
@@ -5478,10 +5533,11 @@ function fcMakeResizable(el, prefKey) {
 }
 fcMakeResizable($('fc-card'), 'fcSizeCard');
 fcMakeResizable($('fc-purch'), 'fcSizePurch');
+fcMakeResizable($('fc-fatora'), 'fcSizeFatora', 560, 320);   /* 06ak: حدّان يناسبان نموذج الإدخال */
 
 /* Esc يغلق النموذج الأمامي (الأعلى تركيزًا) فقط — بلا سبق على محرر خلية أو حوار مفتوح */
 function fwTopmost() {
-  const vis = ['fc-card', 'fc-purch'].map($).filter(w => !w.classList.contains('hidden'));
+  const vis = ['fc-card', 'fc-purch', 'fc-fatora'].map($).filter(w => !w.classList.contains('hidden'));   /* 06ak */
   if (!vis.length) return null;
   return vis.reduce((a, b) => ((parseInt(b.style.zIndex, 10) || 0) >= (parseInt(a.style.zIndex, 10) || 0)) ? b : a);
 }
@@ -5491,7 +5547,7 @@ document.addEventListener('keydown', e => {
   if ($('modal-back').classList.contains('show')) return;            /* الحوار أولًا */
   const top = fwTopmost();
   if (!top) return;
-  if (top.id === 'fc-card') closeCardFloat(); else closePurchFloat();
+  if (top.id === 'fc-card') closeCardFloat(); else if (top.id === 'fc-fatora') closeFatoraFloat(); else closePurchFloat();   /* 06ak */
   e.preventDefault();
   e.stopPropagation();
 }, true);
@@ -5499,13 +5555,13 @@ document.addEventListener('keydown', e => {
 /* ---------- 06y: استعادة موضع وحجم النموذجين المحفوظين ---------- */
 (function () {
   const p = loadUIPrefs();
-  [['fcPosCard', 'fcSizeCard', 'fc-card'], ['fcPosPurch', 'fcSizePurch', 'fc-purch']].forEach(([posKey, sizeKey, id]) => {
+  [['fcPosCard', 'fcSizeCard', 'fc-card', 380, 132], ['fcPosPurch', 'fcSizePurch', 'fc-purch', 380, 132], ['fcPosFatora', 'fcSizeFatora', 'fc-fatora', 560, 320]].forEach(([posKey, sizeKey, id, MINW, MINH]) => {   /* 06ak */
     const el = $(id);
     const sz = p[sizeKey];   /* الحجم المحفوظ بعد آخر تحجيم بالسحب */
     if (sz) {
       const w = parseFloat(sz.w), h = parseFloat(sz.h);
-      if (!isNaN(w) && w >= 380 && w <= window.innerWidth - 8) { el.style.width = Math.round(w) + 'px'; el.classList.add('fw-sized'); }
-      if (!isNaN(h) && h >= 132 && h <= window.innerHeight - 8) { el.style.height = Math.round(h) + 'px'; el.classList.add('fw-sized'); }
+      if (!isNaN(w) && w >= MINW && w <= window.innerWidth - 8) { el.style.width = Math.round(w) + 'px'; el.classList.add('fw-sized'); }
+      if (!isNaN(h) && h >= MINH && h <= window.innerHeight - 8) { el.style.height = Math.round(h) + 'px'; el.classList.add('fw-sized'); }
     }
     const v = p[posKey];
     if (!v) return;
