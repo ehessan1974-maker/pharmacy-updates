@@ -627,33 +627,14 @@ body.selgrab table.sheet th.colsel,body.selgrab table.sheet tr.rowsel td.rowh{cu
     </div>
   </div>
 
-  <!-- 06ab: نموذج «مشتريات» العادي (win-purchases) حُذف نهائيًا بطلب المستخدم مع مدخله في القائمة الجانبية وكافة ما يتعلق به — ونُقل إلى العائم خلافاً لـ06ab «الرصيد» وحده الباقي، وحُذفت إضافاته الأخرى (الأعمدة السبعة وتصفية المستودع والنقر المزدوج والنموذج الفرعي «السعر الأساسي») في 06ad بطلب المستخدم انظر fc-purch أدناه -->
-  <!-- ================= مبيعات ================= -->
-  <div class="window hidden" id="win-sales">
-    <div class="win-head"><span class="dot"></span>مبيعات</div>
-    <div class="win-body">
-      <div class="row">
-        <div class="field" style="max-width:320px"><label>بحث</label><input class="i" id="s_search" title="بحث في المادة — يدعم نمط أكسس: * أي عدد من الأحرف و? حرف واحد (مثل *فولتارين* أو ص*ن) — بلا نجمة = جزء كلمة"></div>
-        <span class="flex1"></span>
-        <button class="tbtn" id="s_add">＋ سطر مبيعات</button>
-      </div>
-      <div class="sheetwrap" id="sales_sheet" style="max-height:480px"></div>
-    </div>
-  </div>
+  <!-- 06ab: نموذج «مشتريات» العادي (win-purchases) حُذف نهائيًا بطلب المستخدم مع مدخله في القائمة الجانبية وكافة ما يتعلق به — وحُذفت إضافاته المنقولة إلى العائم (الأعمدة السبعة وتصفية المستودع والنقر المزدوج والنموذج الفرعي «السعر الأساسي») في 06ad بطلب المستخدم، ثم حُذف «الرصيد» (b2_*) من العائم هو الآخر في 06ae بطلب المستخدم انظر fc-purch أدناه -->
+  <!-- 06ae: نافذة «مبيعات» (win-sales) حُذفت بكل ما تتعلق بها بطلب المستخدم —
+       وبيانات DB.sales بقيت في القاعدة المحلية (إعادة التسمية وتحرير البطاقات والحفظ تستخدمها) -->
 
-  <!-- ================= الرصيد ================= -->
-  <div class="window hidden" id="win-balance">
-    <div class="win-head"><span class="dot"></span>الرصيد</div>
-    <div class="win-body">
-      <div class="row">
-        <div class="field" style="max-width:380px"><label>المادة (افتراضيًا المادة الحالية من فاتورة المشتريات)</label><div class="ctl"><input class="i" id="b_mat" list="dl_cards_all"><datalist id="dl_cards_all"></datalist></div></div>
-        <button class="tbtn primary" id="b_calc">الرصيد</button>
-        <button class="tbtn" id="b_clear">مسح (المادة_Click)</button>
-      </div>
-      <div class="sheetwrap" id="balance_sheet" style="max-height:260px"></div>
-      <div class="hint">الرصيد = مجموع (الكمية + المجاني) من «مشتريات» − مجموع الكمية من «مبيعات»</div>
-    </div>
-  </div>
+  <!-- 06ae: نافذة «الرصيد» (win-balance) حُذفت بكل ما تتعلق بها بطلب المستخدم —
+       و«dl_cards_all» الذي كان معرَّفًا داخلها نُقل إلى المستوى الأعلى
+       لأن خانتَي بحث «بطاقات المواد» و«سجل المشتريات» العائَمَين تعتمدان عليه -->
+  <datalist id="dl_cards_all"></datalist>
 
   <!-- ================= نموذج حساب العروض ================= -->
   <div class="window hidden" id="win-offers">
@@ -687,30 +668,8 @@ body.selgrab table.sheet th.colsel,body.selgrab table.sheet tr.rowsel td.rowh{cu
     </div>
   </div>
 
-  <!-- ================= نسخة من مشتريات ================= -->
-  <div class="window hidden" id="win-copypurch">
-    <div class="win-head"><span class="dot"></span>نسخة من مشتريات (البيانات التاريخية المحمَّلة)</div>
-    <div class="win-body">
-      <div class="row">
-        <div class="field" style="max-width:320px"><label>بحث</label><input class="i" id="cp_search" title="بحث في المادة ورقم الفاتورة — يدعم نمط أكسس: * أي عدد من الأحرف و? حرف واحد — بلا نجمة = جزء كلمة"></div>
-        <span class="flex1"></span>
-        <div class="pager"><button class="tbtn" id="cp_prev">◀</button><span id="cp_page">1</span><button class="tbtn" id="cp_next">▶</button></div>
-      </div>
-      <div class="sheetwrap" id="copypurch_sheet" style="max-height:480px"></div>
-    </div>
-  </div>
-
-  <!-- ================= ضبط المشتريات — تكرار في مشتريات (Module14) ================= -->
-  <div class="window hidden" id="win-dups">
-    <div class="win-head"><span class="dot"></span>ضبط المشتريات — نموذج فرعي تكرار في مشتريات</div>
-    <div class="win-body">
-      <div class="row">
-        <button class="tbtn primary" id="btn_dups" title="البحث_عن_تكرار_في_مشتريات (Module14)">🔍 البحث عن تكرار في مشتريات</button>
-        <span class="hint">يجمع المشتريات (رمز الباركود/المادة/الشركة/السعر الأساسي/عموم معتمد) ويُظهر المواد التي ظهرت أكثر من مرة مع Sum الكمية والمجاني و«ك مشتريات» — كما في أكسس</span>
-      </div>
-      <div class="sheetwrap" id="takrar_sheet" style="max-height:480px"></div>
-    </div>
-  </div>
+  <!-- 06ae: نافذتا «نسخة من مشتريات» (win-copypurch) و«ضبط المشتريات — تكرار في مشتريات» (win-dups)
+       حُذفتا بكل ما تتعلق بهما بطلب المستخدم -->
 
 <!-- 06aa: النافذتان المرسَّبتان نُقلتا إلى داخل #stage — كانتا خارج الصندوق على مستوى الصفحة
      فتمددان position:absolute;inset:0 على مساحة الصفحة كلها وتغطيان شريط تبويبات المستندات
@@ -783,18 +742,9 @@ NumLock: لازم يكون مضاءً لكتابة الأرقام بلوحة ا�
       <span class="flex1"></span>
     </div>
     <!-- 06ad: groupbox «نموذج فرعي السعر الأساسي» (ps_*) الذي نُقل في 06ab حُذف بكل ما يتعلق به بطلب المستخدم (إرجاع إضافات 06ab ما عدا الرصيد) -->
-    <div class="groupbox">
-      <span class="gtitle">الرصيد — نموذج الرصيد داخل سجل المشتريات (كما في أكسس) — نُقل من النموذج العادي (06ab)</span>
-      <div class="row">
-        <div class="field" style="max-width:280px"><label>المادة (افتراضيًا المادة الحالية من فاتورة المشتريات)</label><div class="ctl"><input class="i" id="b2_mat" list="dl_cards_all"></div></div>
-        <button class="tbtn primary" id="b2_calc" title="الرصيد_Click — يعرض: ك مشتريات (كمية+مجاني) وك مبيعات والرصيد للمادة المكتوبة">الرصيد</button>
-        <button class="tbtn" id="b2_clear" title="المادة_Click — يفرغ مصدر السجل">مسح (المادة_Click)</button>
-      </div>
-      <div class="sheetwrap" id="b2_sheet" style="max-height:120px"></div>
-      <div class="subnote">الرصيد = مجموع (الكمية + المجاني) من «مشتريات» − مجموع الكمية من «مبيعات» — والمادة تتبع المادة الحالية في فاتورة المشتريات عند الفتح والسطر المحدد في الجدول عند النقر.</div>
-    </div>
+    <!-- 06ae: groupbox «الرصيد» (b2_mat/b2_calc/b2_clear/b2_sheet) الذي بقي في 06ad حُذف هو الآخر بكل ما يتعلق به بطلب المستخدم -->
     <div class="sheetwrap" id="fcp_sheet" style="max-height:340px"></div>
-    <div class="hint">النقر على سطر في الجدول يحدّث مادة نموذج «الرصيد» أعلاه (06ad: عاد العائم إلى أعمدته الخمسة والعشرين وحُذفت إضافات 06ab ما عدا «الرصيد»)</div>
+    <div class="hint">06ad: عاد العائم إلى أعمدته الخمسة والعشرين وحُذفت إضافات 06ab — 06ae: وحُذف نموذج «الرصيد» منه بكل ما يتعلق به</div>
   </div>
 </div>
 
@@ -956,7 +906,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 3;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-10a';   /* 06ad: بطلب المستخدم «1.احذف جميع الإضافات التي أضفتها على نموذج عائم سجل المشتريات ما عدا الرصيد 2.قم بحذف زر سجل المشتريات العادي من القائمة الجانبية في قسم الجداول» — (1) التراجع عن نقل خصائص «نموذج مشتريات» العادي إلى «سجل المشتريات (عائم)» الذي تم في 06ab مع بقاء «الرصيد» وحده: أعمدة العائم عادت من اثنين وثلاثين إلى الخمسة والعشرين الأصلية (حُذفت السبعة المضافة: ترتيب، شهر، سنة، رمز الباركود، الشركة، عموم معتمد، السعر الأساسي) وعاد FC_PURCH_NUMERIC إلى ثلاثة عشر، وحُذفت خانة «تصفية بمستودع (من)» fcp_wh من HTML العائم مع متغير fcpWh ووسيطها في fcPurchRows وربط change ومزامنتها في renderPurchFloat وتعبئتها في fillDatalists، وحُذف النقر المزدوج على جدول العائم (فتح «حساب العروض» من سعر الشراء/سعر العميل وإعادة تسمية المادة في كل البرنامج) فعاد الجدول عرضًا كما في 06v، وحُذف النموذج الفرعي «السعر الأساسي» بكل ما يتعلق به (groupbox HTML بحقوله الستة ps_mat/ps_base/ps_pub/ps_pubfree/ps_netfree/ps_pub20 والدالتان fillSubform/psEdit وربط النقر المزدوج الثلاثي في bindEvents)، وحُذف الخط الوهمي المنقّط الذي نُقل إلى #fcp_sheet في 06ab، وعاد عنوان خانة البحث في العائم إلى ذكر الأعمدة الخمسة والعشرين وعنوان زر «سجل المشتريات (عائم)» في قسم التحكم إلى نصه قبل 06ab مع إبقاء جملة نمط النجمة من 06ac — وبقي «الرصيد» كما هو: groupbox بمادة b2_mat وزرا b2_calc/b2_clear وورقة b2_sheet بمعادلة calcBalanceInto نفسها، والنقر على سطر جدول العائم يحدّث مادة الرصيد (onRowClick بلا fillSubform الآن) ومادة الرصيد تتبع مادة الفتح عند فتح العائم والترسيف — (2) حُذف مدخل «سجل المشتريات» (النافذة المرسَّبة للنموذج العائم) من مجموعة «الجداول» في القائمة الجانبية نهائيًا كما فُعل مع «بطاقات المواد» في 06z: أُزيل من WINDOWS وانتقل إلى DOCK_TABS فبقي لتبويبه في شريط تبويبات المستندات اسمه «سجل المشتريات» وأيقونته 📜 أثناء الترسيف، ويُفتح كنافذة مرسَّبة من زر التصغير (─) أو Ctrl+2/Ctrl+3، وزر «طفو» أو ✕ يعيده عائمًا أو يغلقه، فمجموعة «الجداول» صارت أربعة مداخل (مبيعات، الرصيد، نسخة من مشتريات، ضبط المشتريات — تكرار في مشتريات) — وإلغاء «نموذج مشتريات» العادي من 06ab باقٍ نهائيًا، وكل ما في 06ac (التصغير حتى سجل واحد والبحث بنمط * في كل النماذج وبحث الكائنات) والمقابض الثمانية وحفظ الحجم والموضع والترسيف بجنب فاتورة مشتريات والبحث الحر والترقيم والمتابعة مع السجل الحالي باقية كما هي — وإصلاح جانبي مهم اكتُشف أثناء التحقق: سجل تغييرات 06ac (2026-11-09b) انتهى بلا إغلاق لتعليقه فابتلع سطرَي const LS_KEY وconst DRAFT_KEY فصمت الحفظ والاستعادة المحلية في localStorage بلا أي خطأ ظاهر منذ 09b (وبرزت مرآة IndexedDB وحدها تحفظ البيانات كاملة، أما مسودة الفاتورة والوضع الخفيف فكانا بلا أثر) — أُعيد إغلاق سجل التغييرات فعاد المفتاحان حيَّين وعاد الحفظ المحلي والمسودة والاستعادة كما في 06ab وما قبله — تحقق حي 37/37 بنقرة فأرة حقيقية (القائمة بلا زرَي «نموذج مشتريات» و«سجل المشتريات» وأربعة مداخل بشارة 4، رأس جدول العائم 26 خانة مع # بلا fcp_wh وبلا ps_* وبلا خط وهمي، مادة الرصيد تتبع مادة الفتح والنقر الحقيقي على سطر يملأها وb2_calc يحسب سطرين، نجمة *نص* = نص = 574 سجلًا، ترسيف (─) وتبويب المرسَّبة باسمه وأيقونته وتنقّل حقيقي بينه وبين فاتورة مشتريات وطفو وCtrl+3 يرسّب، فتح مبيعات/الرصيد/نسخة من مشتريات من القائمة بنقرات حقيقية، بلا أي خطأ صفحات) — و06ac و06ab و06aa و06z و06y و06x و06v و06u و06t و06s و06r و06q و06m و06i و06o باقية ما لم يُذكر خلاف ذلك. */
+const APP_VER = '2026-11-10b';   /* 06ae: بطلب المستخدم «1.احذف من نموذج عائم سجل المشتريات زر الرصيد وكل ما يتعلق به 2.احذف زر مبيعات في القائمة الجانبية في قسم الجداول وكل ما يتعلق به 3.احذف زر الرصيد في القائمة الجانبية في قسم الجداول وكل ما يتعلق به 4.احذف زر نسخة من مشتريات في القائمة الجانبية في قسم الجداول وكل ما يتعلق به 5.احذف زر ضبط المشتريات في القائمة الجانبية في قسم الجداول وكل ما يتعلق به 6.احذف قسم الجداول في القائمة الجانبية وكل ما يتعلق به» — (1) «سجل المشتريات (عائم)»: حُذف groupbox «الرصيد» بكامله (المادة b2_mat وزرا b2_calc/b2_clear وورقة b2_sheet) مع دواله balanceOf/calcBalanceInto/calcBalance/calcBalance2 وربطَي b2_calc/b2_clear في bindEvents وتحديث مادة الرصيد من السطر المحدد في onRowClick ومن مادة الفتح في openPurchFloat ومن الترسيف في dockFloat، وبقي النقر على سطر الجدول يسجل رقم السطر (APP.curPurchaseRow) بلا نموذج رصيد — (2+3+4+5) حُذفت نوافذ «مبيعات» (win-sales بـ renderSales وخانا s_search وزر s_add وورقة sales_sheet وربطهما) و«الرصيد» (win-balance بـ b_mat/b_calc/b_clear/balance_sheet) و«نسخة من مشتريات» (win-copypurch بـ renderCopyPurch وخانا cp_search وpager cp_prev/cp_page/cp_next وورقة copypurch_sheet وربطها وAPP.cpPage) و«ضبط المشتريات — تكرار في مشتريات» (win-dups بـ baghithAnTakrarFiMushtariat وTAKRAR_COLS وrenderTakrarSheet وزر btn_dups وورقة takrar_sheet وربطه) بكل ما يتعلق بها من HTML وWINDOWS وopenWindow وbindEvents، و«dl_cards_all» الذي كان معرَّفًا داخل win-balance نُقل إلى المستوى الأعلى لأن خانتَي بحث «بطاقات المواد» و«سجل المشتريات» العائَمَين تعتمدان عليه ولم يُمس تعبئته — (6) مجموعة «الجداول» حُذفت من GRP_ORDER فلوحة الكائنات صارت مجموعتين (الفواتير، العروض والحسابات) بثلاثة مداخل (فاتورة مشتريات، نموذج حساب العروض، تعديل العروض) وعدّادات الصفحات الميتة fPage/cPage/cpPage أُزيلت من APP — وبيانات DB.sales وsalesCols بقيتا في القاعدة المحلية لأن إعادة تسمية المادة وتحرير بطاقات المواد والحفظ والمسودة تستخدمها — وكل ما في 06ad و06ac (العائم بأعمدته الخمسة والعشرين والتصغير حتى سجل واحد والبحث بنمط * في كل النماذج وبحث الكائنات) والمقابض الثمانية وحفظ الحجم والموضع والترسيف بجنب فاتورة مشتريات وCtrl+2/Ctrl+3 للعائم وCtrl+4 للحاسبة والترقيم والمتابعة مع السجل الحالي باقية كما هي — تحقق حي 28/28 بنقرة فأرة حقيقية (القائمة مجموعتان وثلاثة مداخل بلا «الجداول»، لا groupbox رصيد داخل العائم ورأسه 26 خانة، dl_cards_all معبأ 5000، نجمة *ا* في العائم والبطاقات، ترسيف (─) وتبويب «📜 سجل المشتريات» بجنب فاتورة مشتريات وطفو وCtrl+2/Ctrl+3 وCtrl+4 للحاسبة، فتح حساب العروض وتعديل العروض من القائمة بنقرات حقيقية وتعديل العروض يعرض سطور الفاتورة، بحث الكائنات يصفّي ويُعيد المجموعتين، بلا أي خطأ صفحات) — و06ad و06ac و06ab و06aa و06z و06y و06x و06v و06u و06t و06s و06r و06q و06m و06i و06o باقية ما لم يُذكر خلاف ذلك. */
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 const DRAFT_KEY = 'fatora_mushtariat_draft_v1';   /* مسودة الفاتورة الجارية (سطور + رأس) — تُستعاد عند تحديث الصفحة أو تغيير قاعدة البيانات (06a) */
@@ -2624,7 +2574,7 @@ const APP = {
   curRow: -1,          // السجل الحالي في فاتورة مشتريات
   curPurchaseRow: -1,  // السجل الحالي في «سجل المشتريات (عائم)»
   curCard: -1,
-  fPage: 0, cPage: 0, cpPage: 0,   /* 06ab: pPage حُذفت مع نموذج «مشتريات» العادي */
+  /* 06ae: عدّادات الصفحات الميتة fPage/cPage/cpPage أُزيلت نهائيًا مع آخر نوافذها المحذوفة (06ab: pPage سبقتها) */
   sortDir: 'ASC',      // اتجاه_الترتيب
   currentMaterial: '',
 };
@@ -3228,70 +3178,15 @@ async function updateRelatedPurchases() {
   toast('تم تنفيذ تسلسل تحديث المشتريات كاملًا (نسب الربح 20/35/10 + تقريب العموم + الأسعار)', 'ok');
 }
 
-/* ================= Module14: البحث_عن_تكرار_في_مشتريات =================
-   مطابقة SQL في أكسس حرفيًا:
-   1) حذف_الجدول_إذا_كان_موجود("tmp") — في المتصفح: إعادة بناء المصفوفة (بلا DDL)
-   2) SELECT ... Sum(الكمية) AS Sumمنالكمية, Sum(المجاني) AS Sumمنالمجاني,
-      Sum(الكمية)+Sum(المجاني) AS [ك مشتريات] INTO tmp
-      FROM مشتريات GROUP BY رمز الباركود, المادة, الشركة, السعر الأساسي, عموم معتمد, الرمز
-      ORDER BY (Sum(الكمية)+Sum(المجاني)) DESC, المادة ASC
-   3) WHERE المادة IN (SELECT المادة FROM tmp GROUP BY المادة HAVING Count(*)>1)
-      ORDER BY المادة — وتُعرض في «نموذج فرعي تكرار في مشتريات» بضبط المشتريات */
-function baghithAnTakrarFiMushtariat() {
-  const groups = new Map();
-  DB.purchases.forEach(p => {
-    const m = String(p['المادة'] ?? '');
-    /* GROUP BY: رمز الباركود، المادة، الشركة، السعر الأساسي، عموم معتمد، الرمز */
-    const k = [String(p['رمز الباركود'] ?? ''), m, String(p['الشركة'] ?? ''),
-               String(p['السعر الأساسي'] ?? ''), String(p['عموم معتمد'] ?? ''), String(p['الرمز'] ?? '')].join('\u0001');
-    if (!groups.has(k)) groups.set(k, { p, sumQty: 0, sumFree: 0, cnt: 0 });
-    const g = groups.get(k);
-    g.sumQty += nz(p['الكمية']);
-    g.sumFree += nz(p['المجاني']);
-    g.cnt++;
-  });
-  /* عدّ المجموعات لكل مادة (HAVING Count(*)>1 على مستوى المادة كما في الاستعلام الثاني) */
-  const cntByMat = new Map();
-  [...groups.values()].forEach(g => {
-    const m = String(g.p['المادة'] ?? '');
-    cntByMat.set(m, (cntByMat.get(m) || 0) + 1);
-  });
-  const tmp = [...groups.values()]
-    .filter(g => (cntByMat.get(String(g.p['المادة'] ?? '')) || 0) > 1)
-    .map(g => ({
-      'المادة': g.p['المادة'],
-      'رمز الباركود': g.p['رمز الباركود'],
-      'الشركة': g.p['الشركة'],
-      'السعر الأساسي': g.p['السعر الأساسي'],
-      'عموم معتمد': g.p['عموم معتمد'],
-      'Sumمنالكمية': g.sumQty,
-      'Sumمنالمجاني': g.sumFree,
-      'ك مشتريات': g.sumQty + g.sumFree,
-    }))
-    .sort((a, b) => String(a['المادة'] ?? '').localeCompare(String(b['المادة'] ?? ''), 'ar'));   /* ORDER BY المادة */
-  APP.dupRows = tmp;
-  APP.dupPage = 0;
-  renderTakrarSheet();
-  const mats = new Set(tmp.map(r => String(r['المادة'] ?? '')));
-  if (!tmp.length) toast('لا يوجد تكرار في مشتريات', 'ok');
-  else MsgBox('وُجد تكرار: ' + tmp.length + ' سطرًا لموادّ ' + mats.size + ' — معروض في نموذج فرعي تكرار في مشتريات', 'warn', 'البحث عن تكرار في مشتريات');
-}
-
-const TAKRAR_COLS = ['المادة','رمز الباركود','الشركة','السعر الأساسي','عموم معتمد','Sumمنالكمية','Sumمنالمجاني','ك مشتريات'];
-function renderTakrarSheet() {
-  renderSheet($('takrar_sheet'), {
-    cols: TAKRAR_COLS,
-    rows: APP.dupRows || [],
-    numericCols: ['السعر الأساسي','عموم معتمد','Sumمنالكمية','Sumمنالمجاني','ك مشتريات'],
-    totalsCols: ['Sumمنالكمية','Sumمنالمجاني','ك مشتريات'],
-  });
-}
+/* 06ae: Module14 «البحث_عن_تكرار_في_مشتريات» (baghithAnTakrarFiMushtariat) ونموذجه الفرعي
+   «تكرار في مشتريات» (win-dups بـ TAKRAR_COLS وrenderTakrarSheet وزر btn_dups)
+   حُذفت بكل ما تتعلق به بطلب المستخدم مع حذف مدخل «ضبط المشتريات» من القائمة الجانبية */
 </script>
 
 <script>
 /* =====================================================================
-   بقية النماذج: مشتريات، بطاقات المواد، مبيعات، الرصيد، حساب العروض،
-   تعديل العروض، نسخة من مشتريات + التهيئة والاختصارات
+   بقية النماذج: بطاقات المواد، حساب العروض، تعديل العروض + التهيئة والاختصارات
+   (06ae: مبيعات والرصيد ونسخة من مشتريات وضبط المشتريات حُذفت بكل ما يتعلق بها)
    ===================================================================== */
 
 /* ---------- الكائنات = تبويبات مستندات داخل الصندوق (سلوك أكسس: Tabbed Documents) ---------- */
@@ -3299,12 +3194,11 @@ const WINDOWS = [
   {id: 'win-fatora', name: 'فاتورة مشتريات', ico: '🧾', grp: 'الفواتير'},
   /* 06ab: مدخل «نموذج مشتريات» العادي حُذف نهائيًا من القائمة بطلب المستخدم
      06ad: ومدخل «سجل المشتريات» (النافذة المرسَّبة للنموذج العائم) حُذف هو الآخر نهائيًا بطلب المستخدم
-     كما فُعل مع «بطاقات المواد» في 06z — فمجموعة «الجداول» أربعة مداخل، ولتبويب المرسَّبة اسمه
-     وأيقونته من DOCK_TABS أدناه، ويُفتح كنافذة مرسَّبة من التصغير (─) أو Ctrl+2/Ctrl+3 */
-  {id: 'win-sales', name: 'مبيعات', ico: '🛒', grp: 'الجداول'},
-  {id: 'win-balance', name: 'الرصيد', ico: '⚖️', grp: 'الجداول'},
-  {id: 'win-copypurch', name: 'نسخة من مشتريات', ico: '🗃️', grp: 'الجداول'},
-  {id: 'win-dups', name: 'ضبط المشتريات — تكرار في مشتريات', ico: '🔁', grp: 'الجداول'},
+     كما فُعل مع «بطاقات المواد» في 06z — ولتبويب المرسَّبة اسمه وأيقونته من DOCK_TABS أدناه،
+     ويُفتح كنافذة مرسَّبة من التصغير (─) أو Ctrl+2/Ctrl+3
+     06ae: ومجموعة «الجداول» حُذفت هي الأخرى بطلب المستخدم مع مداخليها الأربعة ونوافذها كاملة:
+     مبيعات (win-sales) والرصيد (win-balance) ونسخة من مشتريات (win-copypurch)
+     وضبط المشتريات — تكرار في مشتريات (win-dups) بما يخص كلًّا منها من دوال وروابط */
   {id: 'win-offers', name: 'نموذج حساب العروض', ico: '🧮', grp: 'العروض والحسابات'},
   {id: 'win-editoffers', name: 'تعديل العروض في فاتورة المشتريات', ico: '✏️', grp: 'العروض والحسابات'},
 ];
@@ -3356,10 +3250,8 @@ function openWindow(id) {
   activateDoc(id);
   if (id === 'win-floatcard' && !fccDocked) dockFloat('card');   /* 06z: الترسيف من الفتح وهو غير مرسَّب فقط — حماية من الاستدعاء المتبادل */
   if (id === 'win-floatpurch' && !fcpDocked) dockFloat('purch');
-  if (id === 'win-sales') renderSales();
   if (id === 'win-editoffers') renderOffersSheet();
-  if (id === 'win-copypurch') renderCopyPurch();
-  if (id === 'win-dups') renderTakrarSheet();   /* آخر نتائج البحث أو جدول فارغ */
+  /* 06ae: استدعاءات renderSales وrenderCopyPurch وrenderTakrarSheet للنوافذ المحذوفة أُزيلت معها */
 }
 /* ---------- إغلاق كائن: يزيل تبويبه ويعرض الكائن المفتوح تحته ---------- */
 function closeWindow(id) {
@@ -3392,7 +3284,7 @@ function closeWindow(id) {
   }
 });
 /* بناء لوحة الكائنات: مجموعات قابلة للطي مثل لوحة كائنات أكسس */
-const GRP_ORDER = ['الفواتير', 'الجداول', 'العروض والحسابات'];
+const GRP_ORDER = ['الفواتير', 'العروض والحسابات'];   /* 06ae: مجموعة «الجداول» حُذفت من لوحة الكائنات بكل مداخلها ونوافذها */
 function buildTabs() {
   const body = $('np_body');
   body.innerHTML = '';
@@ -3603,7 +3495,9 @@ function upgradePurchasesCols() {
    انظر FC_PURCH_COLS وrenderPurchFloat أدناه.
    06ad: بطلب «احذف جميع الإضافات التي أضفتها على نموذج عائم سجل المشتريات ما عدا الرصيد» عاد العائم
    إلى أعمدته الخمسة والعشرين وحُذفت تصفية المستودع والنقر المزدوج والنموذج الفرعي «السعر الأساسي» —
-   وبقي «الرصيد» وحده من إضافات 06ab. */
+   وبقي «الرصيد» وحده من إضافات 06ab.
+   06ae: ثم حُذف «الرصيد» نفسه من العائم ونافذة «الرصيد» المستقلة ومجموعة «الجداول» كلها
+   (مبيعات، الرصيد، نسخة من مشتريات، ضبط المشتريات) بكل ما يتعلق بها بطلب المستخدم. */
 
 /* ================= نموذج فرعي السعر الأساسي — حُذف في 06ad ================= */
 /* 06y: نموذج «بطاقات المواد» العادي أُلغي نهائيًا بطلب المستخدم (المدخل وHTML وrenderCards
@@ -3613,48 +3507,16 @@ function upgradePurchasesCols() {
    إلى العائم — ثم 06ad: حُذف النموذج الفرعي «السعر الأساسي» بكل ما يتعلق به بطلب المستخدم
    «احذف جميع الإضافات التي أضفتها على نموذج عائم سجل المشتريات ما عدا الرصيد»: حُذف groupbox HTML
    بحقوله الستة (ps_mat/ps_base/ps_pub/ps_pubfree/ps_netfree/ps_pub20) والدالتان fillSubform/psEdit
-   وربط النقر المزدوج الثلاثي — وبقي نموذج «الرصيد» (b2_*) وحده كما في أكسس. */
+   وربط النقر المزدوج الثلاثي — وبقي نموذج «الرصيد» (b2_*) وحده كما في أكسس،
+   ثم 06ae: حُذف نموذج «الرصيد» (b2_*) هو الآخر بكل ما يتعلق به بطلب المستخدم. */
 
-/* ================= مبيعات ================= */
-function renderSales() {
-  const q = $('s_search').value.trim();
-  let rows = DB.sales;
-  if (q) rows = rows.filter(s => likeMatch(s['المادة'], q));   /* 06ac: يدعم * و? */
-  renderSheet($('sales_sheet'), {
-    cols: DB.salesCols, rows,
-    numericCols: ['الكمية','سعر المبيع','حسم %','رقم الطبخة'],
-    editableCols: DB.salesCols,
-    onCellCommit: () => saveDB(),
-  });
-}
+/* 06ae: نموذج «مبيعات» (win-sales) حُذف بكل ما يتعلق به بطلب المستخدم
+   (renderSales وs_search وs_add وsales_sheet) — وبيانات DB.sales وsalesCols بقيت
+   في القاعدة المحلية لأن إعادة تسمية المادة وتحرير بطاقات المواد والحفظ والمسودة تستخدمها */
 
-/* ================= الرصيد ================= */
-/* رصيد المادة — صيغة نموذج «الرصيد» في أكسس:
-   ك مشتريات = Sum(الكمية+المجاني) FROM مشتريات، ك مبيعات = Sum(الكمية) FROM مبيعات،
-   الرصيد = IIf(IsNull(ك مبيعات) Or ك مبيعات=0, ك مشتريات, ك مشتريات − ك مبيعات).
-   سطور الفاتورة الحالية غير محسوبة — فهي لم تُرحَّل بعد إلى جدول مشتريات كما في أكسس */
-function balanceOf(mat) {
-  const inP = DB.purchases.filter(p => p['المادة'] === mat).reduce((s, p) => s + nz(p['الكمية']) + nz(p['المجاني']), 0);
-  const outS = DB.sales.filter(s => s['المادة'] === mat).reduce((s, x) => s + nz(x['الكمية']), 0);
-  return outS === 0 ? inP : inP - outS;
-}
-function calcBalanceInto(matId, sheetId) {
-  const mat = $(matId).value.trim();
-  const sheet = $(sheetId);
-  if (!mat) { sheet.innerHTML = '<div style="padding:14px;color:#a00">اختر مادة أولًا</div>'; return; }
-  const inP = DB.purchases.filter(p => p['المادة'] === mat).reduce((s, p) => s + nz(p['الكمية']) + nz(p['المجاني']), 0);
-  const outS = DB.sales.filter(s => s['المادة'] === mat).reduce((s, x) => s + nz(x['الكمية']), 0);
-  const bal = balanceOf(mat);
-  sheet.innerHTML = '';
-  renderSheet(sheet, {
-    cols: ['المادة', 'إجمالي المشتريات (كمية+مجاني)', 'إجمالي المبيعات', 'الرصيد'],
-    rows: [{ 'المادة': mat, 'إجمالي المشتريات (كمية+مجاني)': inP, 'إجمالي المبيعات': outS, 'الرصيد': bal }],
-    numericCols: ['إجمالي المشتريات (كمية+مجاني)', 'إجمالي المبيعات', 'الرصيد'],
-  });
-}
-function calcBalance() { calcBalanceInto('b_mat', 'balance_sheet'); }
-/* الرصيد_Click داخل «سجل المشتريات (عائم)» (نُقل مع النموذج 06ab) — معادلة Form_الرصيد نفسها */
-function calcBalance2() { calcBalanceInto('b2_mat', 'b2_sheet'); }
+/* 06ae: نماذج «الرصيد» كلها حُذفت بكل ما يتعلق بها بطلب المستخدم: نافذة «الرصيد» (win-balance
+   بـ b_mat/b_calc/b_clear/balance_sheet) ونموذج الرصيد داخل «سجل المشتريات (عائم)»
+   (b2_mat/b2_calc/b2_clear/b2_sheet) والدوال balanceOf/calcBalanceInto/calcBalance/calcBalance2 */
 /* ================= نموذج حساب العروض ================= */
 function calcBasePrice() {
   // حساب_السعر_الأساسي_Click
@@ -3747,21 +3609,8 @@ function renderOffersSheet() {
   });
 }
 
-/* ================= نسخة من مشتريات ================= */
-function renderCopyPurch() {
-  const q = $('cp_search').value.trim();
-  let rows = DB.purchases;
-  if (q) rows = rows.filter(p => likeMatch(p['المادة'], q) || likeMatch(p['رقم الفاتورة'], q));   /* 06ac: يدعم * و? */
-  const pageSize = 200;
-  const maxPage = Math.max(0, Math.ceil(rows.length / pageSize) - 1);
-  if (APP.cpPage > maxPage) APP.cpPage = maxPage;
-  $('cp_page').textContent = (APP.cpPage + 1) + ' / ' + (maxPage + 1);
-  renderSheet($('copypurch_sheet'), {
-    cols: DB.purchasesCols, rows,
-    numericCols: ['الكمية','المجاني','سعر الشراء','حسم %','ترتيب','أساس العرض','مجاني العرض','حسم العرض'],
-    page: APP.cpPage, pageSize,
-  });
-}
+/* 06ae: نافذة «نسخة من مشتريات» (win-copypurch) حُذفت بكل ما تتعلق بها بطلب المستخدم
+   (renderCopyPurch وcp_search وcp_prev/cp_page/cp_next وcopypurch_sheet) */
 
 /* ================= ضبط_النماذج_لمراجعة_الفاتورة (Module14) ================= */
 function tathbitAlnamaz() {
@@ -3900,25 +3749,8 @@ function bindEvents() {
 
   /* 06y: ربط نموذج «بطاقات المواد» العادي (البحث/فلتر الشركة/الترقيم/البطاقة الجديدة/الاستيراد) حُذف مع إلغاء النموذج */
 
-  /* --- مبيعات --- */
-  $('s_search').addEventListener('input', renderSales);
-  $('s_add').onclick = () => {
-    const r = {}; DB.salesCols.forEach(k => r[k] = null);
-    r['ترتيب'] = DB.sales.length + 1;
-    r['التاريخ'] = inputToArDate(today());
-    r['الوقت'] = inputToArTime(nowTime());
-    r['إلى'] = $('f_to').value || 'صيدلية إحسان العبد الله';
-    r['المستخدم'] = $('f_user').value || 'مدير';
-    DB.sales.push(r);
-    renderSales(); saveDB();
-  };
-
-  /* --- الرصيد --- */
-  $('b_calc').onclick = calcBalance;
-  $('b_clear').onclick = () => { $('balance_sheet').innerHTML = ''; $('b_mat').value = ''; };
-  /* نموذج الرصيد داخل «سجل المشتريات (عائم)» (b2) — الرصيد_Click والمادة_Click (نُقلا مع النموذج 06ab وبقيا في 06ad) */
-  $('b2_calc').onclick = calcBalance2;
-  $('b2_clear').onclick = () => { $('b2_sheet').innerHTML = ''; $('b2_mat').value = ''; };
+  /* 06ae: ربط «مبيعات» (s_search/s_add) و«الرصيد» (b_calc/b_clear) ونموذج الرصيد في العائم
+     (b2_calc/b2_clear) حُذف مع حذف النوافذ بكل ما يتعلق بها بطلب المستخدم */
   /* 06ad: ربط النقر المزدوج للنموذج الفرعي «السعر الأساسي» (ps_base/ps_pub/ps_netfree) حُذف مع حذف النموذج */
 
   /* --- حساب العروض --- */
@@ -3928,13 +3760,7 @@ function bindEvents() {
   $('o_btn4').onclick = calcBestCombo;
   $('o_reset').onclick = () => ['o_base','o_want','o_obase','o_ofree','o_diff','o_calc'].forEach(id => $(id).value = '');
 
-  /* --- نسخة من مشتريات --- */
-  $('cp_search').addEventListener('input', () => { APP.cpPage = 0; renderCopyPurch(); });
-  $('cp_prev').onclick = () => { if (APP.cpPage > 0) { APP.cpPage--; renderCopyPurch(); } };
-  $('cp_next').onclick = () => { APP.cpPage++; renderCopyPurch(); };
-
-  /* --- ضبط المشتريات: البحث عن تكرار في مشتريات (Module14) --- */
-  $('btn_dups').onclick = () => baghithAnTakrarFiMushtariat();
+  /* 06ae: ربط «نسخة من مشتريات» (cp_search/cp_prev/cp_next) و«ضبط المشتريات» (btn_dups) حُذف مع حذف النافذتين */
 
   /* --- موديول حالة المفاتيح: رصد حالة الأقفال مع كل ضغطة وعرضها في شريط الحالة --- */
   const keyStateHandler = e => keyboardStateFromEvent(e);
@@ -5375,14 +5201,13 @@ function renderPurchFloat() {
   renderSheet($('fcp_sheet'), {
     cols: FC_PURCH_COLS, rows, numericCols: FC_PURCH_NUMERIC,
     page: fcpPage, pageSize, curRow: -1,
-    /* 06ad: النقر على سطر يحدّث مادة نموذج «الرصيد» (بقي مع «الرصيد» بعد حذف إضافات 06ab —
-       fillSubform والنقر المزدوج للعروض وإعادة التسمية حُذفت) */
+    /* 06ae: تحديث مادة نموذج «الرصيد» من السطر المحدد حُذف مع حذف النموذج
+       (و06ad قبلها حُذف fillSubform والنقر المزدوج للعروض وإعادة التسمية) — بقي تسجيل رقم السطر */
     onRowClick: i => {
       const abs = fcpPage * pageSize + i;
       const r = rows[abs];
       if (!r) return;
       APP.curPurchaseRow = abs;
-      $('b2_mat').value = r['المادة'] ?? '';   /* مادة نموذج الرصيد تتبع السطر المحدد */
     },
   });
 }
@@ -5399,7 +5224,6 @@ function openPurchFloat(q) {
   $('fc-purch').classList.remove('hidden');
   $('fcp_title').textContent = 'نموذج عائم — سجل المشتريات' + (matPurch ? ' : ' + matPurch : '');
   renderPurchFloat();
-  if (opening) $('b2_mat').value = matPurch;   /* 06ab: مادة نموذج الرصيد تتبع مادة الفتح كما في openWindow للنموذج العادي الملغى */
   floatFront($('fc-purch'));   /* الفتح يجلب النموذج إلى المقدمة */
 }
 
@@ -5513,7 +5337,7 @@ function dockFloat(which) {
   Array.from(body.children).forEach(n => P.dockBody.appendChild(n));
   P.fl.classList.add('hidden');
   if (which === 'card') { fccDocked = true; openCardFloat(matCard); }
-  else { fcpDocked = true; openPurchFloat(matPurch); if (!$('b2_mat').value.trim()) $('b2_mat').value = matPurch; }   /* 06ab: مادة الرصيد تتبع مادة الفتح — بلا مسح اختيار السطر */
+  else { fcpDocked = true; openPurchFloat(matPurch); }
   openWindow(P.dock);
   dockNextFatora(P.dock);   /* 06z: التبويب يصطف بجنب فاتورة مشتريات */
 }
