@@ -1,10 +1,10 @@
 @echo off
-title Access DB Bridge - Purchase Invoice
+title Access DB Bridge - ehesoft
 cd /d "%~dp0"
 setlocal
 
 echo ==========================================================
-echo    Access Database Bridge - Purchase Invoice (HTML app)
+echo    Access Database Bridge - ehesoft (HTML app)
 echo    Opens the original .accdb database for read and write
 echo ==========================================================
 echo.

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-جسر قاعدة البيانات — فاتورة مشتريات (نسخة أكسس HTML)
+جسر قاعدة البيانات — ehesoft (نسخة أكسس HTML)
 =====================================================
-يربط برنامج «فاتورة مشتريات.html» مباشرة بقاعدة أكسس الأصلية MDB_be.accdb
+يربط برنامج «ehesoft.html» مباشرة بقاعدة أكسس الأصلية MDB_be.accdb
 بدون أي تحويل: الملف نفسه هو قاعدة البيانات الوحيدة — قراءة وكتابة فورية.
 
 التشغيل:  python جسر_أكسس.py      (أو انقر تشغيل_الجسر.bat)
@@ -23,6 +23,7 @@ import sys
 import threading
 import datetime
 import queue
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 try:
@@ -38,6 +39,11 @@ DEFAULT_PORT = 8765
 # الجداول المسموح الوصول إليها (حماية من أي وصول عرضي لجداول أخرى)
 # 06al: أُضيفا «مبيعات» و«مدفوعات» — نظام فاتورة المبيعات المدمج في فاتورة مشتريات
 #       يقرؤهما ويكتب فيهما في نفس قاعدة أكسس هذه عبر نفس الجسر
+# 06av: الجدول المسموح الغائب عن القاعدة لا يبقى غائباً — يُعاد فحص مخططه آلياً
+#       (عند كل طلب له، وعلى ping كل 15 ثانية) فإذا أُنشئ لاحقاً في أكسس صار متاحاً
+#       بلا إعادة تشغيل الجسر — ورسالة الغياب صارت صريحة: «غير موجود في قاعدة
+#       البيانات المتصلة» بدل «غير مسموح» الواحدة المضللة (بلاغ المستخدم:
+#       «لا دفعات إلى هذا المستودع — جدول غير مسموح: مدفوعات»)
 ALLOWED_TABLES = ["مشتريات", "بطاقات المواد", "المستخدم", "مبيعات", "مدفوعات", "جديد", "حصص", "مطلوب"]   # 06an: جداول الطلبية المساندة — تُتجاهل إن غابت من القاعدة
 
 CFG = {"db_path": DEFAULT_DB, "port": DEFAULT_PORT, "read_only": False}
@@ -87,6 +93,7 @@ class Dao:
         self.conn = None
         self.backend = ""
         self.cols = {}       # table -> {col: odbc_type_code}
+        self._last_reprobe = 0.0   # 06av: آخر إعادة فحص شاملة للجداول الغائبة (على ping)
         self._connect()
 
     def _candidates(self):
@@ -119,6 +126,7 @@ class Dao:
                 self.kind = kind
                 self._read_schema()
                 print("✓ اتصل بقاعدة البيانات عبر: " + label)
+                self._print_tables()
                 return
             except Exception as e:
                 errs.append(label + ": " + str(e).split("\n")[0][:160])
@@ -149,6 +157,42 @@ class Dao:
                 except Exception:
                     pass  # جدول غير موجود — يُستبعد
             cur.close()
+
+    def _print_tables(self):
+        """06av: طباعة حالة الجداول المسموحة عند الاتصال — يرى المستخدم فوراً
+        هل قاعدته تحوي «مدفوعات» وما إلى ذلك بدل اكتشاف ذلك من رسالة خطأ لاحقة"""
+        found = [t for t in ALLOWED_TABLES if t in self.cols]
+        missing = [t for t in ALLOWED_TABLES if t not in self.cols]
+        print("  الجداول الموجودة في القاعدة: " + ("، ".join("«" + t + "»" for t in found) if found else "لا شيء"))
+        if missing:
+            print("  جداول غير موجودة (تُفحص آلياً إن أُنشئت لاحقاً): " + "، ".join("«" + t + "»" for t in missing))
+
+    def _reprobe(self, name):
+        """06av: إعادة فحص مخطط جدول مسموح غائب عن القاعدة — يغطي الجدول المُنشأ
+        بعد تشغيل الجسر أو ملف القاعدة المُستبدل بعد الاتصال (المخطط كان يُقرأ مرة واحدة فقط)"""
+        with self.lock:
+            try:
+                cur = self.conn.cursor()
+                cur.execute("SELECT * FROM [" + name + "] WHERE 1=0")
+                desc = cur.description
+                if desc:
+                    self.cols[name] = {d[0]: d[1] for d in desc}
+                cur.close()
+            except Exception:
+                pass
+
+    def _check(self, name):
+        """06av: فصل رسالتَي الخطأ — «غير مسموح» لجدول خارج قائمة الحماية،
+        و«غير موجود في قاعدة البيانات المتصلة» لجدول مسموح غائب (كانت الرسالتان
+        واحدة: «جدول غير مسموح» حتى لجدول مسموح غير موجود — فأوهمت المستخدم)"""
+        if name not in ALLOWED_TABLES:
+            raise ValueError("جدول غير مسموح: " + name)
+        if name not in self.cols:
+            self._reprobe(name)   # ربما أُنشئ بعد تشغيل الجسر — فحص أخير قبل الفشل
+        if name not in self.cols:
+            found = "، ".join("«" + t + "»" for t in ALLOWED_TABLES if t in self.cols)
+            raise ValueError("الجدول «" + name + "» غير موجود في قاعدة البيانات المتصلة"
+                             + (" — الجداول الموجودة: " + found if found else " — القاعدة بلا جداول من القائمة"))
 
     # ---------- أنواع البيانات ----------
     # كودات النوع تختلف بين pyodbc (ODBC) وadodbapi (ADO) — وأحيانًا يُرجع النوع كنوع بايثون
@@ -233,14 +277,21 @@ class Dao:
     # ---------- العمليات ----------
     def ping(self):
         with self.lock:
+            # 06av: كل 15 ثانية كحد أقصى — أعِد فحص الجداول المسموحة الغائبة
+            # فتصير متاحة تلقائياً إن أُنشئت في أكسس أثناء عمل الجسر (وحدثّ قائمة ping)
+            now = time.time()
+            if now - self._last_reprobe > 15:
+                self._last_reprobe = now
+                for t in ALLOWED_TABLES:
+                    if t not in self.cols:
+                        self._reprobe(t)
             return {"ok": True, "connected": True, "db": self.db_path,
                     "backend": self.backend,
                     "read_only": bool(CFG.get("read_only")),
                     "tables": [t for t in ALLOWED_TABLES if t in self.cols]}
 
     def table(self, name):
-        if name not in ALLOWED_TABLES or name not in self.cols:
-            raise ValueError("جدول غير مسموح: " + name)
+        self._check(name)   # 06av: فصل «غير مسموح» عن «غير موجود» + إعادة الفحص
         with self.lock:
             cur = self.conn.cursor()
             cur.execute("SELECT * FROM [" + name + "]")
@@ -251,8 +302,7 @@ class Dao:
         return {"ok": True, "cols": names, "rows": rows}
 
     def _validate(self, name, data):
-        if name not in ALLOWED_TABLES or name not in self.cols:
-            raise ValueError("جدول غير مسموح: " + name)
+        self._check(name)   # 06av: فصل «غير مسموح» عن «غير موجود» + إعادة الفحص
         types = self.cols[name]
         if CFG.get("read_only"):
             raise PermissionError("القاعدة مفتوحة بوضع القراءة فقط (إعدادات_الجسر.json)")
@@ -474,7 +524,7 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     load_cfg()
     print("=" * 56)
-    print("   جسر قاعدة البيانات — فاتورة مشتريات (أكسس بدون تحويل)")
+    print("   جسر قاعدة البيانات — ehesoft (أكسس بدون تحويل)")
     print("=" * 56)
     print("القاعدة: " + CFG["db_path"])
     try:
@@ -487,7 +537,7 @@ def main():
     srv = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     print("الجسر يعمل الآن: http://127.0.0.1:%d" % port)
-    print("افتح «فاتورة مشتريات.html» كالمعتاد — سيكتشف الجسر تلقائيًا.")
+    print("افتح «ehesoft.html» كالمعتاد — سيكتشف الجسر تلقائيًا.")
     print("(اترك هذه النافذة مفتوحة أثناء العمل — إغلاقها يفصل البرنامج عن القاعدة)")
     try:
         pick_loop()   # الخيط الرئيسي حصريًا لنوافذ اختيار الملف
