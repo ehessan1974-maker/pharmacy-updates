@@ -1,10 +1,10 @@
 @echo off
-title Access DB Bridge - ehesoft
+title Access DB Bridge - Apotheca
 cd /d "%~dp0"
 setlocal
 
 echo ==========================================================
-echo    Access Database Bridge - ehesoft (HTML app)
+echo    Access Database Bridge - Apotheca (HTML app)
 echo    Opens the original .accdb database for read and write
 echo ==========================================================
 echo.

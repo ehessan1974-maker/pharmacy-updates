@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-جسر قاعدة البيانات — ehesoft (نسخة أكسس HTML)
+جسر قاعدة البيانات — Apotheca (نسخة أكسس HTML)
 =====================================================
-يربط برنامج «ehesoft.html» مباشرة بقاعدة أكسس الأصلية MDB_be.accdb
+يربط برنامج «Apotheca.html» مباشرة بقاعدة أكسس الأصلية MDB_be.accdb
 بدون أي تحويل: الملف نفسه هو قاعدة البيانات الوحيدة — قراءة وكتابة فورية.
 
 التشغيل:  python جسر_أكسس.py      (أو انقر تشغيل_الجسر.bat)
@@ -524,7 +524,7 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     load_cfg()
     print("=" * 56)
-    print("   جسر قاعدة البيانات — ehesoft (أكسس بدون تحويل)")
+    print("   جسر قاعدة البيانات — Apotheca (أكسس بدون تحويل)")
     print("=" * 56)
     print("القاعدة: " + CFG["db_path"])
     try:
@@ -537,7 +537,7 @@ def main():
     srv = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     print("الجسر يعمل الآن: http://127.0.0.1:%d" % port)
-    print("افتح «ehesoft.html» كالمعتاد — سيكتشف الجسر تلقائيًا.")
+    print("افتح «Apotheca.html» كالمعتاد — سيكتشف الجسر تلقائيًا.")
     print("(اترك هذه النافذة مفتوحة أثناء العمل — إغلاقها يفصل البرنامج عن القاعدة)")
     try:
         pick_loop()   # الخيط الرئيسي حصريًا لنوافذ اختيار الملف
