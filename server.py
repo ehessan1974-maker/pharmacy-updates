@@ -1310,7 +1310,8 @@ def check_for_updates(silent=False):
             "https://raw.githubusercontent.com/ehessan1974-maker/pharmacy-updates/main/",
             "https://cdn.jsdelivr.net/gh/ehessan1974-maker/pharmacy-updates@main/",
             "https://api.github.com/repos/ehessan1974-maker/pharmacy-updates/contents/",
-        ]
+            "https://cdn.statically.io/gh/ehessan1974-maker/pharmacy-updates/main/",
+        ]   # v82: مصدر رابع — بعض الشبكات تحجب الثلاثة الأولى أو تؤخر مراياها
 
         def _fetch(rel, timeout):
             """تنزيل ملف واحد من أول مصدر ينجح — يتذكر المصدر الناجح ويعيد تجربة البقية عند الفشل"""
@@ -1373,7 +1374,10 @@ def check_for_updates(silent=False):
             safe = rel.replace("\\", "/")
             if ".." in safe or safe.startswith("/"):
                 continue
-            data = _fetch(safe, 25)
+            # v82: مهلة أكبر للملفات الكبيرة (نسخة اكسس HTML وحذافاتها 2.26MB) —
+            # فشل ملف واحد كان يُجهض التحديث كله فيُعاد من الصفر كل 5 دقائق بلا نجاح
+            _big = ("Apotheca.html" in safe) or ("ehesoft.html" in safe) or ("فاتورة مشتريات.html" in safe) or safe.endswith(".sqlite") or safe.endswith(".mdb")
+            data = _fetch(safe, 120 if _big else 25)
             dst = os.path.join(base_dir, *safe.split("/"))
             if os.path.exists(dst):
                 bdst = os.path.join(backup_dir, *safe.split("/"))
@@ -1449,7 +1453,8 @@ if __name__ == "__main__":
 
     try:
         tunnel_proc = None
-        check_for_updates()
+        import threading as _th0
+        _th0.Thread(target=check_for_updates, kwargs={"silent": True}, daemon=True).start()   # v82: الفحص في خيط خلفي — الشبكة المحجوبة لا تؤخر إقلاع الخادم
 
         # فحص دوري كل 5 دقائق أثناء التشغيل — التعديلات تصل بلا تدخل من المستخدم
         def _periodic_update_check():

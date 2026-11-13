@@ -135,7 +135,7 @@ function runBackup(){
   else cached=null;
   setMsg('جاري جلب آخر نسخة — تجربة '+list.length+' مصادر معاً...');
   /* كل المصادر بالتوازي ثم اختيار الأحدث إصدارًا بينها وبين النسخة المحفوظة */
-  Promise.all(list.map(function(x){return fetchOne(x.u,x.api,9000).catch(function(){return null;});}))
+  Promise.all(list.map(function(x){return fetchOne(x.u,x.api,15000).catch(function(){return null;});}))
     .then(function(results){
       var fetched=results.filter(function(h){return isApp(h);})
         .map(function(h){return {html:h, ver:extractVer(h)};});
