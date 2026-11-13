@@ -699,10 +699,10 @@ tr.wh-cur{background:#fdeea8}
         <div class="set-row"><label title="حجم الخط في شريط الحالة أسفل الشاشة">خط شريط الحالة</label><input type="number" id="set_fs_status" min="8" max="16" step="0.5" inputmode="decimal"><span class="set-unit">px</span></div>
         <button class="tbtn" id="set_fs_reset" title="إعادة الأحجام الثلاثة إلى الافتراضي">استعادة الأحجام الافتراضية</button>
         <!-- 2026-11-13a: صف الخط يتبع النموذج المفتوح وعليه التركيز — يظهر فقط والنظام مفتوح -->
-        <div class="set-div" title="حجم خط النموذج المفتوح حاليًا من نظام فاتورة المبيعات المدمج — بالنقطة pt كما في أكسس، والافتراضي 8 لتوفير مساحة">خط نماذج نظام فاتورة المبيعات (الافتراضي 8) — للنموذج المفتوح</div>
-        <div class="set-row" id="sf_cur_row" style="display:none"><label id="sf_cur_name" title="حجم خط النموذج المفتوح حاليًا من النظام المدمج">خط النموذج</label><input type="number" id="set_sf_cur" min="6" max="16" step="1" inputmode="numeric"><span class="set-unit">pt</span></div>
-        <div class="set-row" id="sf_none_row" style="display:none"><label style="color:#8a8781" title="النظام المدمج مغلق — افتح نموذجًا منه لتظهر إعدادات خطه">افتح نموذجًا من نظام فاتورة المبيعات لتظهر إعدادات خطه</label></div>
-        <button class="tbtn" id="set_sf_reset" title="إعادة أحجام نماذج النظام السبعة إلى الافتراضي (8)">استعادة أحجام نماذج النظام (8 للجميع)</button>
+        <div class="set-div" title="حجم خط النموذج أو الجدول المفتوح وعليه التركيز الآن — شاشات نظام فاتورة المبيعات المدمج بالنقطة pt (الافتراضي 8)، ونماذج المضيف بالبكسل (فارغ = يتبع «خط الجدول» العام)">خط النموذج المفتوح وعليه التركيز (الافتراضي 8)</div>
+        <div class="set-row" id="sf_cur_row" style="display:none"><label id="sf_cur_name" title="النموذج أو الجدول المفتوح وعليه التركيز الآن — انقر في أي نموذج ليتبعه هذا الصف">خط النموذج</label><input type="number" id="set_sf_cur" min="6" max="20" step="0.5" inputmode="decimal" title="حجم خط هذا النموذج — نماذج المضيف بالبكسل (فارغ = يتبع «خط الجدول» العام) وشاشات النظام المدمج بالنقطة pt"><span class="set-unit" id="sf_cur_unit">pt</span></div>
+        <div class="set-row" id="sf_none_row" style="display:none"><label style="color:#8a8781" title="افتح نموذجًا أو جدولًا وانقر عليه ليظهر حجم خطه هنا">افتح نموذجًا أو جدولًا وانقر عليه لتظهر إعدادات خطه</label></div>
+        <button class="tbtn" id="set_sf_reset" title="إعادة أحجام الخطوط إلى الافتراضي (8) — شاشات النظام المدمج ونماذج المضيف معًا">استعادة أحجام الخطوط (8 للجميع)</button>
         <button class="tbtn" id="set_dbconn" title="اختيار قاعدة بيانات أكسس (عبر الجسر المحلي) أو العمل بدون قاعدة — يُعرض عند أول فتح أيضًا">قاعدة البيانات والاتصال…</button>
       </div>
     </div>
@@ -1456,7 +1456,7 @@ const CARD_FULL_COLS = ['المادة','الشركة','رمز الباركود',
 const CARDS_SEED_V = 3;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
-const APP_VER = '2026-11-13a';   /* 06bf: أربعة طلبات من المستخدم — (1) «لماذا لا يصل التحديث تلقائيًا؟»: التحديث منشور ومتحقق منه على البعيد (v81)، وحُسّنت سلسلة التسليم: مصدر رابع (statically.io) ومهلة 120 ث للملفات الكبيرة في محدّث الخادم والفحص عند الإقلاع في خيط خلفي، ومهلة مصادر المشغّل 9→15 ث. (2) «ترتيب قسم بيانات الفاتورة في فاتورة مبيعات ومشتريات هكذا: من، إلى، التاريخ، الوقت، المستخدم، رقم الفاتورة»: رأس فاتورة المبيعات في النظام المدمج أعيد بناؤه (من بدل «من (الصيدلية)»، إلى بدل «نوع الفاتورة»، خانة الوقت الجديدة التلقائية المعروضة من السجل عند التعديل، رقم الفاتورة بدل «رقم الفاتورة (تلقائي)») وأعيد ترتيب حقول فاتورة مشتريات (من، إلى، التاريخ، الوقت، المستخدم، رقم الفاتورة)، وتعديل فاتورة محفوظة يحفظ وقتها الأصلي فتبقى هويتها (رقم+تاريخ+وقت) ثابتة. (3) «غطاء لا يذهب إلا بعد تعويم النموذج بعد تحديث الصفحة»: أُعيد إنتاجه — أي استثناء في تجهيز قاعدة النظام المدمج كان يترك غطاء الإقلاع عالقًا للأبد بلا رسالة؛ صار الخطأ يُعرض داخل الغطاء والإقلاع يُعاد تلقائيًا كل 10 ثوانٍ مع مهلة 90 ث لكل سحب جدول من الجسر. (4) «إعدادات الخط لكل نموذج لوحده وتظهر فقط للنموذج المفتوح وعليه التركيز»: الصفوف السبعة الثابتة في قسم الإعدادات أسفل القائمة استُبدلت بصف واحد ديناميكي يتبع النموذج المفتوح حاليًا (تتبعه phSalesSyncNav) ويتغير تطبيقه فورًا، ويُخفى بإغلاق النظام مع تنبيه «افتح نموذجًا من النظام». مع نقل أزرار رأس فاتورة المبيعات الثلاثة (فاتورة جديدة، حفظ الفاتورة، طباعة) بنود إجراء إلى مجموعة «فاتورة مبيعات» في القائمة الجانبية للمضيف تستدعي أزرار النظام المخفية نفسها. */
+const APP_VER = '2026-11-13b';   /* 06bg: بلاغان «ما تصلّحا» أُعيد تشخيصهما من الجذر — (3) «نموذج فاتورة المبيعات يظهر فارغًا بعد تحديث الصفحة (كان يوصف بغطاء لا يذهب إلا بالتعويم)»: أُعيد إنتاجه فعليًا بالقياس الحيّ — السبب سباق في استعادة الجلسة: فتح التبويب المرسَّب من قائمة المستندات المحفوظة يستدعي dockFloat بينما حقن حزمة النظام ما زال جاريًا، فيترسَّب النظام بلا محتوى ثم يُلحق المحتوى (#ph-host) بالنافذة العائمة المخفية فيظهر التبويب المرسَّب فارغًا ولا يراه المستخدم إلا حين يعوّمه؛ الإصلاح: الحقن الآن إلى الحاوية الصحيحة وفق حالة الترسَّب اللحظية (fcs_dock إن كان مرسَّبًا) وdockFloat وهو مرسَّب يجرف أي محتوى وصل متأخرًا من جسم العائم إلى المرسَّب. (4) «في قسم الإعدادات الأسفل أريد إعدادات الخط لكل نموذج أو جدول أو أي شيء مفتوح وعليه التركيز»: الصف الديناميكي صار يتبع آخر نقرة أو تفعيل تبويب عبر كل النماذج — شاشات النظام المدمج السبع بالنقطة pt كما هي (ph_sys_fonts عبر PHSYS_fonts.apply)، ونماذج المضيف السبعة (فاتورة مشتريات، بطاقة المواد، سجل المشتريات، الطلبية، تجميع المستودعات، ضبط رصيد طبخات ج ك ص، فاتورة مدفوعات) بالبكسل في ph_host_fonts تُطبَّق كمتغيّري --fs-sheet/--fs-head على حاوية النموذج وحده، والخانة الفارغة تُعيد التبعية لـ«خط الجدول» العام — مع تحقق بعد كل تغيّر حالة يخفي الصف إن أُغلق الهدف وزر استعادة شامل (8 للجميع). */
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 const DRAFT_KEY = 'fatora_mushtariat_draft_v1';   /* مسودة الفاتورة الجارية (سطور + رأس) — تُستعاد عند تحديث الصفحة أو تغيير قاعدة البيانات (06a) */
@@ -3805,6 +3805,7 @@ function activateDoc(id) {
   [...WINDOWS, ...Object.values(DOCK_TABS)].forEach(w => $('' + w.id).classList.toggle('hidden', w.id !== id));   /* 06z: يشمل نافذة المرسَّبة */
   buildDocTabs();
   setActiveWin(id);
+  if (typeof sfFocusFrom === 'function') sfFocusFrom(id);   /* 2026-11-13b: تفعيل تبويب نموذج = تركيز عليه — يتبعه صف إعدادات الخط */
 }
 function openWindow(id) {
   if (!openDocs.includes(id)) openDocs.push(id);
@@ -4015,10 +4016,14 @@ $('set_fs_reset').addEventListener('click', () => {
   toast('أُعيدت أحجام الخط إلى الافتراضي', 'ok');
 });
 
-/* ---------- 06be: حجم خط نماذج نظام فاتورة المبيعات — من هنا مباشرة ----------
-   الشاشات السبع للنظام المدمج: القيم بالنقطة pt والافتراضي 8 كما في أكسس (6–16).
-   تُكتب فورًا في localStorage['ph_sys_fonts'] (نفس مفتاح النظام) وتُطبَّق على النظام
-   المقلع حيًّا عبر window.PHSYS_fonts.apply() — وعند إقلاعه لاحقًا يقرؤها بنفسه. */
+/* ---------- 06be + 2026-11-13b: حجم خط النموذج المفتوح وعليه التركيز — من هنا مباشرة ----------
+   الهدف ديناميكي يتبع آخر نموذج أو جدول فتحه المستخدم ونقر فيه (أو فعّل تبويبه):
+   • شاشات النظام المدمج السبع — بالنقطة pt (الافتراضي 8) في localStorage['ph_sys_fonts']
+     وتُطبَّق على النظام المقلع حيًّا عبر window.PHSYS_fonts.apply() (وعند إقلاعه يقرؤها بنفسه).
+   • نماذج المضيف السبعة (فاتورة مشتريات، بطاقة المواد، سجل المشتريات، الطلبية، تجميع المستودعات،
+     ضبط رصيد طبخات ج ك ص، فاتورة مدفوعات) — بالبكسل في localStorage['ph_host_fonts']، وتُطبَّق
+     بضبط --fs-sheet و--fs-head على حاوية النموذج نفسه (العائم والمرسَّب معًا) فتتأثر جداوله
+     ورأس فاتورة مشتريات وحده دون بقية الجداول — والخانة الفارغة تلغي الخاصة فتتبع «خط الجدول» العام. */
 const SF_KEY = 'ph_sys_fonts', SF_DEFAULT = 8;
 const SF_LIST = [
   ['invoice', 'فاتورة مبيعات'], ['saved', 'الفواتير المحفوظة'], ['debtors', 'زبائن مدينين'],
@@ -4026,7 +4031,29 @@ const SF_LIST = [
 ];
 const SF_NAME = {};
 for (const [kk, nn] of SF_LIST) SF_NAME[kk] = nn;
-var SF_CUR = null;   /* 2026-11-13a: الشاشة النشطة في النظام المدمج — يضبطها phSalesSyncNav عبر sfSyncCur */
+const SALES_IDS = {};
+for (const [kk] of SF_LIST) SALES_IDS[kk] = true;
+/* نماذج المضيف — الحاويةان (المرسَّب ثم العائم) إذ ينتقل المحتوى بينهما بلا فقدان */
+const HF_KEY = 'ph_host_fonts';
+const HF_LIST = [
+  ['fatora', 'فاتورة مشتريات'], ['card', 'بطاقة المواد'], ['purch', 'سجل المشتريات'],
+  ['orders', 'الطلبية'], ['wh', 'تجميع المستودعات'], ['dabt', 'ضبط رصيد طبخات ج ك ص'], ['dafat', 'فاتورة مدفوعات'],
+];
+const HF_NAME = {};
+for (const [kk, nn] of HF_LIST) HF_NAME[kk] = nn;
+const HF_CONTAINERS = {
+  card:   { ids: ['win-floatcard', 'fc-card'] },
+  purch:  { ids: ['win-floatpurch', 'fc-purch'] },
+  orders: { ids: ['win-floatorders', 'fc-orders'] },
+  wh:     { ids: ['win-floatwh', 'fc-wh'] },
+  dabt:   { ids: ['win-floatdabt', 'fc-dabt'] },
+  dafat:  { ids: ['win-floatdafat', 'fc-dafat'] },
+};
+const HF_DOCKFLAG = { card: () => fccDocked, purch: () => fcpDocked, orders: () => fcoDocked, wh: () => fwhDocked, dabt: () => fdabDocked, dafat: () => fdafDocked };
+const FLOAT_TARGET = { 'fc-fatora': 'fatora', 'fc-card': 'card', 'fc-purch': 'purch', 'fc-orders': 'orders', 'fc-wh': 'wh', 'fc-dabt': 'dabt', 'fc-dafat': 'dafat' };
+const DOCK_TARGET = { 'win-fatora': 'fatora', 'win-floatcard': 'card', 'win-floatpurch': 'purch', 'win-floatorders': 'orders', 'win-floatwh': 'wh', 'win-floatdabt': 'dabt', 'win-floatdafat': 'dafat' };
+var SF_CUR = null;      /* الهدف الحالي: مفتاح شاشة نظام أو مفتاح نموذج مضيف */
+var SF_LAST_SURF = null;   /* آخر سطح ركّز عليه المستخدم: 'sales' أو مفتاح نموذج المضيف */
 function sfReadAll() {
   let f = {};
   try { f = JSON.parse(localStorage.getItem(SF_KEY) || '{}') || {}; } catch (e) { f = {}; }
@@ -4052,35 +4079,119 @@ function sfApply(vals) {
   }
   sfUpdateRow();
 }
-/* 2026-11-13a: صف الخط يعرض النموذج المفتوح وعليه التركيز فقط — يُستدعى من phSalesSyncNav
-   عند كل فتح/إغلاق للنظام وكل تنقّل بين شاشاته (مراقب تغيّرات الصنف داخل جذر الظل) */
+/* نماذج المضيف: قراءة الخاصّ (null = يتبع «خط الجدول» العام) وتطبيقه على الحاويتين */
+function hfReadAll() {
+  let f = {};
+  try { f = JSON.parse(localStorage.getItem(HF_KEY) || '{}') || {}; } catch (e) { f = {}; }
+  const out = {};
+  for (const [kk] of HF_LIST) {
+    const v = parseFloat(f[kk]);
+    out[kk] = (isFinite(v) && v >= 6 && v <= 20) ? v : null;
+  }
+  return out;
+}
+function hfApplyOne(kk) {
+  const cfg = kk === 'fatora' ? { ids: ['win-fatora', 'fc-fatora'], head: true } : HF_CONTAINERS[kk];
+  if (!cfg) return;
+  const v = hfReadAll()[kk];
+  for (const id of cfg.ids) {
+    const el = $(id);
+    if (!el) continue;
+    if (v == null) {
+      el.style.removeProperty('--fs-sheet');
+      if (cfg.head) el.style.removeProperty('--fs-head');
+    } else {
+      el.style.setProperty('--fs-sheet', v + 'px');
+      if (cfg.head) el.style.setProperty('--fs-head', v + 'px');
+    }
+  }
+}
+function hfApply(vals) {
+  const cur = hfReadAll();
+  for (const [kk] of HF_LIST) {
+    if (!(kk in vals)) continue;
+    const v = parseFloat(vals[kk]);
+    cur[kk] = (isFinite(v) && v >= 6 && v <= 20) ? v : null;   /* فارغ = تتبع العام */
+  }
+  try { localStorage.setItem(HF_KEY, JSON.stringify(cur)); } catch (e) {}
+  for (const [kk] of HF_LIST) hfApplyOne(kk);
+  sfUpdateRow();
+}
+/* الصف الديناميكي: اسم الهدف ووحدته (pt للنظام المدمج / px لنماذج المضيف) وقيمته الفعلية */
 function sfUpdateRow() {
-  const row = $('sf_cur_row'), none = $('sf_none_row'), inp = $('set_sf_cur');
+  const row = $('sf_cur_row'), none = $('sf_none_row'), inp = $('set_sf_cur'), unit = $('sf_cur_unit');
   if (!row || !none) return;
   if (!SF_CUR) { row.style.display = 'none'; none.style.display = ''; return; }
+  const isHost = !!HF_NAME[SF_CUR] && !SALES_IDS[SF_CUR];
   row.style.display = '';
   none.style.display = 'none';
-  $('sf_cur_name').textContent = SF_NAME[SF_CUR] || SF_CUR;
-  if (document.activeElement !== inp) inp.value = sfReadAll()[SF_CUR];
+  $('sf_cur_name').textContent = (isHost ? HF_NAME : SF_NAME)[SF_CUR] || SF_CUR;
+  if (unit) unit.textContent = isHost ? 'px' : 'pt';
+  if (document.activeElement !== inp) {
+    if (isHost) { const v = hfReadAll()[SF_CUR]; inp.value = (v == null) ? '' : v; }
+    else inp.value = sfReadAll()[SF_CUR];
+  }
 }
-window.sfSyncCur = function (cur) { SF_CUR = cur || null; sfUpdateRow(); };   /* 2026-11-13a */
+function sfFocusSet(t) { SF_CUR = t || null; sfUpdateRow(); }
+/* تركيز سطح: من نقرة داخل نموذج أو تفعيل تبويب — الأسطح غير المعيَّنة لا تغيّر الهدف */
+function sfFocusFrom(id) {
+  if (id === 'fc-sales' || id === 'win-floatsales') { sfFocusSales(); return; }
+  const t = FLOAT_TARGET[id] || DOCK_TARGET[id] || null;
+  if (!t) return;
+  SF_LAST_SURF = t;
+  sfFocusSet(t);
+}
+/* تركيز النظام المدمج: آخر سطح = النظام والهدف شاشته النشطة */
+function sfFocusSales() {
+  SF_LAST_SURF = 'sales';
+  const ab = window.PH_ROOT ? window.PH_ROOT.querySelector('.navBtn.active') : null;
+  sfFocusSet(ab ? ab.getAttribute('data-scr') : null);
+}
+window.sfSyncCur = function (cur) {
+  /* شاشات النظام تُحدِّث الصف فقط إن كان سطح النظام هو آخر ما ركّز عليه المستخدم —
+     كي لا يخطفها تحديث خلفي داخل النظام من نموذج مضيف منلوص عليه */
+  if (SF_LAST_SURF !== 'sales') return;
+  sfFocusSet(cur || null);
+};
+/* بعد كل تغيّر حالة (يُستدعى من saveSession): الهدف ما زال مفتوحًا؟ وإلا يُخفى الصف */
+function sfValidateCur() {
+  if (!SF_CUR) { sfUpdateRow(); return; }
+  if (SALES_IDS[SF_CUR]) {
+    const vis = (!$('fc-sales').classList.contains('hidden')) || fcsDocked;
+    if (!vis) { SF_LAST_SURF = null; SF_CUR = null; }
+    else {
+      const ab = window.PH_ROOT ? window.PH_ROOT.querySelector('.navBtn.active') : null;
+      const cur2 = ab ? ab.getAttribute('data-scr') : null;
+      if (cur2) SF_CUR = cur2;
+    }
+  } else if (SF_CUR === 'fatora') {
+    if (!fcfFloated && !openDocs.includes('win-fatora')) { SF_LAST_SURF = null; SF_CUR = null; }
+  } else if (HF_CONTAINERS[SF_CUR]) {
+    const fl = $(HF_CONTAINERS[SF_CUR].ids[1]);
+    const docked = HF_DOCKFLAG[SF_CUR] ? HF_DOCKFLAG[SF_CUR]() : false;
+    if (!(docked || (fl && !fl.classList.contains('hidden')))) { SF_LAST_SURF = null; SF_CUR = null; }
+  }
+  sfUpdateRow();
+}
 $('set_sf_cur').addEventListener('input', () => {
   if (!SF_CUR) return;
   const v = parseFloat($('set_sf_cur').value);
-  if (!isFinite(v)) return;
-  const vals = {};
-  vals[SF_CUR] = v;
-  sfApply(vals);
+  if (HF_NAME[SF_CUR] && !SALES_IDS[SF_CUR]) { const vals = {}; vals[SF_CUR] = v; hfApply(vals); }   /* فارغ = إزالة الخاصة وتتبع العام */
+  else { if (!isFinite(v)) return; const vals = {}; vals[SF_CUR] = v; sfApply(vals); }
 });
 $('set_sf_reset').addEventListener('click', () => {
   try { localStorage.removeItem(SF_KEY); } catch (e) {}
+  try { localStorage.removeItem(HF_KEY); } catch (e) {}
   if (window.PHSYS_BOUND && window.PHSYS_fonts && typeof window.PHSYS_fonts.reset === 'function') {
     try { window.PHSYS_fonts.reset(); } catch (e) {}
   }
+  for (const [kk] of HF_LIST) hfApplyOne(kk);
   sfUpdateRow();
-  toast('أُعيدت أحجام نماذج النظام إلى الافتراضي (8)', 'ok');
+  toast('أُعيدت أحجام الخطوط إلى الافتراضي (8 للجميع)', 'ok');
 });
 sfUpdateRow();
+/* تطبيق الخاصّ المحفوظ لنماذج المضيف عند الإقلاع */
+for (const [kk] of HF_LIST) hfApplyOne(kk);
 /* قاعدة البيانات والاتصال — حوار الاختيار نفسه المعروض عند أول فتح (اقتراح المستخدم) */
 $('set_dbconn').addEventListener('click', () => { openDbConnDialog(true); });
 /* الحاسبة السريعة: إظهار/إخفاء بالنقر على عنوانها — مثل مجموعات الكائنات */
@@ -4146,6 +4257,7 @@ function saveSession() {
         dafat: { st: fstate(fdafDocked, $('fc-dafat')) },   /* 06ar */
       },
     } });
+    if (typeof sfValidateCur === 'function') sfValidateCur();   /* 2026-11-13b: بعد كل تغيّر حالة — هدف إعدادات الخط ما زال مفتوحًا؟ */
   } catch (e) {}
 }
 const BOOT_SESSION = (function () { try { const s = loadUIPrefs().session; return (s && typeof s === 'object') ? s : null; } catch (e) { return null; } })();
@@ -6061,9 +6173,9 @@ $('fcp_refresh').onclick = () => { openPurchFloat(matPurch); toast('أُعيد �
 $('fcf_min').onclick = () => dockFatora();     /* 06ak: ─ يعيد فاتورة مشتريات تبويبًا في شريط التبويبات */
 $('fcf_close').onclick = closeFatoraFloat;     /* 06ak: ✕ يغلق فاتورة مشتريات كليًّا من العائم */
 $('btn-floatsales').onclick = () => {
-  if (fcsDocked) { undockFloat('sales'); return; }   /* 06al: المرسَّب يعود عائمًا */
+  if (fcsDocked) { undockFloat('sales'); sfFocusSales(); return; }   /* 06al: المرسَّب يعود عائمًا — 2026-11-13b: ويتبعه صف الخط */
   const el = $('fc-sales');
-  if (el.classList.contains('hidden')) openSalesFloat();
+  if (el.classList.contains('hidden')) { openSalesFloat(); sfFocusSales(); }   /* 2026-11-13b: الفتح تركيز على النظام */
   else closeSalesFloat();
 };
 $('fcs_min').onclick = () => dockFloat('sales');   /* 06al: التصغير يرسّف النظام نافذة عادية في الصندوق */
@@ -6146,7 +6258,10 @@ function phSysInject(bundle) {
   const wrap = document.createElement('div');
   wrap.innerHTML = bundle.html;   /* آمن: جسم الحزمة يُبنى بلا <script إطلاقًا */
   while (wrap.firstChild) root.appendChild(wrap.firstChild);
-  $('fcs_body').appendChild(host);
+  /* 2026-11-13b: بلاغ «بعد تحديث الصفحة يظهر نموذج فاتورة المبيعات فارغًا» — إن كان النظام مرسَّبًا
+     لحظة الحقن (ترسَّب من استعادة الجلسة أثناء تضخيم الحزمة) فالحاوية الصحيحة هي جسم النافذة
+     المرسَّبة، وإلا بقي المحتوى عالقًا في النافذة العائمة المخفية وظهر التبويب المرسَّب فارغًا */
+  ((typeof fcsDocked !== 'undefined' && fcsDocked) ? $('fcs_dock') : $('fcs_body')).appendChild(host);
   window.PH_ROOT = root;
   window.PH_HOSTEL = host;
   const se = document.createElement('script');
@@ -8638,15 +8753,15 @@ dafBind();   /* 06ar: ربط وحدة فاتورة مدفوعات */
    الانتقال بنقرة برمجية على زر الشاشة داخل جذر الظل فتنفَّذ showScreen الداخلية بكل تحديثاتها،
    مع انتظار اكتمال إقلاع النظام أول مرة (PHSYS_BOUND بعد اكتمال سحب الجداول وربط الأحداث) حتى 20 ثانية */
 async function openSalesScreen(scr) {
-  if (fcsDocked) { openWindow('win-floatsales'); }   /* مرسَّبًا: يُنشَّط تبويبه والمحتوى يعمل داخله */
-  else { await openSalesFloat(); }
+  if (fcsDocked) { openWindow('win-floatsales'); }   /* مرسَّبًا: يُنشَّط تبويبه والمحتوى يعمل داخله — وتفعيل التبويب يجعل النظام هدف إعدادات الخط */
+  else { await openSalesFloat(); sfFocusSales(); }   /* 2026-11-13b: الفتح من القائمة تركيز على النظام فيتبعه صف الخط */
   phSalesGoto(scr);
 }
 /* 2026-11-13a: بنود الإجراء الثلاثة (فاتورة جديدة، حفظ الفاتورة، طباعة) — تفتح شاشة فاتورة
    المبيعات أولًا ثم تستدعي الزر المخفي نفسه داخل النظام المدمج فتنفَّذ المعالجة الأصلية */
 async function openSalesAction(act) {
   if (fcsDocked) { openWindow('win-floatsales'); }
-  else { await openSalesFloat(); }
+  else { await openSalesFloat(); sfFocusSales(); }   /* 2026-11-13b: تركيز النظام فيتبعه صف الخط */
   phSalesGoto('invoice', () => {
     const map = { new: 'invNewBtn', save: 'invSaveBtn', print: 'invPrintBtn' };
     const btn = (window.PH_ROOT && window.PH_ROOT.getElementById) ? window.PH_ROOT.getElementById(map[act]) : null;
@@ -8695,6 +8810,12 @@ function floatFront(el) { FW_Z++; el.style.zIndex = String(FW_Z); }
 ['fc-card', 'fc-purch', 'fc-fatora', 'fc-sales', 'fc-orders', 'fc-wh', 'fc-dabt', 'fc-dafat'].forEach(id => {   /* 06al — 06ao — 06ar: أُضيف fc-dabt المنسي من 06ap مع fc-dafat الجديد */
   const el = $(id);
   el.addEventListener('pointerdown', () => floatFront(el), true);
+  el.addEventListener('pointerdown', () => sfFocusFrom(id), true);   /* 2026-11-13b: النقر في أي نموذج يجعله هدف إعدادات الخط */
+});
+/* 2026-11-13b: والنقر داخل فاتورة مشتريات كتبويب أو داخل أي تبويب مرسَّب — يحدّد هدف الخط هو الآخر */
+['win-fatora', 'win-floatcard', 'win-floatpurch', 'win-floatsales', 'win-floatorders', 'win-floatwh', 'win-floatdabt', 'win-floatdafat'].forEach(id => {
+  const el = $(id);
+  if (el) el.addEventListener('pointerdown', () => sfFocusFrom(id), true);
 });
 
 /* 06y: الترسيف — النموذج العائم يصير نافذة عادية داخل صندوق عرض النماذج (Tabbed Documents):
@@ -8723,7 +8844,13 @@ function dockNextFatora(id) {
 }
 function dockFloat(which) {
   const P = fcDockParts(which);
-  if (which === 'card' ? fccDocked : (which === 'sales' ? fcsDocked : (which === 'orders' ? fcoDocked : (which === 'wh' ? fwhDocked : (which === 'dabt' ? fdabDocked : (which === 'dafat' ? fdafDocked : fcpDocked)))))) { openWindow(P.dock); return; }   /* 06al — 06an — 06ao */
+  if (which === 'card' ? fccDocked : (which === 'sales' ? fcsDocked : (which === 'orders' ? fcoDocked : (which === 'wh' ? fwhDocked : (which === 'dabt' ? fdabDocked : (which === 'dafat' ? fdafDocked : fcpDocked)))))) {
+    /* 2026-11-13b: استمرار الترسَّب — يجرف ما وصل متأخرًا إلى جسم العائم (حقن حزمة النظام أثناء
+       استعادة الجلسة بعد تحديث الصفحة) إلى المرسَّب كي لا يبقى التبويب فارغًا والمحتوى عالقًا بالمخفي */
+    const lateBody = P.fl.querySelector('.fwin-body');
+    if (lateBody) Array.from(lateBody.children).forEach(n => P.dockBody.appendChild(n));
+    openWindow(P.dock); return;
+  }   /* 06al — 06an — 06ao */
   const body = P.fl.querySelector('.fwin-body');
   Array.from(body.children).forEach(n => P.dockBody.appendChild(n));
   P.fl.classList.add('hidden');
@@ -8749,7 +8876,7 @@ function undockFloat(which, keepClosed) {
   closeWindow(P.dock);
   if (keepClosed) { P.fl.classList.add('hidden'); if (which === 'card') renderCardFloat(); else if (which !== 'sales' && which !== 'orders' && which !== 'wh' && which !== 'dabt' && which !== 'dafat') renderPurchFloat(); saveSession(); return; }   /* 06al: محتوى النظام المدمج يبقى حيًّا بلا إعادة رسم — 06ao */
   P.fl.classList.remove('hidden');
-  if (which === 'card') openCardFloat(matCard); else if (which === 'sales') openSalesFloat(); else if (which === 'orders') openOrdersFloat(); else if (which === 'wh') openWhFloat(); else if (which === 'dabt') openDabtFloat(); else if (which === 'dafat') openDafatFloat(); else openPurchFloat(matPurch);   /* 06al — 06an — 06ao */
+  if (which === 'card') openCardFloat(matCard); else if (which === 'sales') { openSalesFloat(); sfFocusSales(); } else if (which === 'orders') openOrdersFloat(); else if (which === 'wh') openWhFloat(); else if (which === 'dabt') openDabtFloat(); else if (which === 'dafat') openDafatFloat(); else openPurchFloat(matPurch);   /* 06al — 06an — 06ao — 2026-11-13b: الطفو تركيز على النظام فيتبعه صف الخط */
   saveSession();   /* 06ag: الطفو حالة جلسة تُحفظ */
 }
 
