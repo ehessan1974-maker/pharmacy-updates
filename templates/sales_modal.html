@@ -1,0 +1,190 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='جدول_مبيعات_العائم.css') }}"> 
+
+<!-- النموذج العائم -->
+<div id="floatingModal" class="modal-window" style="display: none;">
+<style>
+/* جعل رأس النافذة العلوي ثابتاً */
+#floatingModalHeader {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #1f4f3a;
+    padding-top: 0px; /* ارتفاع السطر السفلي*/
+}
+
+/* جعل شريط الفلترة والأزرار (أداة Bulk) ثابتاً أسفل الرأس مباشرة */
+#floatingModal > div:first-of-type + div,   /* القائمة المنبثقة ليست جزءاً من هذا */
+#floatingModal > div:first-of-type + div + div {
+    position: sticky;
+    top: 52px; /* حسب ارتفاع الهيدر، اضبطها */
+    z-index: 99;
+    background: #f0f2f5;
+}
+
+/* جعل رأس الجدول (thead) ثابتاً */
+#floatingTable thead {
+    position: sticky;
+    top: 0px; /* ارتفاع الهيدر + شريط الأدوات */
+    z-index: 10;
+    background: #2c6e49;
+}
+
+/* منطقة المحتوى القابلة للتمرير */
+#floatingModalContent {
+    overflow-y: auto !important;
+    max-height: calc(100vh - 200px); /* حسب الحاجة */
+}
+</style>
+  <!-- رأس النافذة -->
+  <div id="floatingModalHeader">
+
+    <!-- أزرار التحكم في الأعمدة -->
+    <div class="window-controls">
+      <span class="window-title">جدول المبيعات</span> 
+      <button id="fitAllColumnsBtn" onclick="autoFitColumns()" title="Auto Fit لجميع الأعمدة">⛶</button>
+      <button id="refitAllColumnsBtn" onclick="disableAutoFit()" title="إلغاء Auto Fit">✖</button>
+    </div> 
+
+    <!-- حاوية البحث -->
+    <div class="sales-search-wrapper google-search-wrapper" style="flex: 1; margin: 0 15px; max-width: 420px; position: relative;"></div>
+
+    <!-- 🔥 زر الفلترة - مهم جداً -->
+    <button id="filterDropdownBtn" type="button" style="background: #198754; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; margin-left: 10px;">
+      📅 فلترة التاريخ <span style="font-size: 12px;">▼</span>
+    </button>
+
+    <!-- أزرار التحكم في النافذة -->
+    <div class="window-controls">
+      <button id="minimizeBtnWindow" type="button" title="تصغير">🗕</button>
+      <button id="maximizeBtnWindow" type="button" title="تكبير/استعادة">🗖</button>
+      <button id="closeBtnWindow" type="button" title="إغلاق">✖</button>
+    </div>
+  </div>
+
+  <!-- 🔥 القائمة المنبثقة للفلترة - توضع خارج الـ header مباشرة -->
+  <div id="filterPopup" style="display: none; position: fixed; background: white; border: 1px solid #ddd; border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.2); z-index: 100000; width: 300px; padding: 15px; direction: rtl;">
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; font-weight: bold; margin-bottom: 8px; color: #333;">فلترة حسب التاريخ</label>
+      <select id="filterTypeSelect" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+        <option value="today">اليوم</option>
+        <option value="yesterday">البارحة</option>
+        <option value="this_week">هذا الأسبوع</option>
+        <option value="this_month">هذا الشهر</option>
+        <option value="single_date">تاريخ محدد</option>
+        <option value="date_range">بين تاريخين</option>
+        <option value="all">الكل</option>
+      </select>
+    </div>
+    
+    <div id="singleDateGroup" style="display: none; margin-bottom: 15px;">
+      <label style="display: block; font-weight: bold; margin-bottom: 5px;">اختر تاريخ:</label>
+      <input type="date" id="singleDateInput" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+    </div>
+    
+    <div id="dateRangeGroup" style="display: none; margin-bottom: 15px;">
+      <label style="display: block; font-weight: bold; margin-bottom: 5px;">من تاريخ:</label>
+      <input type="date" id="startDateInput" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; margin-bottom: 10px;">
+      <label style="display: block; font-weight: bold; margin-bottom: 5px;">إلى تاريخ:</label>
+      <input type="date" id="endDateInput" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+    </div>
+    
+    <div style="display: flex; justify-content: space-between; gap: 10px; margin-top: 10px;">
+      <button id="applyFilterBtn" style="flex: 1; background: #0d6efd; color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer; font-weight: bold;">تطبيق</button>
+      <button id="cancelFilterBtn" style="flex: 1; background: #6c757d; color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer;">إلغاء</button>
+    </div>
+  </div>
+
+  <!-- شريط الأدوات السفلي (Bulk operations) -->
+  <div style="display: flex; gap: 12px; align-items: center; padding: 8px 12px; background: #f0f2f5; border-bottom: 1px solid #dee2e6; flex-wrap: wrap;">
+    <div style="display: flex; align-items: center; gap: 6px;">
+      <span>📅 التاريخ:</span>
+      <input type="date" id="bulkDateInput" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #ccc;">
+    </div>
+    <button id="applyBulkDateBtn" class="btn-small" style="background: #198754; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;">تطبيق على المحددين</button>
+    <button id="selectAllRowsBtn" class="btn-small" style="background: #0d6efd; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;">تحديد الكل</button>
+    <span id="selectedCountBadge" style="background: #6c757d; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem;">0 محدد</span>
+    <button id="deselectAllRowsBtn" class="btn-small" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;">إلغاء التحديد</button>
+    <div style="display: flex; align-items: center; gap: 6px;">
+      <span>👤 إلى:</span>
+      <input type="text" id="bulkToInput" placeholder="اسم العميل" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #ccc;">
+    </div>
+    <button id="applyBulkToBtn" class="btn-small" style="background: #198754; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;">تطبيق على المحددين</button>
+  </div>
+
+  <!-- منطقة المحتوى -->
+  <div id="floatingModalContent">
+    <table id="floatingTable">
+      <thead>
+        <tr>
+          <th>المادة</th>
+          <th>الكمية</th>
+          <th>سعر المبيع</th>
+          <th>حسم %</th>
+          <th>رقم الطبخة</th>
+          <th>رقم الفاتورة</th>
+          <th class="col-user">المستخدم</th>
+          <th class="col-from">من</th>
+          <th>إلى</th>
+          <th class="col-date">التاريخ</th>
+          <th class="col-time">الوقت</th>
+          <th>التكلفة</th>
+          <th>إجمالي التكلفة</th>
+          <th>إجمالي الربح</th>
+          <th>الإجمالي بعد الحسم</th>
+          <th class="tarkim-col">tarkim</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot>
+        <tr id="totalsRow">
+          <td data-field="total_items">0</td>
+          <td data-field="total_qty">0</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td data-field="total_cost">0.00</td>
+          <td data-field="total_profit">0.00</td>
+          <td data-field="total_after">0.00</td>
+          <td></td>
+         </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <!-- روزنامة مخفية -->
+  <input type="date" id="datepicker" style="display: none; position: fixed; z-index: 99999;">
+
+  <!-- مقابض تغيير الحجم -->
+  <div class="resize-handle resize-bottom-right"></div>
+  <div class="resize-handle resize-bottom-left"></div>
+  <div class="resize-handle resize-up-right"></div>
+  <div class="resize-handle resize-up-left"></div>
+  <div class="resize-handle resize-right"></div>
+  <div class="resize-handle resize-left"></div>
+  <div class="resize-handle resize-bottom"></div>
+  <div class="resize-handle resize-up"></div>
+</div>
+
+<style>
+  .btn-small {
+    background: #2c6e49;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .btn-small:hover { opacity: 0.85; }
+  #filterDropdownBtn:hover { opacity: 0.85; }
+  #floatingTable tbody tr.row-selected {
+    background-color: #cfe2ff !important;
+  }
+</style>

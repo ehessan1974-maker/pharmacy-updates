@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>📋 المبيعات - عرض كامل</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='floating-modal-common.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='جدول_مبيعات_العائم.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='sales_standalone.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+<div class="standalone-sales-container">
+    <div id="floatingModalHeader">
+        <div class="window-controls" style="display: flex; gap: 8px; align-items: center;">
+            <span class="window-title">📋 مبيعات</span>
+            <button id="fitAllColumnsBtn" class="btn-small">⛶</button>
+            <button id="refitAllColumnsBtn" class="btn-small">✖</button>
+            <button id="toggleColumnsSalesBtn" class="toggle-columns-btn">☷</button>
+        </div>
+        <div class="search-wrapper" id="salesSearchContainer"></div>
+        <button id="filterDropdownBtn" class="btn-small" style="background:#198754; display:flex; align-items:center; gap:8px;">📅 فلترة التاريخ <span style="font-size:12px;">▼</span></button>
+        <div class="window-controls"></div>
+    </div>
+
+    <div class="sales-toolbar">
+        <div><span>📅 التاريخ:</span> <input type="date" id="bulkDateInput"></div>
+        <button id="applyBulkDateBtn" class="btn-small">تطبيق على المحددين</button>
+        <button id="selectAllRowsBtn" class="btn-small">تحديد الكل</button>
+        <button id="deselectAllRowsBtn" class="btn-small">إلغاء التحديد</button>
+        <span id="selectedCountBadge" style="background:#6c757d; padding:4px 12px; border-radius:20px; color:white;">0 محدد</span>
+        <div><span>👤 إلى:</span> <input type="text" id="bulkToInput" placeholder="اسم العميل"></div>
+        <button id="applyBulkToBtn" class="btn-small">تطبيق على المحددين</button>
+    </div>
+
+    <div id="floatingModalContent">
+        <table id="floatingTable">
+            <thead>
+                <tr>
+                    <th data-col-index="0">المادة</th><th data-col-index="1">الكمية</th><th data-col-index="2">سعر المبيع</th>
+                    <th data-col-index="3">حسم %</th><th data-col-index="4">رقم الطبخة</th><th data-col-index="5">رقم الفاتورة</th>
+                    <th data-col-index="6">المستخدم</th><th data-col-index="7">من</th><th data-col-index="8">إلى</th>
+                    <th data-col-index="9">التاريخ</th><th data-col-index="10">الوقت</th><th data-col-index="11">التكلفة</th>
+                    <th data-col-index="12">إجمالي التكلفة</th><th data-col-index="13">إجمالي الربح</th>
+                    <th data-col-index="14">الإجمالي بعد الحسم</th><th data-col-index="15">tarkim</th>
+                </tr>
+
+            </thead>
+            <tbody id="salesTbody">
+                <tr><td colspan="16" class="loading">⏳ جاري التحميل...<\/td><\/tr>
+            </tbody>
+
+<tfoot>
+    <tr id="totalsRow">
+        <td data-field="total_items">0</td>
+        <td data-field="total_qty">0</td>
+        <td></td><td></td><td></td><td></td>
+        <td></td><td></td><td></td><td></td><td></td><td></td>
+        <td data-field="total_cost">0.00</td>
+        <td data-field="total_profit">0.00</td>
+        <td data-field="total_after">0.00</td>
+        <td></td>
+    </tr>
+</tfoot>
+
+
+        </table>
+    </div>
+
+    <div id="filterPopup" class="filter-popup">
+        <div><label>فلترة حسب التاريخ</label><select id="filterTypeSelect">
+            <option value="today">اليوم</option><option value="yesterday">البارحة</option>
+            <option value="this_week">هذا الأسبوع</option><option value="this_month">هذا الشهر</option>
+            <option value="single_date">تاريخ محدد</option><option value="date_range">بين تاريخين</option>
+            <option value="all">الكل</option>
+        </select></div>
+        <div id="singleDateGroup" style="display:none; margin-top:10px;"><label>اختر تاريخ:</label><input type="date" id="singleDateInput"></div>
+        <div id="dateRangeGroup" style="display:none; margin-top:10px;"><label>من تاريخ:</label><input type="date" id="startDateInput" style="margin-bottom:10px;"><label>إلى تاريخ:</label><input type="date" id="endDateInput"></div>
+        <div style="display:flex; justify-content:space-between; gap:10px; margin-top:15px;">
+            <button id="applyFilterBtn" style="background:#0d6efd; color:white; border:none; padding:8px; border-radius:6px; flex:1;">تطبيق</button>
+            <button id="cancelFilterBtn" style="background:#6c757d; color:white; border:none; padding:8px; border-radius:6px; flex:1;">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+
+
+<script src="/static/column-auto-fit.js"></script>
+<script src="/static/column-resizer.js"></script>
+<script src="/static/highlight-utils.js"></script>
+<script src="/static/google-search-component.js"></script>
+<script src="/static/sales_standalone.js"></script>
+</body>
+</html>

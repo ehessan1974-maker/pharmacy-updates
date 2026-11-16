@@ -1,0 +1,130 @@
+@import url("floating-modal-common.css");
+
+/* ========== خصائص خاصة بالمواد فقط ========== */
+
+#materialsOverlay { display: none !important; }
+
+#materialsHeader {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  cursor: move;
+  user-select: none;
+  pointer-events: auto;
+}
+
+.window-title { font-weight: bold; font-size: 14.5px; }
+
+.window-controls button {
+  margin-left: 6px;
+  border: none;
+  background: transparent;
+  color: white;
+  font-size: 17px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.window-controls button:hover {
+  background: rgba(255,255,255,0.15);
+  color: #f1c40f;
+}
+#closeMaterialsBtn:hover { background: red !important; }
+
+#materialsContent {
+  flex: 1 1 auto;
+  overflow: auto;
+  position: relative;
+}
+
+#materialsTable {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+#materialsTable thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+#materialsTable td {
+  padding: 8px 6px;
+  border: 1px solid #ddd;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* البحث والتمييز (خاص) */
+.search-wrapper { position: relative; margin: 10px; }
+.highlight {
+  background: linear-gradient(90deg, #fff59d, #ffe082);
+  color: #000;
+  font-weight: bold;
+  padding: 1px 2px;
+  border-radius: 3px;
+}
+.selected-row { background: #cce5ff !important; }
+
+/* رؤوس قابلة للفرز */
+th.sortable { cursor: pointer; user-select: none; transition: 0.2s; }
+th.sortable:hover { background: #3a5a7a; color: #ffcc00; }
+th.asc::after { content: " ▲"; font-size: 11px; }
+th.desc::after { content: " ▼"; font-size: 11px; }
+td.sorted-col { background: rgba(0, 123, 255, 0.08); }
+
+/* تاريخ البحث الأول */
+.materials-search-history {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  background: #fff;
+  color: #333;
+  border: 1px solid #ccc;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+  z-index: 999999;
+  max-height: 250px;
+  overflow-y: auto;
+  opacity: 0;
+  transform: translateY(-5px);
+  pointer-events: none;
+  transition: 0.15s;
+}
+.materials-search-history.show {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* نمط Google للبحث */
+.google-search-wrapper { position: relative; width: 100%; }
+#materialsSearchInput {
+  padding: 10px 20px 10px 80px;
+  border-radius: 28px;
+  border: 1px solid #dfe1e5;
+}
+
+
+
+
+.search-history-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 18px;
+  cursor: pointer;
+}
+.search-history-item:hover { background: #f1f3f4; }
+.search-history-icon { font-size: 18px; color: #9aa0a6; }
+.search-history-text { flex: 1; }
+.search-history-clear {
+  font-size: 18px;
+  color: #9aa0a6;
+  visibility: hidden;
+}
+.search-history-item:hover .search-history-clear { visibility: visible; }
+.search-history-clear:hover { color: #ea4335; }

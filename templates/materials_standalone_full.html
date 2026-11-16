@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>📚 بطاقات المواد - عرض كامل</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='floating-modal-common.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='بطاقات_المواد_العائم.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f0f2f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .standalone-container {
+            max-width: 100%;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        #materialsHeader {
+            cursor: default !important;
+            border-radius: 12px 12px 0 0;
+            background: #1f4f3a;
+            color: white;
+            padding: 12px 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        #materialsContent {
+            overflow-x: auto !important;
+            overflow-y: auto !important;
+            max-height: calc(100vh - 150px);
+            padding: 10px;
+        }
+        #materialsTable {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #materialsTable th, #materialsTable td {
+            border: 1px solid #ddd;
+            padding: 8px 6px;
+            text-align: center;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        #materialsTable thead th {
+            background: #2c6e49;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            cursor: pointer;
+            user-select: none;
+        }
+        #materialsTable thead th.asc::after { content: " ▲"; font-size: 11px; }
+        #materialsTable thead th.desc::after { content: " ▼"; font-size: 11px; }
+        .btn-small {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            background: #2c6e49;
+            color: white;
+        }
+        .btn-small:hover { opacity: 0.85; }
+        .toggle-columns-btn {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            margin-left: 8px;
+        }
+        .toggle-columns-btn:hover { background: rgba(255,255,255,0.2); border-radius: 4px; }
+        .highlight { background: linear-gradient(90deg, #fff59d, #ffe082); color: #000; font-weight: bold; padding: 1px 2px; border-radius: 3px; }
+        
+        /* أنماط البحث */
+        .google-search-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 420px;
+            margin: 0 15px;
+            flex: 1;
+        }
+        .google-search-input {
+            width: 100%;
+            padding: 10px 20px;
+            border-radius: 28px;
+            border: 1px solid #dfe1e5;
+            font-size: 14px;
+            outline: none;
+            background: white;
+            box-sizing: border-box;
+            text-align: right;
+        }
+        .google-search-input:focus {
+            border-color: #4285f4;
+            box-shadow: 0 1px 6px rgba(66,133,244,0.3);
+        }
+        
+        /* وضع no-auto-fit */
+        .no-auto-fit th, .no-auto-fit td {
+            white-space: normal !important;
+            word-break: break-word !important;
+        }
+        .auto-fit-mode th, .auto-fit-mode td {
+            white-space: nowrap !important;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 18px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+<div class="standalone-container">
+    <div id="materialsHeader">
+        <div class="window-controls" style="display: flex; gap: 8px; align-items: center;">
+            <span class="window-title">📚 بطاقات المواد</span>
+            <button id="fitAllColumnsMaterialsBtn" class="btn-small">⛶ ضبط تلقائي</button>
+            <button id="refitAllColumnsMaterialsBtn" class="btn-small">✖ إلغاء الضبط</button>
+            <button id="toggleColumnsMaterialsBtn" class="toggle-columns-btn">☷ تخصيص</button>
+        </div>
+        <div class="google-search-wrapper">
+            <input type="text" id="searchInput" class="google-search-input" placeholder="بحث في بطاقات المواد...">
+        </div>
+        <div class="window-controls"></div>
+    </div>
+    <div id="materialsContent">
+        <table id="materialsTable">
+            <thead>
+                <tr>
+                    <th data-field="barcode">رمز الباركود</th>
+                    <th data-field="name">المادة</th>
+                    <th data-field="company">الشركة</th>
+                    <th data-field="base_price">السعر الأساسي</th>
+                    <th data-field="general_free">عموم حر</th>
+                    <th data-field="general_20">عموم 20%</th>
+                    <th data-field="general_approved">عموم معتمد</th>
+                    <th data-field="category">التصنيف</th>
+                    <th data-field="profit_ratio">نسبة الربح</th>
+                    <th data-field="latin_name">الاسم اللاتيني</th>
+                    <th data-field="net_free">نيت حر</th>
+                    <th data-field="package">العبوة</th>
+                    <th data-field="strength">العيار</th>
+                    <th data-field="form">الشكل الصيدلاني</th>
+                    <th data-field="composition">التركيب الكيميائي</th>
+                    <th data-field="unit">وحدة العبوة</th>
+                    <th data-field="trade_name">اسم المستحضر</th>
+                    <th data-field="code">الرمز</th>
+                    <th data-field="updated">تعديل جديد</th>
+                    <th data-field="base_price_usd">السعر الأساسي دولار</th>
+                    <th data-field="general_approved_usd">عموم معتمد دولار</th>
+                    <th data-field="general_20_usd">عموم 20% دولار</th>
+                </tr>
+            </thead>
+            <tbody id="materialsTbody">
+                <tr><td colspan="22" class="loading">⏳ جاري تحميل البيانات...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="/static/column-auto-fit.js"></script>
+<script src="/static/column-resizer.js"></script>
+<script src="/static/highlight-utils.js"></script>
+
+<script>
+(function() {
+    "use strict";
+    
+    // ---------- المتغيرات ----------
+    let allData = [];
+    let currentData = [];
+    let currentSearchTerm = "";
+    let sortField = "name";
+    let sortDirection = "asc";
+    
+    // إدارة الأعمدة المخفية
+    const HIDDEN_STORAGE_KEY = 'hiddenColumns_materialsStandalone';
+    let hiddenIndexes = [];
+    
+    const tbody = document.getElementById('materialsTbody');
+    const searchInput = document.getElementById('searchInput');
+    
+    // ---------- دوال الأعمدة المخفية ----------
+    function loadHiddenColumns() {
+        const saved = localStorage.getItem(HIDDEN_STORAGE_KEY);
+        if (saved) {
+            try { hiddenIndexes = JSON.parse(saved); } catch(e) {}
+        }
+    }
+    
+    function saveHiddenColumns() {
+        localStorage.setItem(HIDDEN_STORAGE_KEY, JSON.stringify(hiddenIndexes));
+    }
+    
+    function applyHiddenColumns() {
+        const table = document.getElementById('materialsTable');
+        if (!table) return;
+        const rows = table.querySelectorAll('tr');
+        rows.forEach(row => {
+            const cells = row.children;
+            for (let i = 0; i < cells.length; i++) {
+                if (hiddenIndexes.includes(i)) {
+                    cells[i].style.display = 'none';
+                } else {
+                    cells[i].style.display = '';
+                }
+            }
+        });
+    }
+    
+    function showColumnsModal() {
+        const existing = document.querySelector('.columns-modal');
+        if (existing) existing.remove();
+        
+        const theadRow = document.querySelector('#materialsTable thead tr');
+        if (!theadRow) return;
+        const columnNames = Array.from(theadRow.children).map(th => th.innerText.trim());
+        
+        const overlay = document.createElement('div');
+        overlay.className = 'columns-modal';
+        overlay.style.cssText = `position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10001; display:flex; align-items:center; justify-content:center;`;
+        
+        const modalDiv = document.createElement('div');
+        modalDiv.style.cssText = `background:white; border-radius:16px; width:90%; max-width:450px; max-height:85%; overflow:auto; direction:rtl;`;
+        modalDiv.innerHTML = `
+            <div style="background:#1f4f3a; color:white; padding:15px; display:flex; justify-content:space-between;">
+                <span>📋 تخصيص الأعمدة</span>
+                <button id="closeColModal" style="background:none; border:none; color:white; font-size:28px; cursor:pointer;">&times;</button>
+            </div>
+            <div id="colList" style="padding:10px;"></div>
+            <div style="padding:12px; border-top:1px solid #ddd; display:flex; gap:12px; justify-content:flex-end;">
+                <button id="resetColsBtn" style="padding:6px 12px; cursor:pointer;">إظهار الكل</button>
+                <button id="closeColBtn" style="padding:6px 12px; cursor:pointer;">إغلاق</button>
+            </div>
+        `;
+        overlay.appendChild(modalDiv);
+        document.body.appendChild(overlay);
+        
+        const listDiv = modalDiv.querySelector('#colList');
+        columnNames.forEach((name, idx) => {
+            const label = document.createElement('label');
+            label.style.cssText = `display:flex; align-items:center; gap:12px; padding:10px; cursor:pointer;`;
+            const chk = document.createElement('input');
+            chk.type = 'checkbox';
+            chk.checked = !hiddenIndexes.includes(idx);
+            chk.style.cssText = 'width:18px; height:18px;';
+            const span = document.createElement('span');
+            span.textContent = name;
+            label.appendChild(chk);
+            label.appendChild(span);
+            chk.addEventListener('change', () => {
+                if (chk.checked) {
+                    hiddenIndexes = hiddenIndexes.filter(i => i !== idx);
+                } else {
+                    if (!hiddenIndexes.includes(idx)) hiddenIndexes.push(idx);
+                }
+                saveHiddenColumns();
+                applyHiddenColumns();
+            });
+            listDiv.appendChild(label);
+        });
+        
+        const close = () => overlay.remove();
+        modalDiv.querySelector('#closeColModal').onclick = close;
+        modalDiv.querySelector('#closeColBtn').onclick = close;
+        modalDiv.querySelector('#resetColsBtn').onclick = () => {
+            hiddenIndexes = [];
+            saveHiddenColumns();
+            applyHiddenColumns();
+            listDiv.querySelectorAll('input').forEach(cb => cb.checked = true);
+        };
+    }
+    
+    // ---------- دوال البحث والفرز والعرض ----------
+    function filterData() {
+        if (!currentSearchTerm.trim()) {
+            currentData = [...allData];
+        } else {
+            const term = currentSearchTerm.toLowerCase();
+            currentData = allData.filter(item => 
+                (item.name && item.name.toLowerCase().includes(term)) ||
+                (item.barcode && item.barcode.toLowerCase().includes(term)) ||
+                (item.company && item.company.toLowerCase().includes(term)) ||
+                (item.category && item.category.toLowerCase().includes(term))
+            );
+        }
+        sortData();
+    }
+    
+    function sortData() {
+        const dir = sortDirection === "asc" ? 1 : -1;
+        currentData.sort((a, b) => {
+            let valA = a[sortField] ?? "";
+            let valB = b[sortField] ?? "";
+            if (typeof valA === "number" && typeof valB === "number") {
+                return (valA - valB) * dir;
+            }
+            return String(valA).localeCompare(String(valB)) * dir;
+        });
+        updateSortUI();
+        renderTable();
+    }
+    
+    function updateSortUI() {
+        const headers = document.querySelectorAll('#materialsTable thead th');
+        headers.forEach(th => {
+            th.classList.remove('asc', 'desc');
+            if (th.dataset.field === sortField) {
+                th.classList.add(sortDirection);
+            }
+        });
+    }
+    
+    function renderTable() {
+        if (!tbody) return;
+        
+        if (currentData.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="22" style="text-align:center;">📭 لا توجد بيانات</td></tr>';
+            return;
+        }
+        
+        const fragment = document.createDocumentFragment();
+        
+        currentData.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td contenteditable="true" data-field="barcode">${escapeHtml(item.barcode || '')}</td>
+                <td data-field="name">${highlightText(item.name || '', currentSearchTerm)}</td>
+                <td contenteditable="true" data-field="company">${highlightText(item.company || '', currentSearchTerm)}</td>
+                <td contenteditable="true" data-field="base_price">${item.base_price ?? ''}</td>
+                <td contenteditable="true" data-field="general_free">${item.general_free ?? ''}</td>
+                <td contenteditable="true" data-field="general_20">${item.general_20 ?? ''}</td>
+                <td contenteditable="true" data-field="general_approved">${item.general_approved ?? ''}</td>
+                <td contenteditable="true" data-field="category">${highlightText(item.category || '', currentSearchTerm)}</td>
+                <td contenteditable="true" data-field="profit_ratio">${item.profit_ratio ?? ''}</td>
+                <td contenteditable="true" data-field="latin_name">${highlightText(item.latin_name || '', currentSearchTerm)}</td>
+                <td contenteditable="true" data-field="net_free">${item.net_free ?? ''}</td>
+                <td contenteditable="true" data-field="package">${item.package ?? ''}</td>
+                <td contenteditable="true" data-field="strength">${item.strength ?? ''}</td>
+                <td contenteditable="true" data-field="form">${item.form ?? ''}</td>
+                <td contenteditable="true" data-field="composition">${item.composition ?? ''}</td>
+                <td contenteditable="true" data-field="unit">${item.unit ?? ''}</td>
+                <td contenteditable="true" data-field="trade_name">${item.trade_name ?? ''}</td>
+                <td contenteditable="true" data-field="code">${item.code ?? ''}</td>
+                <td contenteditable="true" data-field="updated">${item.updated ?? ''}</td>
+                <td contenteditable="true" data-field="base_price_usd">${item.base_price_usd ?? ''}</td>
+                <td contenteditable="true" data-field="general_approved_usd">${item.general_approved_usd ?? ''}</td>
+                <td contenteditable="true" data-field="general_20_usd">${item.general_20_usd ?? ''}</td>
+            `;
+            tr._rowData = item;
+            fragment.appendChild(tr);
+        });
+        
+        tbody.innerHTML = '';
+        tbody.appendChild(fragment);
+        applyHiddenColumns();
+    }
+    
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+    
+    function highlightText(text, term) {
+        if (!term || !text) return escapeHtml(text);
+        const str = escapeHtml(String(text));
+        const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`(${escaped})`, 'gi');
+        return str.replace(regex, `<span class="highlight">$1</span>`);
+    }
+    
+    // ---------- تحميل البيانات من السيرفر ----------
+    function loadData() {
+        tbody.innerHTML = '<tr><td colspan="22" class="loading">⏳ جاري التحميل...</td></tr>';
+        
+        fetch('/api/materials')
+            .then(res => res.json())
+            .then(data => {
+                allData = data;
+                currentData = [...allData];
+                sortData();
+                renderTable();
+                
+                // استعادة مصطلح البحث المحفوظ
+                const savedTerm = localStorage.getItem('searchTerm_materialsStandalone') || '';
+                if (savedTerm && searchInput) {
+                    searchInput.value = savedTerm;
+                    currentSearchTerm = savedTerm;
+                    filterData();
+                }
+            })
+            .catch(err => {
+                console.error('خطأ في التحميل:', err);
+                tbody.innerHTML = '<tr><td colspan="22" style="text-align:center; color:red;">❌ خطأ في تحميل البيانات</td></tr>';
+            });
+    }
+    
+    // ---------- حفظ التغييرات المباشرة ----------
+    function setupInlineEditing() {
+        tbody.addEventListener('blur', function(e) {
+            const cell = e.target.closest('[contenteditable="true"]');
+            if (!cell) return;
+            
+            const tr = cell.closest('tr');
+            const rowData = tr?._rowData;
+            if (!rowData) return;
+            
+            const field = cell.dataset.field;
+            const newValue = cell.innerText.trim();
+            const oldValue = rowData[field];
+            
+            if (oldValue === newValue) return;
+            
+            const allowedFields = ['barcode', 'company', 'base_price', 'general_approved'];
+            if (!allowedFields.includes(field)) return;
+            
+            const fieldMap = {
+                'general_approved': 'عموم معتمد',
+                'barcode': 'رمز الباركود',
+                'company': 'الشركة',
+                'base_price': 'السعر الأساسي'
+            };
+            
+            fetch('/api/materials/update-approved', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    material_name: rowData.name,
+                    field: fieldMap[field],
+                    value: newValue
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    rowData[field] = newValue;
+                    showToast('✅ تم الحفظ', 'success');
+                } else {
+                    cell.innerText = oldValue;
+                    showToast('❌ ' + (data.msg || 'فشل الحفظ'), 'error');
+                }
+            })
+            .catch(() => {
+                cell.innerText = oldValue;
+                showToast('❌ خطأ في الاتصال', 'error');
+            });
+        }, true);
+    }
+    
+    function showToast(msg, type) {
+        const toast = document.createElement('div');
+        toast.innerText = msg;
+        toast.style.cssText = `position:fixed; bottom:20px; right:20px; background:${type === 'success' ? '#28a745' : '#dc3545'}; color:white; padding:10px 16px; border-radius:8px; z-index:20000; font-size:14px;`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
+    }
+    
+    // ---------- دوال Auto Fit ----------
+    function handleAutoFit() {
+        if (typeof autoFitAllColumns === 'function') {
+            autoFitAllColumns('materialsTable', 'materialsColumnWidths');
+            applyHiddenColumns();
+            showToast('✅ تم ضبط الأعمدة تلقائياً', 'success');
+        } else {
+            showToast('❌ الدالة غير متوفرة', 'error');
+        }
+    }
+    
+    function handleDisableAutoFit() {
+        if (typeof disableAutoFit === 'function') {
+            disableAutoFit('materialsTable', 'materialsContent', 'materialsColumnWidths');
+            applyHiddenColumns();
+            showToast('✅ تم إلغاء الضبط التلقائي', 'success');
+        } else {
+            showToast('❌ الدالة غير متوفرة', 'error');
+        }
+    }
+    
+    // ---------- أحداث البحث والفرز ----------
+    function bindEvents() {
+        if (searchInput) {
+            searchInput.addEventListener('input', function(e) {
+                currentSearchTerm = e.target.value.trim();
+                localStorage.setItem('searchTerm_materialsStandalone', currentSearchTerm);
+                filterData();
+            });
+        }
+        
+        const headers = document.querySelectorAll('#materialsTable thead th');
+        headers.forEach(th => {
+            th.addEventListener('click', () => {
+                const field = th.dataset.field;
+                if (!field) return;
+                if (sortField === field) {
+                    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortField = field;
+                    sortDirection = 'asc';
+                }
+                sortData();
+            });
+        });
+        
+        const fitBtn = document.getElementById('fitAllColumnsMaterialsBtn');
+        const refitBtn = document.getElementById('refitAllColumnsMaterialsBtn');
+        const toggleBtn = document.getElementById('toggleColumnsMaterialsBtn');
+        
+        if (fitBtn) fitBtn.onclick = handleAutoFit;
+        if (refitBtn) refitBtn.onclick = handleDisableAutoFit;
+        if (toggleBtn) toggleBtn.onclick = showColumnsModal;
+    }
+    
+    // ---------- التهيئة ----------
+    function init() {
+        loadHiddenColumns();
+        loadData();
+        setupInlineEditing();
+        bindEvents();
+        
+        if (typeof restoreColumnWidths === 'function') {
+            restoreColumnWidths('materialsTable', 'materialsColumnWidths');
+        }
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
+</script>
+</body>
+</html>
