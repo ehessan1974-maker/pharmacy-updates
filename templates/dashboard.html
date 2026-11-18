@@ -1,0 +1,877 @@
+# -*- coding: utf-8 -*-
+# dashboard.html — لوحة معلومات Apotheca (جديدة في v100)
+# تجمع كل المسارات الجديدة في واجهة واحدة بصرية بسيطة وعربية بالكامل
+# ============================================================
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة معلومات Apotheca</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", "Tahoma", sans-serif;
+      background: #f5f6fa;
+      color: #2c3e50;
+      padding: 20px;
+      direction: rtl;
+    }
+    header {
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      color: white;
+      padding: 20px 30px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    header h1 { font-size: 28px; margin-bottom: 5px; }
+    header .sub { opacity: 0.85; font-size: 14px; }
+    header .reload {
+      float: left;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      padding: 8px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    header .reload:hover { background: rgba(255,255,255,0.25); }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: white;
+      padding: 18px 22px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+      border-right: 4px solid #2a5298;
+    }
+    .card.warn { border-right-color: #f39c12; }
+    .card.danger { border-right-color: #c0392b; }
+    .card.success { border-right-color: #27ae60; }
+    .card .label {
+      font-size: 13px;
+      color: #7f8c8d;
+      margin-bottom: 6px;
+    }
+    .card .value {
+      font-size: 26px;
+      font-weight: 700;
+      color: #2c3e50;
+    }
+    .card .sub {
+      font-size: 11px;
+      color: #95a5a6;
+      margin-top: 4px;
+    }
+
+    section.panel {
+      background: white;
+      border-radius: 10px;
+      padding: 22px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+    section.panel h2 {
+      font-size: 18px;
+      margin-bottom: 14px;
+      color: #2c3e50;
+      border-bottom: 2px solid #ecf0f1;
+      padding-bottom: 8px;
+    }
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .toolbar label {
+      font-size: 13px;
+      color: #555;
+    }
+    .toolbar input[type="date"] {
+      padding: 6px 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-family: inherit;
+    }
+    .toolbar button {
+      background: #2a5298;
+      color: white;
+      border: none;
+      padding: 7px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+    }
+    .toolbar button:hover { background: #1e3c72; }
+    .toolbar .export-btn {
+      background: #27ae60;
+    }
+    .toolbar .export-btn:hover { background: #1e8449; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      padding: 8px 10px;
+      text-align: right;
+      border-bottom: 1px solid #ecf0f1;
+    }
+    th {
+      background: #f8f9fa;
+      color: #5d6d7e;
+      font-weight: 600;
+    }
+    tbody tr:hover { background: #f8f9fa; }
+    .num { font-family: "Consolas", monospace; text-align: left; }
+    .warn-text { color: #f39c12; font-weight: 600; }
+    .danger-text { color: #c0392b; font-weight: 600; }
+    .ok-text { color: #27ae60; font-weight: 600; }
+
+    .tabs {
+      display: flex;
+      gap: 4px;
+      border-bottom: 2px solid #ecf0f1;
+      margin-bottom: 14px;
+    }
+    .tab {
+      padding: 8px 18px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      color: #7f8c8d;
+      font-size: 14px;
+    }
+    .tab.active {
+      color: #2a5298;
+      border-bottom-color: #2a5298;
+      font-weight: 600;
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .status {
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      display: inline-block;
+    }
+    .status.loading { background: #fff3cd; color: #856404; }
+    .status.ok { background: #d4edda; color: #155724; }
+    .status.err { background: #f8d7da; color: #721c24; }
+
+    footer {
+      text-align: center;
+      color: #95a5a6;
+      font-size: 12px;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #ecf0f1;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <button class="reload" onclick="loadAll()">تحديث</button>
+    <h1>لوحة معلومات Apotheca</h1>
+    <div class="sub">الإصدار 101 — <span id="gen-time"></span></div>
+  </header>
+
+  <!-- بطاقات الإحصائيات السريعة -->
+  <div class="stats-grid" id="stats-cards">
+    <div class="card"><div class="label">مبيعات اليوم</div><div class="value" id="today-sales">—</div><div class="sub" id="today-count">— فاتورة</div></div>
+    <div class="card success"><div class="label">مبيعات الشهر</div><div class="value" id="month-sales">—</div><div class="sub" id="month-count">— فاتورة</div></div>
+    <div class="card"><div class="label">مشتريات الشهر</div><div class="value" id="month-purchases">—</div><div class="sub">إجمالي تكلفة</div></div>
+    <div class="card warn"><div class="label">مصاريف الشهر</div><div class="value" id="month-payments">—</div><div class="sub" id="month-payments-count">— دفعة</div></div>
+    <div class="card"><div class="label">عدد المواد</div><div class="value" id="materials-count">—</div><div class="sub">بطاقة مادة</div></div>
+    <div class="card warn"><div class="label">نقص المخزون</div><div class="value" id="low-stock">—</div><div class="sub">مادة تحت الحد</div></div>
+    <div class="card danger"><div class="label">قرب الانتهاء</div><div class="value" id="expiring">—</div><div class="sub">خلال 30 يومًا</div></div>
+  </div>
+
+  <!-- التبويبات -->
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('sales', this)">المبيعات والأرباح</div>
+    <div class="tab" onclick="showTab('payments', this)">المصاريف</div>
+    <div class="tab" onclick="showTab('inventory', this)">المخزون</div>
+    <div class="tab" onclick="showTab('orders', this)">الطلبيات والشركات</div>
+    <div class="tab" onclick="showTab('export', this)">التصدير</div>
+  </div>
+
+  <!-- تبويب المبيعات -->
+  <div id="tab-sales" class="tab-content active">
+    <section class="panel">
+      <h2>ملخص المبيعات والأرباح</h2>
+      <div class="toolbar">
+        <label>من: <input type="date" id="sales-start"></label>
+        <label>إلى: <input type="date" id="sales-end"></label>
+        <label>تجميع:
+          <select id="sales-group">
+            <option value="day">يومي</option>
+            <option value="month">شهري</option>
+          </select>
+        </label>
+        <button onclick="loadSalesSummary()">عرض</button>
+        <button class="export-btn" onclick="exportSalesCSV()">تصدير CSV</button>
+      </div>
+      <div id="sales-summary-result">
+        <p class="status loading">بانتظار التحميل…</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>الأكثر مبيعًا</h2>
+      <div class="toolbar">
+        <label>من: <input type="date" id="top-start"></label>
+        <label>إلى: <input type="date" id="top-end"></label>
+        <label>عدد: <input type="number" id="top-limit" value="20" min="1" max="100" style="width:60px"></label>
+        <button onclick="loadTopSelling()">عرض</button>
+      </div>
+      <div id="top-selling-result">
+        <p class="status loading">بانتظار التحميل…</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>المبيعات حسب الزبون</h2>
+      <div class="toolbar">
+        <label>من: <input type="date" id="buyer-start"></label>
+        <label>إلى: <input type="date" id="buyer-end"></label>
+        <button onclick="loadSalesByBuyer()">عرض</button>
+      </div>
+      <div id="buyer-result">
+        <p class="status loading">بانتظار التحميل…</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- تبويب المخزون -->
+  <div id="tab-inventory" class="tab-content">
+    <section class="panel">
+      <h2>تنبيهات نقص المخزون</h2>
+      <div class="toolbar">
+        <label>الحد: <input type="number" id="threshold" value="10" min="0" style="width:80px"></label>
+        <button onclick="loadLowStock()">عرض</button>
+      </div>
+      <div id="low-stock-result">
+        <p class="status loading">بانتظار التحميل…</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>قرب انتهاء الصلاحية</h2>
+      <div class="toolbar">
+        <label>خلال: <input type="number" id="exp-days" value="90" min="1" style="width:80px"> يوم</label>
+        <button onclick="loadExpiring()">عرض</button>
+      </div>
+      <div id="expiring-result">
+        <p class="status loading">بانتظار التحميل…</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>المنتهي صلاحيته</h2>
+      <button onclick="loadExpired()">عرض المنتهي</button>
+      <div id="expired-result" style="margin-top:14px">
+        <p class="status loading">اضغط «عرض المنتهي» للتحميل</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>تقييم المخزون</h2>
+      <button onclick="loadValuation()">احسب التقييم</button>
+      <div id="valuation-result" style="margin-top:14px">
+        <p class="status loading">اضغط «احسب التقييم» للتحميل</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- تبويب المصاريف (جديد v101) -->
+  <div id="tab-payments" class="tab-content">
+    <section class="panel">
+      <h2>إجمالي المصاريف في فترة</h2>
+      <div class="toolbar">
+        <label>من: <input type="date" id="pay-start"></label>
+        <label>إلى: <input type="date" id="pay-end"></label>
+        <button onclick="loadPaymentsTotals()">عرض</button>
+        <button class="export-btn" onclick="exportPaymentsCSV()">تصدير CSV</button>
+      </div>
+      <div id="payments-totals-result">
+        <p class="status loading">بانتظار التحميل…</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>قائمة المدفوعات</h2>
+      <div class="toolbar">
+        <label>من: <input type="date" id="pay-list-start"></label>
+        <label>إلى: <input type="date" id="pay-list-end"></label>
+        <button onclick="loadPaymentsList()">عرض</button>
+      </div>
+      <div id="payments-list-result">
+        <p class="status loading">بانتظار التحميل…</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- تبويب الطلبيات والشركات (جديد v101) -->
+  <div id="tab-orders" class="tab-content">
+    <section class="panel">
+      <h2>الطلبيات حسب الشركة</h2>
+      <p style="margin-bottom:14px;color:#555">
+        يعرض إجمالي الكميات المطلوبة من كل مورد لإعادة التموين.
+      </p>
+      <button onclick="loadOrdersByCompany()">عرض التجمع حسب الشركة</button>
+      <div id="orders-by-company-result" style="margin-top:14px">
+        <p class="status loading">اضغط الزر للتحميل</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>قائمة الطلبيات</h2>
+      <div class="toolbar">
+        <label>الشركة: <input type="text" id="orders-company" placeholder="اتركه فارغًا للكل"></label>
+        <label><input type="checkbox" id="orders-required-only"> المطلوب فقط (&gt; 0)</label>
+        <button onclick="loadOrdersList()">عرض</button>
+      </div>
+      <div id="orders-list-result">
+        <p class="status loading">بانتظار التحميل…</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>دليل الشركات المورِّدة</h2>
+      <div class="toolbar">
+        <label><input type="checkbox" id="companies-required-only" checked> المطلوبة فقط</label>
+        <button onclick="loadCompanies()">عرض</button>
+      </div>
+      <div id="companies-result">
+        <p class="status loading">بانتظار التحميل…</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- تبويب التصدير -->
+  <div id="tab-export" class="tab-content">
+    <section class="panel">
+      <h2>تصدير البيانات</h2>
+      <p style="margin-bottom:14px;color:#555">
+        اختر النطاق الزمني ثم اضغط زر التصدير. الملف يُحمَّل مباشرة بصيغة CSV متوافقة مع Excel العربي.
+      </p>
+      <div class="toolbar">
+        <label>من: <input type="date" id="exp-start"></label>
+        <label>إلى: <input type="date" id="exp-end"></label>
+      </div>
+      <div class="toolbar">
+        <button class="export-btn" onclick="exportSalesCSV()">تصدير المبيعات</button>
+        <button class="export-btn" onclick="exportPurchasesCSV()">تصدير المشتريات</button>
+        <button class="export-btn" onclick="exportPaymentsCSV()">تصدير المصاريف</button>
+        <button class="export-btn" onclick="exportMaterialsCSV()">تصدير بطاقات المواد</button>
+        <button class="export-btn" onclick="exportBackupJSON()" style="background:#8e44ad">نسخة احتياطية JSON</button>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    Apotheca v101 — وحدة لوحة المعلومات الجديدة
+  </footer>
+
+  <script>
+    // ====== أدوات مساعدة ======
+    const fmt = (n) => {
+      if (n == null || isNaN(n)) return "—";
+      return Number(n).toLocaleString("ar-EG", { maximumFractionDigits: 2 });
+    };
+    const money = (n) => {
+      if (n == null || isNaN(n)) return "—";
+      return Number(n).toLocaleString("ar-EG", { maximumFractionDigits: 2 }) + " ل.س";
+    };
+    const setStatus = (el, txt, kind) => {
+      el.innerHTML = `<p class="status ${kind}">${txt}</p>`;
+    };
+    const today = () => new Date().toISOString().slice(0,10);
+    const firstOfMonth = () => {
+      const d = new Date(); d.setDate(1);
+      return d.toISOString().slice(0,10);
+    };
+
+    // تعبئة التواريخ الافتراضية
+    ["sales-start","top-start","buyer-start","exp-start","pay-start","pay-list-start"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = firstOfMonth();
+    });
+    ["sales-end","top-end","buyer-end","exp-end","pay-end","pay-list-end"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = today();
+    });
+
+    function showTab(name, el) {
+      document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+      document.getElementById("tab-" + name).classList.add("active");
+      el.classList.add("active");
+    }
+
+    // ====== تحميل الإحصائيات السريعة ======
+    async function loadDashboardStats() {
+      try {
+        const r = await fetch("/api/reports/dashboard-stats");
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        document.getElementById("today-sales").textContent = money(d.today.sales_total);
+        document.getElementById("today-count").textContent = fmt(d.today.sales_count) + " فاتورة";
+        document.getElementById("month-sales").textContent = money(d.month.sales_total);
+        document.getElementById("month-count").textContent = fmt(d.month.sales_count) + " فاتورة";
+        document.getElementById("month-purchases").textContent = money(d.month.purchases_total);
+        if (document.getElementById("month-payments")) {
+          document.getElementById("month-payments").textContent = money(d.month.payments_total);
+          document.getElementById("month-payments-count").textContent = fmt(d.month.payments_count || 0) + " دفعة";
+        }
+        document.getElementById("materials-count").textContent = fmt(d.materials_count);
+        document.getElementById("low-stock").textContent = fmt(d.low_stock_count);
+        document.getElementById("expiring").textContent = fmt(d.expiring_count);
+        document.getElementById("gen-time").textContent = "آخر تحديث: " + new Date(d.generated_at).toLocaleString("ar-EG");
+      } catch (e) {
+        console.error("dashboard stats:", e);
+      }
+    }
+
+    // ====== ملخص المبيعات ======
+    async function loadSalesSummary() {
+      const el = document.getElementById("sales-summary-result");
+      setStatus(el, "جارٍ التحميل…", "loading");
+      try {
+        const start = document.getElementById("sales-start").value;
+        const end = document.getElementById("sales-end").value;
+        const group = document.getElementById("sales-group").value;
+        const r = await fetch(`/api/reports/sales-summary?start_date=${start}&end_date=${end}&group_by=${group}`);
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        let html = `<p style="margin-bottom:10px">
+          إجمالي: <b>${fmt(d.totals.invoices)}</b> فاتورة،
+          <b>${fmt(d.totals.qty)}</b> وحدة،
+          إجمالي قبل الحسم: <b>${money(d.totals.gross)}</b>،
+          بعد الحسم: <b class="ok-text">${money(d.totals.net)}</b>،
+          متوسط الفاتورة: <b>${money(d.totals.avg_invoice)}</b>
+        </p>`;
+        html += `<table><thead><tr>
+          <th>الفترة</th><th>الفواتير</th><th>الكمية</th>
+          <th>قبل الحسم</th><th>بعد الحسم</th><th>متوسط الفاتورة</th>
+        </tr></thead><tbody>`;
+        for (const p of d.periods) {
+          html += `<tr>
+            <td>${p.period}</td>
+            <td class="num">${fmt(p.invoices)}</td>
+            <td class="num">${fmt(p.qty)}</td>
+            <td class="num">${money(p.gross)}</td>
+            <td class="num">${money(p.net)}</td>
+            <td class="num">${money(p.avg_invoice)}</td>
+          </tr>`;
+        }
+        html += "</tbody></table>";
+        el.innerHTML = html;
+      } catch (e) {
+        setStatus(el, "خطأ: " + e.message, "err");
+      }
+    }
+
+    // ====== الأكثر مبيعًا ======
+    async function loadTopSelling() {
+      const el = document.getElementById("top-selling-result");
+      setStatus(el, "جارٍ التحميل…", "loading");
+      try {
+        const start = document.getElementById("top-start").value;
+        const end = document.getElementById("top-end").value;
+        const limit = document.getElementById("top-limit").value;
+        const r = await fetch(`/api/reports/top-selling?start_date=${start}&end_date=${end}&limit=${limit}`);
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        let html = `<table><thead><tr>
+          <th>#</th><th>المادة</th><th>الفواتير</th>
+          <th>الكمية</th><th>الإيراد قبل الحسم</th><th>الإيراد بعد الحسم</th>
+        </tr></thead><tbody>`;
+        d.items.forEach((it, i) => {
+          html += `<tr>
+            <td class="num">${i+1}</td>
+            <td>${it.name}</td>
+            <td class="num">${fmt(it.invoices)}</td>
+            <td class="num">${fmt(it.qty)}</td>
+            <td class="num">${money(it.revenue)}</td>
+            <td class="num">${money(it.net_revenue)}</td>
+          </tr>`;
+        });
+        html += "</tbody></table>";
+        el.innerHTML = html;
+      } catch (e) {
+        setStatus(el, "خطأ: " + e.message, "err");
+      }
+    }
+
+    // ====== المبيعات حسب الزبون ======
+    async function loadSalesByBuyer() {
+      const el = document.getElementById("buyer-result");
+      setStatus(el, "جارٍ التحميل…", "loading");
+      try {
+        const start = document.getElementById("buyer-start").value;
+        const end = document.getElementById("buyer-end").value;
+        const r = await fetch(`/api/reports/sales-by-buyer?start_date=${start}&end_date=${end}`);
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        let html = `<table><thead><tr>
+          <th>الزبون</th><th>الفواتير</th><th>الكمية</th>
+          <th>قبل الحسم</th><th>بعد الحسم</th>
+        </tr></thead><tbody>`;
+        for (const b of d.items) {
+          html += `<tr>
+            <td>${b.buyer}</td>
+            <td class="num">${fmt(b.invoices)}</td>
+            <td class="num">${fmt(b.qty)}</td>
+            <td class="num">${money(b.gross)}</td>
+            <td class="num">${money(b.net)}</td>
+          </tr>`;
+        }
+        html += "</tbody></table>";
+        el.innerHTML = html;
+      } catch (e) {
+        setStatus(el, "خطأ: " + e.message, "err");
+      }
+    }
+
+    // ====== نقص المخزون ======
+    async function loadLowStock() {
+      const el = document.getElementById("low-stock-result");
+      setStatus(el, "جارٍ التحميل…", "loading");
+      try {
+        const thr = document.getElementById("threshold").value;
+        const r = await fetch(`/api/inventory/low-stock?threshold=${thr}`);
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        let html = `<p style="margin-bottom:10px">
+          <b>${fmt(d.count)}</b> مادة تحت الحد ${fmt(d.threshold)} — المصدر: ${d.items[0]?.source || "—"}
+        </p>`;
+        html += `<table><thead><tr>
+          <th>المادة</th><th>الشركة</th><th>الرصيد</th>
+          <th>رقم الطبخة</th><th>تاريخ الانتهاء</th><th>الباركود</th>
+        </tr></thead><tbody>`;
+        for (const it of d.items) {
+          html += `<tr>
+            <td>${it.name}</td>
+            <td>${it.company || "—"}</td>
+            <td class="num danger-text">${it.stock != null ? fmt(it.stock) : "—"}</td>
+            <td>${it.batch_no || "—"}</td>
+            <td>${it.exp_date || "—"}</td>
+            <td>${it.barcode || "—"}</td>
+          </tr>`;
+        }
+        html += "</tbody></table>";
+        el.innerHTML = html;
+      } catch (e) {
+        setStatus(el, "خطأ: " + e.message, "err");
+      }
+    }
+
+    // ====== قرب الانتهاء ======
+    async function loadExpiring() {
+      const el = document.getElementById("expiring-result");
+      setStatus(el, "جارٍ التحميل…", "loading");
+      try {
+        const days = document.getElementById("exp-days").value;
+        const r = await fetch(`/api/inventory/expiring?days=${days}`);
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        let html = `<p style="margin-bottom:10px">
+          <b>${fmt(d.count)}</b> مادة ستنتهي بين ${d.today} و ${d.until}
+        </p>`;
+        html += `<table><thead><tr>
+          <th>المادة</th><th>الشركة</th><th>الرصيد</th>
+          <th>الطبخة</th><th>تاريخ الانتهاء</th><th>أيام متبقية</th>
+        </tr></thead><tbody>`;
+        for (const it of d.items) {
+          const cls = it.days_left != null && it.days_left < 30 ? "danger-text" : "warn-text";
+          html += `<tr>
+            <td>${it.name}</td>
+            <td>${it.company || it.supplier || "—"}</td>
+            <td class="num">${it.stock != null ? fmt(it.stock) : "—"}</td>
+            <td>${it.batch_no || "—"}</td>
+            <td>${it.exp_date}</td>
+            <td class="num ${cls}">${it.days_left != null ? fmt(it.days_left) : "—"}</td>
+          </tr>`;
+        }
+        html += "</tbody></table>";
+        el.innerHTML = html;
+      } catch (e) {
+        setStatus(el, "خطأ: " + e.message, "err");
+      }
+    }
+
+    // ====== المنتهي ======
+    async function loadExpired() {
+      const el = document.getElementById("expired-result");
+      setStatus(el, "جارٍ التحميل…", "loading");
+      try {
+        const r = await fetch("/api/inventory/expired");
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        let html = `<p style="margin-bottom:10px"><b class="danger-text">${fmt(d.count)}</b> مادة منتهية حتى ${d.today}</p>`;
+        html += `<table><thead><tr>
+          <th>المادة</th><th>الشركة</th><th>الرصيد</th>
+          <th>الطبخة</th><th>تاريخ الانتهاء</th><th>أيام متأخرة</th>
+        </tr></thead><tbody>`;
+        for (const it of d.items) {
+          html += `<tr>
+            <td>${it.name}</td>
+            <td>${it.company || it.supplier || "—"}</td>
+            <td class="num">${it.stock != null ? fmt(it.stock) : "—"}</td>
+            <td>${it.batch_no || "—"}</td>
+            <td>${it.exp_date}</td>
+            <td class="num danger-text">${it.days_overdue != null ? fmt(it.days_overdue) : "—"}</td>
+          </tr>`;
+        }
+        html += "</tbody></table>";
+        el.innerHTML = html;
+      } catch (e) {
+        setStatus(el, "خطأ: " + e.message, "err");
+      }
+    }
+
+    // ====== التقييم ======
+    async function loadValuation() {
+      const el = document.getElementById("valuation-result");
+      setStatus(el, "جارٍ التحميل…", "loading");
+      try {
+        const r = await fetch("/api/inventory/valuation");
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        let html = `<div class="stats-grid">
+          <div class="card"><div class="label">عدد الأصناف</div><div class="value">${fmt(d.items_count)}</div></div>
+          <div class="card"><div class="label">إجمالي الوحدات</div><div class="value">${fmt(d.total_units)}</div></div>
+          <div class="card"><div class="label">قيمة التكلفة</div><div class="value">${money(d.total_cost_value)}</div></div>
+          <div class="card success"><div class="label">قيمة البيع</div><div class="value">${money(d.total_retail_value)}</div></div>
+          <div class="card success"><div class="label">الربح المتوقع</div><div class="value">${money(d.expected_profit)}</div></div>
+        </div>`;
+        if (d.by_category && d.by_category.length) {
+          html += `<h3 style="margin:16px 0 8px">حسب التصنيف</h3><table><thead><tr>
+            <th>التصنيف</th><th>عدد الأصناف</th><th>الوحدات</th><th>القيمة</th>
+          </tr></thead><tbody>`;
+          for (const c of d.by_category) {
+            html += `<tr><td>${c.category}</td><td class="num">${fmt(c.count)}</td>
+              <td class="num">${fmt(c.qty)}</td><td class="num">${money(c.value)}</td></tr>`;
+          }
+          html += "</tbody></table>";
+        }
+        el.innerHTML = html;
+      } catch (e) {
+        setStatus(el, "خطأ: " + e.message, "err");
+      }
+    }
+
+    // ====== التصدير ======
+    function exportSalesCSV() {
+      const s = document.getElementById("exp-start").value || firstOfMonth();
+      const e = document.getElementById("exp-end").value || today();
+      window.location.href = `/api/export/sales.csv?start_date=${s}&end_date=${e}`;
+    }
+    function exportPurchasesCSV() {
+      const s = document.getElementById("exp-start").value || firstOfMonth();
+      const e = document.getElementById("exp-end").value || today();
+      window.location.href = `/api/export/purchases.csv?start_date=${s}&end_date=${e}`;
+    }
+    function exportPaymentsCSV() {
+      const s = document.getElementById("pay-start")?.value || document.getElementById("exp-start").value || firstOfMonth();
+      const e = document.getElementById("pay-end")?.value || document.getElementById("exp-end").value || today();
+      window.location.href = `/api/payments/export.csv?start_date=${s}&end_date=${e}`;
+    }
+    function exportMaterialsCSV() {
+      window.location.href = "/api/export/materials.csv";
+    }
+    function exportBackupJSON() {
+      window.location.href = "/api/export/backup.json";
+    }
+
+    // ====== المصاريف (جديد v101) ======
+    async function loadPaymentsTotals() {
+      const el = document.getElementById("payments-totals-result");
+      setStatus(el, "جارٍ التحميل…", "loading");
+      try {
+        const s = document.getElementById("pay-start").value;
+        const e = document.getElementById("pay-end").value;
+        const r = await fetch(`/api/payments/totals?start_date=${s}&end_date=${e}`);
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        let html = `<div class="stats-grid">
+          <div class="card warn"><div class="label">إجمالي المصاريف</div>
+            <div class="value">${money(d.grand_total.value)}</div>
+            <div class="sub">${fmt(d.grand_total.count)} دفعة</div></div>
+        </div>`;
+        if (d.by_group && d.by_group.length) {
+          html += `<h3 style="margin:16px 0 8px">حسب المجموعة</h3>
+            <table><thead><tr><th>المجموعة</th><th>عدد الدفعات</th><th>القيمة</th></tr></thead><tbody>`;
+          for (const g of d.by_group) {
+            html += `<tr><td>${g.group}</td><td class="num">${fmt(g.count)}</td>
+              <td class="num">${money(g.value)}</td></tr>`;
+          }
+          html += "</tbody></table>";
+        }
+        if (d.by_destination && d.by_destination.length) {
+          html += `<h3 style="margin:16px 0 8px">حسب الجهة (أعلى 20)</h3>
+            <table><thead><tr><th>الجهة</th><th>عدد الدفعات</th><th>القيمة</th></tr></thead><tbody>`;
+          d.by_destination.slice(0, 20).forEach(b => {
+            html += `<tr><td>${b.destination}</td><td class="num">${fmt(b.count)}</td>
+              <td class="num">${money(b.value)}</td></tr>`;
+          });
+          html += "</tbody></table>";
+        }
+        el.innerHTML = html;
+      } catch (e) {
+        setStatus(el, "خطأ: " + e.message, "err");
+      }
+    }
+
+    async function loadPaymentsList() {
+      const el = document.getElementById("payments-list-result");
+      setStatus(el, "جارٍ التحميل…", "loading");
+      try {
+        const s = document.getElementById("pay-list-start").value;
+        const e = document.getElementById("pay-list-end").value;
+        const r = await fetch(`/api/payments?start_date=${s}&end_date=${e}&limit=500`);
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        let html = `<p style="margin-bottom:10px">
+          <b>${fmt(d.totals.count)}</b> دفعة، إجمالي: <b>${money(d.totals.value)}</b>
+          ${d.has_more ? "(تعرض أول 500 فقط)" : ""}
+        </p>`;
+        html += `<table><thead><tr>
+          <th>التاريخ</th><th>البيان</th><th>القيمة</th>
+          <th>الجهة</th><th>المجموعة</th><th>المستخدم</th>
+        </tr></thead><tbody>`;
+        for (const p of d.data) {
+          html += `<tr>
+            <td>${p.date}</td>
+            <td>${p.statement}</td>
+            <td class="num">${money(p.value)}</td>
+            <td>${p.to}</td>
+            <td>${p.group || "—"}</td>
+            <td>${p.user}</td>
+          </tr>`;
+        }
+        html += "</tbody></table>";
+        el.innerHTML = html;
+      } catch (e) {
+        setStatus(el, "خطأ: " + e.message, "err");
+      }
+    }
+
+    // ====== الطلبيات والشركات (جديد v101) ======
+    async function loadOrdersByCompany() {
+      const el = document.getElementById("orders-by-company-result");
+      setStatus(el, "جارٍ التحميل…", "loading");
+      try {
+        const r = await fetch("/api/orders/by-company");
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        let html = `<p style="margin-bottom:10px">
+          <b>${fmt(d.totals.companies_count)}</b> شركة،
+          <b>${fmt(d.totals.items_count)}</b> صنف،
+          إجمالي مطلوب: <b>${fmt(d.totals.total_required)}</b> وحدة،
+          إجمالي رصيد: <b>${fmt(d.totals.total_balance)}</b> وحدة
+        </p>`;
+        html += `<table><thead><tr>
+          <th>الشركة</th><th>عدد الأصناف</th><th>المطلوب</th>
+          <th>الرصيد</th><th>ك مشتريات</th><th>ك مبيعات</th>
+        </tr></thead><tbody>`;
+        for (const c of d.companies) {
+          html += `<tr>
+            <td>${c.company}</td>
+            <td class="num">${fmt(c.items_count)}</td>
+            <td class="num warn-text">${fmt(c.total_required)}</td>
+            <td class="num">${fmt(c.total_balance)}</td>
+            <td class="num">${fmt(c.total_purchases)}</td>
+            <td class="num">${fmt(c.total_sales)}</td>
+          </tr>`;
+        }
+        html += "</tbody></table>";
+        el.innerHTML = html;
+      } catch (e) {
+        setStatus(el, "خطأ: " + e.message, "err");
+      }
+    }
+
+    async function loadOrdersList() {
+      const el = document.getElementById("orders-list-result");
+      setStatus(el, "جارٍ التحميل…", "loading");
+      try {
+        const company = document.getElementById("orders-company").value;
+        const onlyRequired = document.getElementById("orders-required-only").checked ? "1" : "0";
+        let url = `/api/orders?only_required=${onlyRequired}&limit=500`;
+        if (company) url += `&company=${encodeURIComponent(company)}`;
+        const r = await fetch(url);
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        let html = `<p style="margin-bottom:10px">
+          <b>${fmt(d.count)}</b> صنف من أصل <b>${fmt(d.total)}</b>
+          ${d.has_more ? "(تعرض أول 500 فقط)" : ""}
+        </p>`;
+        html += `<table><thead><tr>
+          <th>المادة</th><th>الشركة</th><th>المستودع</th>
+          <th>المطلوب</th><th>الرصيد</th><th>ك مشتريات</th><th>ك مبيعات</th>
+        </tr></thead><tbody>`;
+        for (const o of d.data) {
+          html += `<tr>
+            <td>${o.material}</td>
+            <td>${o.company}</td>
+            <td>${o.warehouse || "—"}</td>
+            <td class="num warn-text">${fmt(o.required_qty)}</td>
+            <td class="num">${fmt(o.balance)}</td>
+            <td class="num">${fmt(o.purchases_qty)}</td>
+            <td class="num">${fmt(o.sales_qty)}</td>
+          </tr>`;
+        }
+        html += "</tbody></table>";
+        el.innerHTML = html;
+      } catch (e) {
+        setStatus(el, "خطأ: " + e.message, "err");
+      }
+    }
+
+    async function loadCompanies() {
+      const el = document.getElementById("companies-result");
+      setStatus(el, "جارٍ التحميل…", "loading");
+      try {
+        const onlyRequired = document.getElementById("companies-required-only").checked ? "1" : "0";
+        const r = await fetch(`/api/companies?only_required=${onlyRequired}`);
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        let html = `<p style="margin-bottom:10px"><b>${fmt(d.count)}</b> شركة</p>`;
+        html += `<table><thead><tr><th>اسم الشركة</th><th>مطلوبة</th></tr></thead><tbody>`;
+        for (const c of d.items) {
+          html += `<tr><td>${c.name}</td>
+            <td>${c.required_flag ? '<span class="ok-text">نعم</span>' : '—'}</td></tr>`;
+        }
+        html += "</tbody></table>";
+        el.innerHTML = html;
+      } catch (e) {
+        setStatus(el, "خطأ: " + e.message, "err");
+      }
+    }
+
+    // ====== التحميل الأولي ======
+    function loadAll() {
+      loadDashboardStats();
+      loadSalesSummary();
+      loadTopSelling();
+      loadSalesByBuyer();
+      loadPaymentsTotals();
+    }
+    loadAll();
+  </script>
+</body>
+</html>
