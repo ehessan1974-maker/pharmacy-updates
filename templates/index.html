@@ -864,18 +864,18 @@ document.addEventListener('DOMContentLoaded', () => {
         <tr>
           <th>المادة</th>
           <th>الكمية</th>
-          <th>المبلغ المقبوض من مادة واحدة</th>
-          <th>إيصال نسبة الربح إلى</th>
-          <th>حسم %</th>
-          <th>الإجمالي قبل الحسم</th>
-          <th>رقم الطبخة</th>
-          <th>قيمة الحسم</th>
           <th>سعر المبيع</th>
+          <th>حسم %</th>
+          <th>قيمة الحسم</th>
           <th>الإجمالي بعد الحسم</th>
-          <th>نسبة الربح</th>
-          <th>إجمالي الربح</th>
+          <th>رقم الطبخة</th>
           <th>التكلفة</th>
           <th>إجمالي التكلفة</th>
+          <th>الإجمالي قبل الحسم</th>
+          <th>إجمالي الربح</th>
+          <th>المبلغ المقبوض من مادة واحدة</th>
+          <th>إيصال نسبة الربح إلى</th>
+          <th>نسبة الربح</th>
           <th>حذف</th>
         </tr>
       </thead>
@@ -892,18 +892,18 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
           </td>
           <td><input type="number" data-field="quantity" step="any"></td>
-          <td><input type="number" data-field="receivedAmount" step="any"></td>
-          <td><input type="number" data-field="إيصال_نسبة_الربح_إلى" step="any"></td>
-          <td><input type="number" data-field="discountPercent" step="any"></td>
-          <td><input type="text" data-field="totalBeforeDiscount" inputmode="decimal" readonly></td>
-          <td><input type="text" data-field="batchNo" readonly></td>
-          <td><input type="text" data-field="discountValue" inputmode="decimal" readonly></td>
           <td><input type="text" data-field="sellPrice" inputmode="decimal" readonly></td>
+            <td><input type="number" data-field="discountPercent" step="any"></td>
+            <td><input type="text" data-field="discountValue" inputmode="decimal" readonly></td>
           <td><input type="text" data-field="totalAfterDiscount" inputmode="decimal" readonly></td>
-          <td><input type="text" data-field="profitPercentReal" inputmode="decimal" readonly></td>
-          <td><input type="text" data-field="totalProfit" inputmode="decimal" readonly></td>
+            <td><input type="text" data-field="batchNo" readonly></td>
           <td><input type="text" data-field="cost" inputmode="decimal" readonly></td>
           <td><input type="text" data-field="totalCost" inputmode="decimal" readonly></td>
+            <td><input type="text" data-field="totalBeforeDiscount" inputmode="decimal" readonly></td>
+            <td><input type="text" data-field="totalProfit" inputmode="decimal" readonly></td>
+            <td><input type="number" data-field="receivedAmount" step="any"></td>
+            <td><input type="number" data-field="إيصال_نسبة_الربح_إلى" step="any"></td>
+            <td><input type="text" data-field="profitPercentReal" inputmode="decimal" readonly></td>
           <td><button type="button" class="btn delete-row">❌</button></td>
         </tr>
       </tbody>
@@ -912,18 +912,19 @@ document.addEventListener('DOMContentLoaded', () => {
         <tr>
           <td>المجموع</td>
           <td id="sum-qty">0</td>
+          <td></td>
+          <td></td>
+          <td id="sum-discount">0</td>
+          <td id="sum-after" class="sum-after-highlight"></td>
+          <td></td>
+          <td></td>
+          <td id="sum-cost">0</td>
+          <td id="sum-before">0</td>
+          <td id="sum-profit">0</td>
           <td id="sum-received">0</td>
           <td></td>
           <td></td>
-          <td id="sum-before">0</td>
           <td></td>
-          <td id="sum-discount">0</td>
-          <td></td>
-          <td id="sum-after" class="sum-after-highlight"></td>
-          <td></td>
-          <td id="sum-profit">0</td>
-          <td></td>
-          <td id="sum-cost">0</td>
         </tr>
       </tfoot>
     </table>

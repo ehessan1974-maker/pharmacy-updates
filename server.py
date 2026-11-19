@@ -23,7 +23,7 @@ if env_path.exists():
 from flask import Flask, jsonify, request, render_template
 import logging
 
-from db import get_conn
+from db import ensure_invoice_schema, get_conn
 from materials_routes import materials_bp
 
 logging.basicConfig(level=logging.INFO)
@@ -206,6 +206,52 @@ def get_medicines():
 
 
 # ================== حفظ الفاتورة ==================
+def invoice_record_values(item):
+    quantity = safe_num(item.get("quantity"))
+    sell_price = safe_num(item.get("sellPrice"))
+    discount_percent = safe_num(item.get("discountPercent"))
+    cost = safe_num(item.get("cost"))
+    total_before = quantity * sell_price
+    discount_value = safe_num(item.get("discountValue"), float)
+    if item.get("discountValue") in (None, ""):
+        discount_value = total_before * discount_percent / 100
+    total_after = safe_num(item.get("totalAfterDiscount"))
+    if item.get("totalAfterDiscount") in (None, ""):
+        total_after = total_before - discount_value
+    total_cost = safe_num(item.get("totalCost"))
+    if item.get("totalCost") in (None, ""):
+        total_cost = quantity * cost
+    total_profit = safe_num(item.get("totalProfit"))
+    if item.get("totalProfit") in (None, ""):
+        total_profit = total_after - total_cost
+    profit_percent = safe_num(item.get("profitPercentReal"))
+    if item.get("profitPercentReal") in (None, "") and total_after:
+        profit_percent = total_profit * 100 / total_after
+    received = item.get("receivedAmount")
+    if received in (None, ""):
+        received = total_after
+    profit_receipt_to = item.get("إيصال_نسبة_الربح_إلى")
+    if profit_receipt_to in (None, ""):
+        profit_receipt_to = profit_percent
+
+    return (
+        str(item.get("name") or "").strip(),
+        quantity,
+        sell_price,
+        discount_percent,
+        discount_value,
+        total_after,
+        item.get("batchNo") or None,
+        cost,
+        total_cost,
+        total_before,
+        total_profit,
+        safe_num(received),
+        safe_num(profit_receipt_to),
+        profit_percent,
+    )
+
+
 @app.route("/save_invoice", methods=["POST"])
 def save_invoice():
     conn = None
@@ -225,8 +271,13 @@ def save_invoice():
 
         conn = get_conn()
         cur = conn.cursor()
+        ensure_invoice_schema(conn)
+        items = [item for item in items if str(item.get("name") or "").strip()]
 
-        cur.execute('SELECT COUNT(*) FROM "مبيعات" WHERE "رقم الفاتورة" = ?', (invoice_number,))
+        cur.execute(
+            'SELECT COUNT(*) FROM "فاتورة مبيعات رؤوس" WHERE "رقم الفاتورة" = ?',
+            (invoice_number,),
+        )
         exists = cur.fetchone()[0] > 0
 
         if exists and not force:
@@ -234,29 +285,48 @@ def save_invoice():
             return jsonify({"status": "exists", "invoice_number": invoice_number})
 
         if exists:
-            cur.execute('DELETE FROM "مبيعات" WHERE "رقم الفاتورة" = ?', (invoice_number,))
-
-        for item in items:
-            if not item.get("name"):
-                continue
             cur.execute("""
-                INSERT INTO "مبيعات"
-                ("المادة", "الكمية", "سعر المبيع", "حسم %", "رقم الطبخة",
-                 "المستخدم", "من", "إلى", "التاريخ", "الوقت", "رقم الفاتورة", "تحديد")
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+                DELETE FROM "فاتورة مبيعات"
+                WHERE rowid IN (
+                    SELECT "row_id" FROM "فاتورة مبيعات ربط"
+                    WHERE "رقم الفاتورة" = ?
+                )
+            """, (invoice_number,))
+            cur.execute(
+                'DELETE FROM "فاتورة مبيعات ربط" WHERE "رقم الفاتورة" = ?',
+                (invoice_number,),
+            )
+            cur.execute(
+                'DELETE FROM "فاتورة مبيعات رؤوس" WHERE "رقم الفاتورة" = ?',
+                (invoice_number,),
+            )
+
+        if items:
+            cur.execute("""
+                INSERT INTO "فاتورة مبيعات رؤوس"
+                ("رقم الفاتورة", "المستخدم", "من", "إلى", "التاريخ", "الوقت")
+                VALUES (?, ?, ?, ?, ?, ?)
             """, (
-                item["name"],
-                safe_num(item.get("quantity")) or None,
-                safe_num(item.get("sellPrice")) or None,
-                safe_num(item.get("discountPercent")) or None,
-                item.get("batchNo") or None,
+                invoice_number,
                 header.get("user") or None,
                 header.get("from") or None,
                 header.get("to") or None,
                 iso_date,
                 iso_time,
-                invoice_number,
             ))
+        for item in items:
+            cur.execute("""
+                INSERT INTO "فاتورة مبيعات"
+                ("المادة", "الكمية", "سعر المبيع", "حسم %", "قيمة الحسم",
+                 "الإجمالي بعد الحسم", "رقم الطبخة", "التكلفة", "إجمالي التكلفة",
+                 "الإجمالي قبل الحسم", "إجمالي الربح", "المبلغ المقبوض من مادة واحدة",
+                 "إيصال نسبة الربح إلى", "نسبة الربح")
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, invoice_record_values(item))
+            cur.execute("""
+                INSERT INTO "فاتورة مبيعات ربط" ("row_id", "رقم الفاتورة")
+                VALUES (?, ?)
+            """, (cur.lastrowid, invoice_number))
 
         conn.commit()
         conn.close()
@@ -283,10 +353,10 @@ def get_invoice_numbers():
     try:
         conn = get_conn()
         cur = conn.cursor()
+        ensure_invoice_schema(conn)
         cur.execute("""
             SELECT "رقم الفاتورة"
-            FROM "مبيعات"
-            GROUP BY "رقم الفاتورة", "التاريخ", "الوقت"
+            FROM "فاتورة مبيعات رؤوس"
             ORDER BY "التاريخ" DESC, "الوقت" DESC
         """)
         numbers = [str(r["رقم الفاتورة"]) for r in cur.fetchall() if r["رقم الفاتورة"]]
@@ -310,13 +380,13 @@ def get_invoice():
 
     conn = get_conn()
     cur = conn.cursor()
+    ensure_invoice_schema(conn)
 
     cur.execute("""
         SELECT
             "المستخدم", "من", "إلى", "التاريخ", "الوقت", "رقم الفاتورة"
-        FROM "مبيعات"
+        FROM "فاتورة مبيعات رؤوس"
         WHERE "رقم الفاتورة" = ?
-        LIMIT 1
     """, (invoice_number,))
     header_row = cur.fetchone()
 
@@ -334,9 +404,15 @@ def get_invoice():
     }
 
     cur.execute("""
-        SELECT "المادة", "الكمية", "سعر المبيع", "حسم %", "رقم الطبخة"
-        FROM "مبيعات"
-        WHERE "رقم الفاتورة" = ?
+        SELECT i."المادة", i."الكمية", i."سعر المبيع", i."حسم %",
+               i."رقم الطبخة", i."قيمة الحسم", i."الإجمالي بعد الحسم",
+               i."التكلفة", i."إجمالي التكلفة", i."الإجمالي قبل الحسم",
+               i."إجمالي الربح", i."المبلغ المقبوض من مادة واحدة",
+               i."إيصال نسبة الربح إلى", i."نسبة الربح"
+        FROM "فاتورة مبيعات" AS i
+        JOIN "فاتورة مبيعات ربط" AS l ON l."row_id" = i.rowid
+        WHERE l."رقم الفاتورة" = ?
+        ORDER BY i.rowid
     """, (invoice_number,))
 
     items = []
@@ -347,6 +423,15 @@ def get_invoice():
             "sellPrice": r["سعر المبيع"],
             "discountPercent": r["حسم %"],
             "batchNo": r["رقم الطبخة"],
+            "discountValue": r["قيمة الحسم"],
+            "totalAfterDiscount": r["الإجمالي بعد الحسم"],
+            "cost": r["التكلفة"],
+            "totalCost": r["إجمالي التكلفة"],
+            "totalBeforeDiscount": r["الإجمالي قبل الحسم"],
+            "totalProfit": r["إجمالي الربح"],
+            "receivedAmount": r["المبلغ المقبوض من مادة واحدة"],
+            "إيصال_نسبة_الربح_إلى": r["إيصال نسبة الربح إلى"],
+            "profitPercentReal": r["نسبة الربح"],
         })
 
     conn.close()
@@ -356,10 +441,14 @@ def get_invoice():
 # ================== API المبيعات (من العرض الحي — بديل معلومات مبيعات) ==================
 SALES_SELECT = """
     SELECT
-        "المادة", "الكمية", "سعر المبيع", "حسم %", "رقم الطبخة",
-        "رقم الفاتورة", "المستخدم", "من", "إلى", "التاريخ", "الوقت",
-        "التكلفة", "إجمالي التكلفة", "إجمالي الربح", "الإجمالي بعد الحسم", "ترقيم"
-    FROM "معلومات مبيعات"
+        i."المادة", i."الكمية", i."سعر المبيع", i."حسم %",
+        i."رقم الطبخة", h."رقم الفاتورة", h."المستخدم", h."من",
+        h."إلى", h."التاريخ", h."الوقت", i."التكلفة",
+        i."إجمالي التكلفة", i."إجمالي الربح", i."الإجمالي بعد الحسم",
+        l."row_id" AS "ترقيم"
+    FROM "فاتورة مبيعات" AS i
+    JOIN "فاتورة مبيعات ربط" AS l ON l."row_id" = i.rowid
+    JOIN "فاتورة مبيعات رؤوس" AS h ON h."رقم الفاتورة" = l."رقم الفاتورة"
 """
 
 
@@ -401,26 +490,30 @@ def api_sales():
         params = []
         if date_param:
             iso = parse_date_flexible(date_param)
-            where_clause = 'WHERE "التاريخ" = ?'
+            where_clause = 'WHERE h."التاريخ" = ?'
             params.append(iso)
         elif start_date and end_date:
             iso1, iso2 = parse_date_flexible(start_date), parse_date_flexible(end_date)
-            where_clause = 'WHERE "التاريخ" BETWEEN ? AND ?'
+            where_clause = 'WHERE h."التاريخ" BETWEEN ? AND ?'
             params.extend([iso1, iso2])
 
         conn = get_conn()
         cur = conn.cursor()
+        ensure_invoice_schema(conn)
 
         cur.execute(f"""
-            SELECT COUNT(*), SUM("الكمية"), SUM("إجمالي التكلفة"),
-                   SUM("إجمالي الربح"), SUM("الإجمالي بعد الحسم")
-            FROM "معلومات مبيعات" {where_clause}
+            SELECT COUNT(*), SUM(i."الكمية"), SUM(i."إجمالي التكلفة"),
+                   SUM(i."إجمالي الربح"), SUM(i."الإجمالي بعد الحسم")
+            FROM "فاتورة مبيعات" AS i
+            JOIN "فاتورة مبيعات ربط" AS l ON l."row_id" = i.rowid
+            JOIN "فاتورة مبيعات رؤوس" AS h ON h."رقم الفاتورة" = l."رقم الفاتورة"
+            {where_clause}
         """, params)
         totals_row = cur.fetchone()
         total_count = totals_row[0] or 0
         has_more = (offset + limit) < total_count
 
-        sql = f"{SALES_SELECT} {where_clause} ORDER BY \"التاريخ\" DESC, \"الوقت\" DESC LIMIT ? OFFSET ?"
+        sql = f"{SALES_SELECT} {where_clause} ORDER BY h.\"التاريخ\" DESC, h.\"الوقت\" DESC, i.rowid LIMIT ? OFFSET ?"
         cur.execute(sql, params + [limit, offset])
         rows = cur.fetchall()
         conn.close()
@@ -468,24 +561,28 @@ def search_sales():
         iso_like = f"%{parsed_date}%" if parsed_date else like_query
 
         where_clause = """
-            WHERE "المادة" LIKE ? OR "رقم الفاتورة" LIKE ?
-              OR "التاريخ" LIKE ? OR "إلى" LIKE ? OR "رقم الطبخة" LIKE ?
+            WHERE i."المادة" LIKE ? OR h."رقم الفاتورة" LIKE ?
+              OR h."التاريخ" LIKE ? OR h."إلى" LIKE ? OR i."رقم الطبخة" LIKE ?
         """
         params = [like_query, like_query, iso_like, like_query, like_query]
 
         conn = get_conn()
         cur = conn.cursor()
+        ensure_invoice_schema(conn)
 
         cur.execute(f"""
-            SELECT COUNT(*), SUM("الكمية"), SUM("إجمالي التكلفة"),
-                   SUM("إجمالي الربح"), SUM("الإجمالي بعد الحسم")
-            FROM "معلومات مبيعات" {where_clause}
+            SELECT COUNT(*), SUM(i."الكمية"), SUM(i."إجمالي التكلفة"),
+                   SUM(i."إجمالي الربح"), SUM(i."الإجمالي بعد الحسم")
+            FROM "فاتورة مبيعات" AS i
+            JOIN "فاتورة مبيعات ربط" AS l ON l."row_id" = i.rowid
+            JOIN "فاتورة مبيعات رؤوس" AS h ON h."رقم الفاتورة" = l."رقم الفاتورة"
+            {where_clause}
         """, params)
         totals_row = cur.fetchone()
         total_count = totals_row[0] or 0
         has_more = (offset + limit) < total_count
 
-        sql = f"{SALES_SELECT} {where_clause} ORDER BY \"التاريخ\" DESC, \"الوقت\" DESC LIMIT ? OFFSET ?"
+        sql = f"{SALES_SELECT} {where_clause} ORDER BY h.\"التاريخ\" DESC, h.\"الوقت\" DESC, i.rowid LIMIT ? OFFSET ?"
         cur.execute(sql, params + [limit, offset])
         rows = cur.fetchall()
         conn.close()
@@ -535,15 +632,19 @@ def update_sales_cell():
 
         conn = get_conn()
         cursor = conn.cursor()
-        cursor.execute(
-            f'UPDATE "مبيعات" SET "{field}" = ? WHERE "رقم الفاتورة" = ? AND "ترقيم" = ?',
-            (value, invoice_no, row_number),
-        )
-
-        if cursor.rowcount == 0:
+        ensure_invoice_schema(conn)
+        cursor.execute("""
+            SELECT 1 FROM "فاتورة مبيعات ربط"
+            WHERE "رقم الفاتورة" = ? AND "row_id" = ?
+        """, (invoice_no, row_number))
+        if cursor.fetchone() is None:
             conn.rollback()
             return jsonify({"success": False, "error": "No matching record found"})
 
+        cursor.execute(
+            f'UPDATE "فاتورة مبيعات رؤوس" SET "{field}" = ? WHERE "رقم الفاتورة" = ?',
+            (value, invoice_no),
+        )
         conn.commit()
         return jsonify({"success": True})
 
@@ -811,9 +912,10 @@ def get_buyers():
     try:
         conn = get_conn()
         cursor = conn.cursor()
+        ensure_invoice_schema(conn)
         cursor.execute("""
             SELECT DISTINCT "إلى"
-            FROM "مبيعات"
+            FROM "فاتورة مبيعات رؤوس"
             WHERE "إلى" IS NOT NULL AND "إلى" <> ''
         """)
         buyers = [str(r["إلى"]) for r in cursor.fetchall() if r["إلى"]]

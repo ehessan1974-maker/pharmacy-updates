@@ -456,10 +456,15 @@ async saveInvoice() {
                     item.sellPrice = it.sellPrice || 0;
                     item.discountPercent = it.discountPercent || 0;
                     item.batchNo = it.batchNo || "";
-                    item.receivedAmount = "";
-                    const med = window.MEDICINES?.[item.name];
-                    if (med) item.cost = med.cost || 0;
-                    Object.assign(item, calculateItemTotals(item, "discountPercent"));
+                    item.cost = it.cost || 0;
+                    item.receivedAmount = it.receivedAmount ?? "";
+                    item["إيصال_نسبة_الربح_إلى"] = it["إيصال_نسبة_الربح_إلى"] ?? "";
+                    item.discountValue = it.discountValue ?? 0;
+                    item.totalAfterDiscount = it.totalAfterDiscount ?? 0;
+                    item.totalCost = it.totalCost ?? 0;
+                    item.totalBeforeDiscount = it.totalBeforeDiscount ?? 0;
+                    item.totalProfit = it.totalProfit ?? 0;
+                    item.profitPercentReal = it.profitPercentReal ?? 0;
                     return item;
                 });
                 this.renderTable();
@@ -645,18 +650,18 @@ focusFirstEmptyMaterialRow() {
             row.innerHTML = `
                 <td class="material-cell"><div class="ghost-wrapper"><input type="text" class="material-input ghost-input" value="${this.escapeHtml(item.name)}" data-field="name" placeholder="أدخل اسم المادة"><span class="ghost-suggestion" data-ghost=""></span></div></td>
                 <td><input type="text" data-field="quantity" inputmode="decimal" value="${item.quantity ?? ""}" placeholder="أدخل الكمية"></td>
-                <td><input type="number" data-field="receivedAmount" value="${item.receivedAmount}"></td>
-                <td><input type="number" data-field="إيصال_نسبة_الربح_إلى" value="${item["إيصال_نسبة_الربح_إلى"]}"></td>
-                <td><input type="number" data-field="discountPercent" value="${item.discountPercent}"></td>
-                <td><input readonly data-field="totalBeforeDiscount" value="${item.totalBeforeDiscount}"></td>
-                <td><input readonly data-field="batchNo" value="${this.escapeHtml(item.batchNo)}"></td>
-                <td><input readonly data-field="discountValue" value="${item.discountValue}"></td>
                 <td><input readonly data-field="sellPrice" value="${item.sellPrice}"></td>
+                <td><input type="number" data-field="discountPercent" value="${item.discountPercent}"></td>
+                <td><input readonly data-field="discountValue" value="${item.discountValue}"></td>
                 <td><input readonly data-field="totalAfterDiscount" value="${item.totalAfterDiscount}"></td>
-                <td><input readonly data-field="profitPercentReal" value="${item.profitPercentReal}"></td>
-                <td><input readonly data-field="totalProfit" value="${item.totalProfit}"></td>
+                <td><input readonly data-field="batchNo" value="${this.escapeHtml(item.batchNo)}"></td>
                 <td><input readonly data-field="cost" value="${item.cost}"></td>
                 <td><input readonly data-field="totalCost" value="${item.totalCost}"></td>
+                <td><input readonly data-field="totalBeforeDiscount" value="${item.totalBeforeDiscount}"></td>
+                <td><input readonly data-field="totalProfit" value="${item.totalProfit}"></td>
+                <td><input type="number" data-field="receivedAmount" value="${item.receivedAmount}"></td>
+                <td><input type="number" data-field="إيصال_نسبة_الربح_إلى" value="${item["إيصال_نسبة_الربح_إلى"]}"></td>
+                <td><input readonly data-field="profitPercentReal" value="${item.profitPercentReal}"></td>
                 <td><button class="btn delete-row">❌</button></td>
             `;
             tbody.appendChild(row);
