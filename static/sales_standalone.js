@@ -81,21 +81,32 @@
         const price = parseFloat(row.sellPrice) || 0;
         const discount = parseFloat(row.discountPercent) || 0;
         const cost = parseFloat(row.cost) || 0;
-        const totalBefore = qty * price;
-        const discountValue = totalBefore * discount / 100;
-        const totalAfter = totalBefore - discountValue;
-        const totalCost = qty * cost;
-        const profit = totalAfter - totalCost;
-        return { totalCost, profit, totalAfter };
+        // الأعمدة المحسوبة المطابقة لجدول «فاتورة مبيعات» في أكسس
+        const totalBefore = qty * price;                       // الإجمالي قبل الحسم
+        const discountValue = totalBefore * discount / 100;    // قيمة الحسم
+        const totalAfter = totalBefore - discountValue;        // الإجمالي بعد الحسم
+        const totalCost = qty * cost;                          // إجمالي التكلفة
+        const profit = totalAfter - totalCost;                 // إجمالي الربح
+        const receivedAmount = totalAfter;                     // المبلغ المقبوض من مادة واحدة
+        const profitPercent = totalAfter ? profit * 100 / totalAfter : 0;          // نسبة الربح
+        const receiptProfitTo = totalAfter ? 100 - totalCost * 100 / totalAfter : 0; // إيصال نسبة الربح إلى
+        return { totalCost, profit, totalAfter, discountValue, totalBefore,
+                 receivedAmount, profitPercent, receiptProfitTo };
     }
 
     function updateCalculatedCells(rowElement, totals) {
-        const totalCostCell = rowElement.querySelector('td[data-field="totalCost"]');
-        const totalProfitCell = rowElement.querySelector('td[data-field="totalProfit"]');
-        const totalAfterCell = rowElement.querySelector('td[data-field="totalAfterDiscount"]');
-        if (totalCostCell) totalCostCell.textContent = totals.totalCost.toFixed(2);
-        if (totalProfitCell) totalProfitCell.textContent = totals.profit.toFixed(2);
-        if (totalAfterCell) totalAfterCell.textContent = totals.totalAfter.toFixed(2);
+        const set = (field, val) => {
+            const cell = rowElement.querySelector(`td[data-field="${field}"]`);
+            if (cell) cell.textContent = val.toFixed(2);
+        };
+        set("discountValue", totals.discountValue);
+        set("totalAfterDiscount", totals.totalAfter);
+        set("totalCost", totals.totalCost);
+        set("totalBeforeDiscount", totals.totalBefore);
+        set("totalProfit", totals.profit);
+        set("receivedAmount", totals.receivedAmount);
+        set("receiptProfitTo", totals.receiptProfitTo);
+        set("profitPercent", totals.profitPercent);
     }
 
 function updateTotals() {
@@ -205,7 +216,7 @@ function updateTotals() {
             allData = [];
             selectedRows.clear();
             updateSelectionUI();
-            tbody.innerHTML = '<tr><td colspan="16" class="loading">⏳ جاري التحميل...<\/td><\/tr>';
+            tbody.innerHTML = '<tr><td colspan="14" class="loading">⏳ جاري التحميل...<\/td><\/tr>';
         }
         if (isLoading) return;
         isLoading = true;
@@ -292,7 +303,7 @@ function updateTotals() {
             if (hasMore) offset += limit;
         } catch (err) {
             console.error(err);
-            if (reset) tbody.innerHTML = '<tr><td colspan="16" style="text-align:center; color:red;">❌ خطأ<\/td><\/tr>';
+            if (reset) tbody.innerHTML = '<tr><td colspan="14" style="text-align:center; color:red;">❌ خطأ<\/td><\/tr>';
         } finally {
             isLoading = false;
         }
@@ -302,7 +313,7 @@ function updateTotals() {
         if (!tbody) return;
         if (!append) tbody.innerHTML = "";
         if (currentData.length === 0) {
-            if (!append) tbody.innerHTML = '<tr><td colspan="16">📭 لا توجد بيانات<\/td><\/tr>';
+            if (!append) tbody.innerHTML = '<tr><td colspan="14">📭 لا توجد بيانات<\/td><\/tr>';
             applyHiddenColumns();
             return;
         }
@@ -318,20 +329,18 @@ function updateTotals() {
             tr.innerHTML = `
                 <td data-col-index="0" contenteditable="false">${window.highlightText(escapeHtml(row.name || ""), currentSearchTerm)}<\/td>
                 <td data-col-index="1" contenteditable="true" data-field="quantity">${row.quantity || 0}<\/td>
-                <td data-col-index="2" contenteditable="true" data-field="sellPrice">${row.sellPrice || 0}<\/td>
-                <td data-col-index="3" contenteditable="true" data-field="discountPercent">${row.discountPercent || 0}<\/td>
-                <td data-col-index="4" contenteditable="false">${window.highlightText(escapeHtml(row.batchNo || ""), currentSearchTerm)}<\/td>
-                <td data-col-index="5" class="col-invoiceNo press-cell">${window.highlightText(escapeHtml(row.invoiceNo || ""), currentSearchTerm)}<\/td>
-                <td data-col-index="6" contenteditable="false">${window.highlightText(escapeHtml(row.user || ""), currentSearchTerm)}<\/td>
-                <td data-col-index="7" contenteditable="false">${window.highlightText(escapeHtml(row.from || ""), currentSearchTerm)}<\/td>
-                <td data-col-index="8" class="col-to press-cell" contenteditable="true" data-field="to">${window.highlightText(escapeHtml(row.to || ""), currentSearchTerm)}<\/td>
-                <td data-col-index="9" class="col-date press-cell" contenteditable="true" data-field="date">${row.date || ""}<\/td>
-                <td data-col-index="10" contenteditable="false">${row.time || ""}<\/td>
-                <td data-col-index="11" contenteditable="true" data-field="cost">${row.cost || 0}<\/td>
-                <td data-col-index="12" data-field="totalCost">${totals.totalCost.toFixed(2)}<\/td>
-                <td data-col-index="13" data-field="totalProfit">${totals.profit.toFixed(2)}<\/td>
-                <td data-col-index="14" data-field="totalAfterDiscount">${totals.totalAfter.toFixed(2)}<\/td>
-                <td data-col-index="15" contenteditable="false">${row.tarkim || ""}<\/td>
+                <td data-col-index="2" data-field="receivedAmount">${totals.receivedAmount.toFixed(2)}<\/td>
+                <td data-col-index="3" data-field="receiptProfitTo">${totals.receiptProfitTo.toFixed(2)}<\/td>
+                <td data-col-index="4" contenteditable="true" data-field="discountPercent">${row.discountPercent || 0}<\/td>
+                <td data-col-index="5" data-field="totalBeforeDiscount">${totals.totalBefore.toFixed(2)}<\/td>
+                <td data-col-index="6" contenteditable="false">${window.highlightText(escapeHtml(row.batchNo || ""), currentSearchTerm)}<\/td>
+                <td data-col-index="7" data-field="discountValue">${totals.discountValue.toFixed(2)}<\/td>
+                <td data-col-index="8" contenteditable="true" data-field="sellPrice">${row.sellPrice || 0}<\/td>
+                <td data-col-index="9" data-field="totalAfterDiscount">${totals.totalAfter.toFixed(2)}<\/td>
+                <td data-col-index="10" data-field="profitPercent">${totals.profitPercent.toFixed(2)}<\/td>
+                <td data-col-index="11" data-field="totalProfit">${totals.profit.toFixed(2)}<\/td>
+                <td data-col-index="12" contenteditable="true" data-field="cost">${row.cost || 0}<\/td>
+                <td data-col-index="13" data-field="totalCost">${totals.totalCost.toFixed(2)}<\/td>
             `;
             tr._rowData = row;
             fragment.appendChild(tr);
@@ -641,7 +650,7 @@ function updateTotals() {
                     refreshCurrentFilter(true);
                     return;
                 }
-                tbody.innerHTML = '<tr><td colspan="16" class="loading">🔎 جاري البحث...<\/td><\/tr>';
+                tbody.innerHTML = '<tr><td colspan="14" class="loading">🔎 جاري البحث...<\/td><\/tr>';
                 const res = await fetch(`/api/sales/search?q=${encodeURIComponent(term)}&limit=1000&_=${Date.now()}`);
                 const result = await res.json();
                 let data = result.data || (Array.isArray(result) ? result : []);

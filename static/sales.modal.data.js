@@ -66,7 +66,7 @@ async function refreshCurrentFilter(reset = true) {
         selectedRows.clear();
         if (el.selectedCountSpan) el.selectedCountSpan.innerText = "0 محدد";
         // إظهار رسالة تحميل
-        el.tbody.innerHTML = `<tr><td colspan="16">⏳ جاري التحميل...<\/td><\/tr>`;
+        el.tbody.innerHTML = `<tr><td colspan="14">⏳ جاري التحميل...<\/td><\/tr>`;
     }
     
     if (window.isLoadingMoreSales) return;
@@ -127,7 +127,7 @@ async function refreshCurrentFilter(reset = true) {
     } catch (err) {
         console.error("خطأ في التحميل:", err);
         if (reset) {
-            el.tbody.innerHTML = '<tr><td colspan="16">❌ خطأ<\/td><\/tr>';
+            el.tbody.innerHTML = '<tr><td colspan="14">❌ خطأ<\/td><\/tr>';
         }
     } finally {
         window.isLoadingMoreSales = false;
@@ -375,7 +375,7 @@ function updateSelectionUI() {
     if (!el.tbody) return;
     if (loadSalesTable.isLoading) return;
     loadSalesTable.isLoading = true;
-    el.tbody.innerHTML = '<tr><td colspan="16">⏳ جاري التحميل...<\/td><\/tr>';
+    el.tbody.innerHTML = '<tr><td colspan="14">⏳ جاري التحميل...<\/td><\/tr>';
 
     try {
       let data, searchTerm = "";
@@ -390,7 +390,7 @@ function updateSelectionUI() {
       renderRows(data, searchTerm);
       updateTotals();
     } catch (err) {
-      el.tbody.innerHTML = '<tr><td colspan="16">❌ خطأ<\/td><\/tr>';
+      el.tbody.innerHTML = '<tr><td colspan="14">❌ خطأ<\/td><\/tr>';
       console.error(err);
     }
     loadSalesTable.isLoading = false;
@@ -411,7 +411,7 @@ function renderRows(data, searchTerm = "", append = false) {
     
     if (!data.length) {
         if (!append) {
-            el.tbody.innerHTML = '<tr><td colspan="16">لا توجد بيانات<\/td><\/tr>';
+            el.tbody.innerHTML = '<tr><td colspan="14">لا توجد بيانات<\/td><\/tr>';
         }
         updateSelectionUI();
         if (typeof window.applyColumnsVisibilityToModal === 'function') {
@@ -429,22 +429,20 @@ function renderRows(data, searchTerm = "", append = false) {
         tr.dataset.tarkim = row.tarkim || "";
         
         tr.innerHTML = `
-            <td data-field="name">${window.highlightText(escapeHtml(row.name || ""), searchTerm)}<\/td>
-            <td data-field="quantity">${row.quantity || ""}<\/td>
-            <td data-field="sellPrice">${row.sellPrice || ""}<\/td>
-            <td data-field="discount">${row.discount || ""}<\/td>
-            <td data-field="batchNo">${window.highlightText(escapeHtml(row.batchNo || ""), searchTerm)}<\/td>
-            <td class="col-invoiceNo press-cell">${window.highlightText(escapeHtml(row.invoiceNo || ""), searchTerm)}<\/td>
-            <td data-field="user">${window.highlightText(escapeHtml(row.user || ""), searchTerm)}<\/td>
-            <td data-field="from">${window.highlightText(escapeHtml(row.from || ""), searchTerm)}<\/td>
-            <td class="col-to press-cell" data-field="to">${window.highlightText(escapeHtml(row.to || ""), searchTerm)}<\/td>
-            <td class="col-date press-cell">${row.date || ""}<\/td>
-            <td data-field="time">${row.time || ""}<\/td>
-            <td data-field="unit_cost">${row["التكلفة"] || ""}<\/td>
-            <td data-field="total_cost">${row["إجمالي التكلفة"] || ""}<\/td>
-            <td data-field="total_profit">${row["إجمالي الربح"] || ""}<\/td>
-            <td data-field="total_after_discount">${row["الإجمالي بعد الحسم"] || ""}<\/td>
-            <td class="tarkim-col" data-field="tarkim">${window.highlightText(escapeHtml(row.tarkim || ""), searchTerm)}<\/td>
+            <td data-field="name" data-col-index="0">${window.highlightText(escapeHtml(row.name || row["المادة"] || ""), searchTerm)}<\/td>
+            <td data-field="quantity" data-col-index="1">${row.quantity ?? row["الكمية"] ?? ""}<\/td>
+            <td data-field="received_amount" data-col-index="2">${row.receivedAmount ?? row["المبلغ المقبوض من مادة واحدة"] ?? ""}<\/td>
+            <td data-field="receipt_profit_to" data-col-index="3">${row.receiptProfitTo ?? row["إيصال نسبة الربح إلى"] ?? ""}<\/td>
+            <td data-field="discount" data-col-index="4">${row.discount ?? row["حسم %"] ?? ""}<\/td>
+            <td data-field="total_before" data-col-index="5">${row.totalBeforeDiscount ?? row["الإجمالي قبل الحسم"] ?? ""}<\/td>
+            <td data-field="batchNo" data-col-index="6">${window.highlightText(escapeHtml(row.batchNo ?? row["رقم الطبخة"] ?? ""), searchTerm)}<\/td>
+            <td data-field="discountValue" data-col-index="7">${row.discountValue ?? row["قيمة الحسم"] ?? ""}<\/td>
+            <td data-field="sellPrice" data-col-index="8">${row.sellPrice ?? row["سعر المبيع"] ?? ""}<\/td>
+            <td data-field="total_after_discount" data-col-index="9">${row.totalAfterDiscount ?? row["الإجمالي بعد الحسم"] ?? ""}<\/td>
+            <td data-field="profit_percent" data-col-index="10">${row.profitPercent ?? row["نسبة الربح"] ?? ""}<\/td>
+            <td data-field="total_profit" data-col-index="11">${row.totalProfit ?? row["إجمالي الربح"] ?? ""}<\/td>
+            <td data-field="unit_cost" data-col-index="12">${row.cost ?? row["التكلفة"] ?? ""}<\/td>
+            <td data-field="total_cost" data-col-index="13">${row.totalCost ?? row["إجمالي التكلفة"] ?? ""}<\/td>
         `;
         fragment.appendChild(tr);
     });
@@ -665,13 +663,13 @@ function enableDateEditing() {
     if (!el.tbody) return;
     window.currentSalesSearchTerm = term;
     if (!term) { refreshCurrentFilter(); return; }
-    el.tbody.innerHTML = '<tr><td colspan="16">🔎 جاري البحث...<\/td><\/tr>';
+    el.tbody.innerHTML = '<tr><td colspan="14">🔎 جاري البحث...<\/td><\/tr>';
     try {
       const res = await fetch(`/api/sales/search?q=${encodeURIComponent(term.replace(/\*/g, "%"))}&limit=1000&_=${Date.now()}`, { cache: "no-store" });
       const data = await res.json();
       renderRows(data, term);
       updateTotals();
-    } catch { el.tbody.innerHTML = '<tr><td colspan="16">❌ خطأ<\/td><\/tr>'; }
+    } catch { el.tbody.innerHTML = '<tr><td colspan="14">❌ خطأ<\/td><\/tr>'; }
   };
 // ======================================
 async function loadBuyersList() {
@@ -1143,7 +1141,7 @@ function initDateFilter() {
       // تحميل البيانات
       if (!el.tbody) initDOM();
       if (el.tbody) {
-        el.tbody.innerHTML = '<tr><td colspan="16">⏳ جاري التحميل...<\/td><\/tr>';
+        el.tbody.innerHTML = '<tr><td colspan="14">⏳ جاري التحميل...<\/td><\/tr>';
       }
       
       try {
