@@ -1249,3 +1249,52 @@ tfoot td input {
     line-height: 1.2 !important;
 }
 
+
+/* ============ v110: قائمة الطبخات + تمييز تجاوز الرصيد ============ */
+.batch-cell { position: relative; display: flex; align-items: center; gap: 2px; }
+.batch-cell input[data-field="batchNo"] { flex: 1; cursor: pointer; }
+.batch-cell input[data-field="batchNo"]:hover { outline: 1px dashed #7b61ff; }
+.batch-pick-btn {
+  border: none; background: #eef; color: #4a3fbf; cursor: pointer;
+  font-size: 11px; padding: 2px 5px; border-radius: 4px; line-height: 1;
+}
+.batch-pick-btn:hover { background: #dcdcf8; }
+.batch-picker {
+  position: absolute; top: 100%; left: 0; z-index: 9999;
+  max-height: 240px; overflow-y: auto; min-width: 380px;
+  background: #fff; border: 1px solid #c5c5e8; border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(30,30,80,.18); direction: rtl;
+}
+.batch-picker .bp-row {
+  display: grid; grid-template-columns: 90px 70px 80px 95px 80px 80px;
+  gap: 6px; padding: 5px 8px; font-size: 12px; cursor: pointer;
+  border-bottom: 1px solid #f0f0f8; text-align: center;
+}
+.batch-picker .bp-row:hover { background: #f3f2ff; }
+.batch-picker .bp-row.bp-header {
+  position: sticky; top: 0; background: #eceafc; font-weight: bold; cursor: default;
+}
+.batch-picker .bp-row.bp-current { background: #e8f7ee; }
+input.qty-over-warning {
+  border: 2px solid #e53935 !important;
+  background: #fdecea !important;
+  box-shadow: 0 0 0 2px rgba(229,57,53,.25);
+}
+.qty-resolve-dialog {
+  position: fixed; top: 24%; left: 50%; transform: translateX(-50%);
+  z-index: 100001; background: #fff; border: 1px solid #e0b4b4;
+  border-radius: 10px; box-shadow: 0 10px 30px rgba(80,20,20,.25);
+  padding: 16px 20px; min-width: 340px; max-width: 92vw; direction: rtl;
+}
+.qty-resolve-dialog .qrd-msg {
+  font-size: 14px; font-weight: bold; color: #b02a37; margin-bottom: 12px; line-height: 1.7;
+}
+.qty-resolve-dialog .qrd-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.qty-resolve-dialog .qrd-btn {
+  padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer;
+  font-size: 13px; font-weight: bold; font-family: inherit;
+}
+.qrd-prim { background: #2e7d32; color: #fff; }
+.qrd-warn { background: #f9a825; color: #000; }
+.qrd-neutral { background: #455a64; color: #fff; }
+.qrd-danger { background: #c62828; color: #fff; }

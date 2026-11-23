@@ -1574,6 +1574,241 @@ def api_update_status():
     return jsonify({"status": status or "idle", "version": _get_local_version()})
 
 
+# ================== v110: نظام قواعد البيانات الموحّد (db_adapters) ==================
+# لوحة «إعدادات الاتصال بقاعدة البيانات» + الفحص + الترحيل + النسخ الاحتياطي.
+# لا يمسّ أي مسار قائم أعلاه — كل المسارات الحالية تعمل كما هي عبر db.get_conn().
+import threading
+from uuid import uuid4
+from db_adapters import factory as db_factory
+from db_adapters import migrate as db_migrate
+from db_adapters.base import DBError
+
+DB_KINDS = [
+    {"kind": "sqlite", "label": "SQLite (.db / .sqlite / .sqlite3)", "needs_path": True},
+    {"kind": "txtjson", "label": "ملفات TXT / JSON مهيكلة (مجلد أو حزمة)", "needs_path": True},
+    {"kind": "csv", "label": "ملفات CSV (جدول لكل ملف)", "needs_path": True},
+    {"kind": "excel", "label": "مصنف Excel (.xlsx — كل ورقة جدول)", "needs_path": True},
+    {"kind": "access", "label": "Microsoft Access (.accdb / .mdb — عبر ODBC)", "needs_path": True},
+    {"kind": "access-sim", "label": "محاكي Access في الذاكرة (تجريب دون أوفيس)", "needs_path": False},
+    {"kind": "network", "label": "قاعدة شبكية (PostgreSQL / MySQL / SQL Server)", "needs_path": False},
+]
+
+DB_REQUIRED_TABLES = [
+    "جدول ك صيدلية", "فاتورة مبيعات", "فاتورة مبيعات رؤوس", "فاتورة مبيعات ربط",
+    "مبيعات", "مشتريات", "مدفوعات", "بطاقات المواد",
+]
+
+DB_CREATE_TABLES = {
+    "جدول ك صيدلية": """CREATE TABLE IF NOT EXISTS "جدول ك صيدلية" (
+        "المادة" TEXT, "الشركة" TEXT, "التكلفة" NUMERIC, "عموم" NUMERIC,
+        "ك صيدلية" NUMERIC, "رقم الطبخة" TEXT, "تاريخ الصنع" TEXT,
+        "تاريخ انتهاء الفعالية" TEXT, "رمز الباركود" TEXT, "ك مشتريات" NUMERIC,
+        "ك مبيعات" NUMERIC, "التصنيف" TEXT, "التركيب الكيميائي" TEXT,
+        "الرمز" TEXT, "السعر الأساسي" NUMERIC)""",
+    "مبيعات": """CREATE TABLE IF NOT EXISTS "مبيعات" (
+        "المادة" TEXT, "الكمية" NUMERIC, "سعر المبيع" NUMERIC, "حسم %" NUMERIC,
+        "رقم الطبخة" TEXT, "رقم الفاتورة" TEXT, "المستخدم" TEXT, "من" TEXT,
+        "إلى" TEXT, "التاريخ" TEXT, "الوقت" TEXT, "تحديد" INTEGER, "ترقيم" INTEGER,
+        PRIMARY KEY ("ترقيم"))""",
+    "مشتريات": """CREATE TABLE IF NOT EXISTS "مشتريات" (
+        "ترتيب" INTEGER, "المادة" TEXT, "أساس العرض" INTEGER, "مجاني العرض" NUMERIC,
+        "حسم العرض" NUMERIC, "الكمية" NUMERIC, "المجاني" NUMERIC, "سعر الشراء" NUMERIC,
+        "حسم %" NUMERIC, "رقم الطبخة" TEXT, "تاريخ الصنع" TEXT,
+        "تاريخ انتهاء الفعا" TEXT, "رقم الفاتورة" TEXT, "المستخدم" TEXT, "من" TEXT,
+        "إلى" TEXT, "التاريخ" TEXT, "الوقت" TEXT, "ملاحظات" TEXT, "البيان" TEXT)""",
+    "مدفوعات": """CREATE TABLE IF NOT EXISTS "مدفوعات" (
+        "ترقيم تلقائي" INTEGER, "البيان" TEXT, "القيمة" NUMERIC, "التاريخ" TEXT,
+        "المستخدم" TEXT, "من" TEXT, "إلى" TEXT, "رقم الفاتورة" TEXT, "المجموعة" TEXT)""",
+    "بطاقات المواد": """CREATE TABLE IF NOT EXISTS "بطاقات المواد" (
+        "رمز الباركود" TEXT, "المادة" TEXT, "الشركة" TEXT, "السعر الأساسي" NUMERIC,
+        "عموم حر" INTEGER, "عموم 20 %" INTEGER, "عموم معتمد" INTEGER, "التصنيف" TEXT,
+        "نسبة الربح" INTEGER, "الاسم اللاتيني" TEXT, "نيت حر" INTEGER, "العبوة" NUMERIC,
+        "العيار" TEXT, "الشكل الصيدلاني" TEXT, "التركيب الكيميائي" TEXT,
+        "وحدة العبوة" TEXT, "اسم المستحضر" TEXT, "الرمز" TEXT, "تعديل جديد" INTEGER,
+        "السعر الأساسي (2)" NUMERIC, "عموم معتمد دولار" NUMERIC, "عموم 20 % دولار" NUMERIC)""",
+    "المستخدمين": """CREATE TABLE IF NOT EXISTS "المستخدمين" (
+        "المستخدم" TEXT, "كلمة المرور" TEXT, "الصلاحية" TEXT)""",
+}
+
+
+def _db_error_payload(e):
+    msg = getattr(e, "message_ar", None) or str(e)
+    payload = {"error": msg}
+    if getattr(e, "technical", ""):
+        payload["technical"] = e.technical
+    return payload
+
+
+def _make_adapter_from_body(body):
+    cfg = {
+        "kind": body.get("kind") or "sqlite",
+        "path": (body.get("path") or "").strip(),
+        "connection_string": (body.get("connection_string") or "").strip(),
+        "read_only": bool(body.get("read_only", False)),
+    }
+    return db_factory.create_adapter(cfg), cfg
+
+
+@app.route("/api/db/kinds")
+def api_db_kinds():
+    cfg = db_factory.get_active_config()
+    try:
+        meta = db_factory.get_adapter().meta()
+    except DBError as e:
+        meta = {"connected": False, "error": e.message_ar}
+    return jsonify({"kinds": DB_KINDS, "current": cfg, "meta": meta})
+
+
+@app.route("/api/db/status")
+def api_db_status():
+    """مؤشر الحالة الدائم أعلى الواجهة: النوع + الملف + الاتصال."""
+    try:
+        a = db_factory.get_adapter()
+        cfg = db_factory.get_active_config()
+        try:
+            tables = a.list_tables()
+            missing = [t for t in DB_REQUIRED_TABLES if t not in tables]
+            status = "connected"
+        except DBError as e:
+            return jsonify({"meta": a.meta(), "status": "error", "error": e.message_ar,
+                            "missing": DB_REQUIRED_TABLES})
+        m = a.meta()
+        m["source"] = cfg.get("source", "")
+        m["tables_count"] = len(tables)
+        return jsonify({"meta": m, "status": status,
+                        "missing": missing if missing else [],
+                        "read_only": bool(a.read_only)})
+    except DBError as e:
+        return jsonify({"meta": {"kind": "?", "connected": False}, "status": "error",
+                        "error": e.message_ar})
+
+
+@app.route("/api/db/test", methods=["POST"])
+def api_db_test():
+    """اختبار الاتصال وفحص الجداول — مع خيار إنشاء الناقص تلقائيًا."""
+    body = request.get_json(force=True)
+    adapter, cfg = _make_adapter_from_body(body)
+    try:
+        adapter.connect()
+        tables = adapter.list_tables()
+        missing = [t for t in DB_REQUIRED_TABLES if t not in tables]
+        created = []
+        if body.get("create_missing") and missing:
+            creatable = adapter.kind in ("sqlite", "txtjson", "csv", "excel", "access-sim")
+            if not creatable:
+                return jsonify({
+                    "ok": True, "tables": tables, "missing": missing, "created": [],
+                    "note": "إنشاء الجداول على هذا النوع يتم عبر «الترحيل» من قاعدة قائمة "
+                            "أو عبر الجسر المحلي لأكسس."
+                })
+            conn = adapter.get_conn()
+            try:
+                for t in missing:
+                    if t in DB_CREATE_TABLES:
+                        conn.execute(DB_CREATE_TABLES[t])
+                        created.append(t)
+                ensure_invoice_schema(conn)   # فاتورة مبيعات + رؤوس + ربط
+                created += [t for t in ("فاتورة مبيعات", "فاتورة مبيعات رؤوس", "فاتورة مبيعات ربط")
+                            if t in missing and t not in created]
+                conn.commit()
+            finally:
+                conn.close()
+            tables = adapter.list_tables()
+            missing = [t for t in DB_REQUIRED_TABLES if t not in tables]
+        return jsonify({"ok": True, "tables": tables, "missing": missing, "created": created,
+                        "kind": adapter.kind})
+    except DBError as e:
+        return jsonify(_db_error_payload(e)), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        try:
+            adapter.close()
+        except Exception:
+            pass
+
+
+@app.route("/api/db/config", methods=["GET", "POST"])
+def api_db_config():
+    if request.method == "GET":
+        return jsonify({"current": db_factory.get_active_config(),
+                        "meta": db_factory.get_adapter().meta()})
+    body = request.get_json(force=True)
+    try:
+        adapter, cfg = _make_adapter_from_body(body)
+        adapter.connect()          # فحص قبل التبديل
+        adapter.list_tables()
+        try:
+            db_factory.backup_active(tag="قبل-تبديل-القاعدة")
+        except Exception:
+            pass
+        adapter.close()
+        db_factory.save_config(cfg)
+        db_factory.activate(cfg)
+        return jsonify({"ok": True, "meta": db_factory.get_adapter().meta()})
+    except DBError as e:
+        return jsonify(_db_error_payload(e)), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+_MIG_JOBS = {}
+
+
+@app.route("/api/db/migrate", methods=["POST"])
+def api_db_migrate():
+    """نقل/نسخ البيانات من القاعدة الحالية إلى قاعدة أخرى — مهمة خلفية بشريط تقدم."""
+    body = request.get_json(force=True)
+    target = body.get("target") or {}
+    job_id = str(uuid4())[:8]
+    _MIG_JOBS[job_id] = {"done": 0, "total": 0, "table": "", "status": "running",
+                         "result": None, "error": ""}
+
+    def _run():
+        dst = None
+        try:
+            src = db_factory.get_adapter()
+            dst, _cfg = _make_adapter_from_body(target)
+            dst.connect()
+
+            def cb(d, t, name):
+                _MIG_JOBS[job_id].update({"done": d, "total": t, "table": name})
+
+            res = db_migrate.migrate(src, dst, progress_cb=cb,
+                                     backup=bool(body.get("backup", True)))
+            _MIG_JOBS[job_id].update({"status": "done", "result": res})
+        except DBError as e:
+            _MIG_JOBS[job_id].update({"status": "error", "error": e.message_ar})
+        except Exception as e:
+            _MIG_JOBS[job_id].update({"status": "error", "error": str(e)})
+        finally:
+            try:
+                if dst:
+                    dst.close()
+            except Exception:
+                pass
+
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({"job": job_id})
+
+
+@app.route("/api/db/migrate/progress")
+def api_db_migrate_progress():
+    job_id = request.args.get("job", "")
+    job = _MIG_JOBS.get(job_id)
+    if not job:
+        return jsonify({"error": "مهمة غير معروفة"}), 404
+    return jsonify(job)
+
+
+@app.route("/api/db/backup", methods=["POST"])
+def api_db_backup():
+    try:
+        return jsonify({"ok": True, **db_factory.backup_active(tag="يدوي")})
+    except DBError as e:
+        return jsonify(_db_error_payload(e)), 400
+
+
 if __name__ == "__main__":
     import threading
     import time

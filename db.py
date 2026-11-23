@@ -1,8 +1,10 @@
-# db.py — اتصال قاعدة البيانات SQLite الجديدة (بدون أوفيس نهائياً)
+# db.py — واجهة موحدة فوق نظام المحوّلات (db_adapters) — العقد القديم محفوظ بالكامل:
+#   get_conn() / get_db_path() / ensure_invoice_schema(conn) كما هي لكل مستدعٍ (server.py، الاختبارات).
+# القاعدة الفعلية تتحدد من «إعدادات الاتصال بقاعدة البيانات» داخل البرنامج (db_adapters/factory.py).
 import os
-import sqlite3
 import sys
 
+from db_adapters.factory import get_adapter, get_active_config  # noqa: F401
 
 INVOICE_TABLE_COLUMNS = (
     "المادة",
@@ -23,7 +25,13 @@ INVOICE_TABLE_COLUMNS = (
 
 
 def get_db_path():
-    """تحديد مسار قاعدة البيانات — يعمل في التطوير والحزمة المجمعة"""
+    """مسار القاعدة النشطة إن كان ملفيًا — وللاستعلام والإشارة في الواجهة."""
+    try:
+        cfg = get_active_config()
+        if cfg.get("path"):
+            return cfg["path"]
+    except Exception:
+        pass
     if getattr(sys, 'frozen', False):
         base = os.path.dirname(sys.executable)
     else:
@@ -31,7 +39,6 @@ def get_db_path():
     env_path = os.getenv("DB_PATH")
     if env_path:
         return env_path
-    # داخل مجلد data أولاً ثم بجانب السيرفر
     candidate = os.path.join(base, "data", "pharmacy.db")
     if os.path.exists(candidate):
         return candidate
@@ -39,19 +46,27 @@ def get_db_path():
 
 
 def get_conn():
-    """فتح اتصال SQLite جديد لكل عملية — آمن مع تعدد الخيوط"""
-    path = get_db_path()
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"❌ قاعدة البيانات غير موجودة: {path}")
-    conn = sqlite3.connect(path, timeout=15)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA busy_timeout=15000")
-    return conn
+    """اتصال DB-API متوافق على أي نوع قاعدة مفعّل — كما كان يعمل server.py.
+
+    توافق رجعي: متغير البيئة DB_PATH يتحكم بمسار SQLite ما دام المستخدم
+    لم يحفظ إعدادات اتصال صريحة من لوحة البرنامج (data/db_config.json)."""
+    env_path = os.getenv("DB_PATH")
+    if env_path:
+        cfg = get_active_config()
+        if cfg.get("source") in ("default", "env") and cfg.get("kind") == "sqlite":
+            try:
+                if os.path.abspath(str(cfg.get("path") or "")) != os.path.abspath(env_path):
+                    from db_adapters import factory as _factory
+                    _factory.activate({"kind": "sqlite", "path": env_path, "source": "env"})
+            except Exception:
+                pass
+    return get_adapter().get_conn()
 
 
 def ensure_invoice_schema(conn):
-    """Create the invoice record source with the columns supplied in its schema."""
+    """Create the invoice record source with the columns supplied in its schema.
+
+    يعمل على أي اتصال متوافق مع SQLite (بما فيه وكيل الذاكرة للصيغ الملفية)."""
     numeric_columns = (
         "الكمية",
         "سعر المبيع",

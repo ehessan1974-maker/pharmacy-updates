@@ -97,9 +97,14 @@ class PharmacyInvoice {
         try {
             const res = await fetch("/medicines");
             const data = await res.json();
-            window.MEDICINES = {};
-            data.forEach(med => { window.MEDICINES[med.name] = med; });
-            console.log("🔄 تم تحديث MEDICINES:", Object.keys(window.MEDICINES).length);
+            /* v110: نفس تطبيع autocomplete.data.js — يحفظ MEDICINES مصفوفة صف-لكل-طبخة
+               ويبني MEDICINE_BATCHES (كان ينهار هنا إلى كائن بمفتاح الاسم فتضيع الطبخات) */
+            if (typeof window.buildMedicineStores === 'function') {
+                window.buildMedicineStores(data);
+            } else {
+                window.MEDICINES = data;
+            }
+            console.log("🔄 تم تحديث MEDICINES:", Array.isArray(window.MEDICINES) ? window.MEDICINES.length : Object.keys(window.MEDICINES).length);
             this.renderTable();
         } catch (err) {
             console.error("❌ خطأ تحميل الأدوية:", err);
@@ -113,6 +118,36 @@ class PharmacyInvoice {
             if (field === activeField) return;
             input.value = item[field] !== undefined && item[field] !== null ? item[field] : "";
         });
+    }
+
+    /* v110: معلومات رصيد طبخة داخل سياق الفاتورة الحالية
+       othersCurrent: مجموع كميات بقية الأسطر لنفس المادة+الطبخة (السيناريو 4)
+       origAll: مجموع الكميات الأصلية المحمّلة من فاتورة قديمة لنفس المادة+الطبخة —
+       رصيد «جدول ك صيدلية» مبني بعد خصم بيع الفاتورة القديمة، فيُعاد ترخيصه هنا
+       كي لا يظهر تحذير خاطئ عند تعديل فاتورة محفوظة */
+    batchInfoFor(name, batchNo, excludeIndex = -1) {
+        let othersCurrent = 0, origAll = 0;
+        this.items.forEach((it, i) => {
+            if (!it || it.name !== name) return;
+            if (String(it.batchNo || '') !== String(batchNo || '')) return;
+            if (i !== excludeIndex) othersCurrent += Number(it.quantity) || 0;
+            if (it._origBatchNo !== undefined && String(it._origBatchNo || '') === String(batchNo || '')) {
+                origAll += Number(it._origQty) || 0;
+            }
+        });
+        const batches = (window.MEDICINE_BATCHES && window.MEDICINE_BATCHES[name]) || [];
+        const batch = batches.find(b => String(b.batchNo || '') === String(batchNo || ''));
+        const stock = batch ? (Number(batch.pharmacyQty) || 0) : null;
+        const origDeleted = (window.__deletedOrigQty && window.__deletedOrigQty[(name || '') + '\u0001' + String(batchNo || '')]) || 0;
+        return { othersCurrent, origAll, origDeleted, stock, editMode: !!this.isLoadingOldInvoice };
+    }
+
+    setQtyWarning(index, on) {
+        const rows = document.querySelectorAll('#items-tbody tr');
+        const tr = rows[index];
+        if (!tr) return;
+        const qtyInput = tr.querySelector('input[data-field="quantity"]');
+        if (qtyInput) qtyInput.classList.toggle('qty-over-warning', !!on);
     }
 
     updateItemsFromDOM() {
@@ -456,6 +491,8 @@ async saveInvoice() {
                     item.sellPrice = it.sellPrice || 0;
                     item.discountPercent = it.discountPercent || 0;
                     item.batchNo = it.batchNo || "";
+                    item._origBatchNo = item.batchNo;      /* v110: أصل الفاتورة القديمة — ترخيص التعديل */
+                    item._origQty = Number(it.quantity) || 0;
                     item.cost = it.cost || 0;
                     item.receivedAmount = it.receivedAmount ?? "";
                     item["إيصال_نسبة_الربح_إلى"] = it["إيصال_نسبة_الربح_إلى"] ?? "";
@@ -654,7 +691,7 @@ focusFirstEmptyMaterialRow() {
                 <td><input type="number" data-field="discountPercent" value="${item.discountPercent}"></td>
                 <td><input readonly data-field="discountValue" value="${item.discountValue}"></td>
                 <td><input readonly data-field="totalAfterDiscount" value="${item.totalAfterDiscount}"></td>
-                <td><input readonly data-field="batchNo" value="${this.escapeHtml(item.batchNo)}"></td>
+                <td><div class="batch-cell"><input readonly data-field="batchNo" value="${this.escapeHtml(item.batchNo)}"><button type="button" class="batch-pick-btn" title="قائمة الطبخات المتاحة (نقر مزدوج أو Alt+↓)">▾</button></div></td>
                 <td><input readonly data-field="cost" value="${item.cost}"></td>
                 <td><input readonly data-field="totalCost" value="${item.totalCost}"></td>
                 <td><input readonly data-field="totalBeforeDiscount" value="${item.totalBeforeDiscount}"></td>
@@ -695,7 +732,20 @@ focusFirstEmptyMaterialRow() {
                     this.saveToLocalStorage();
                 });
             });
+            /* v110: فتح قائمة الطبخات — نقر مزدوج أو Alt+↓ أو زر الاختيار */
+            const batchInput = row.querySelector('input[data-field="batchNo"]');
+            const pickBtn = row.querySelector('.batch-pick-btn');
+            if (batchInput && pickBtn && typeof window.openBatchPicker === 'function') {
+                const openPicker = () => window.openBatchPicker(batchInput);
+                batchInput.addEventListener("dblclick", openPicker);
+                batchInput.addEventListener("keydown", (e) => {
+                    if (e.altKey && e.key === "ArrowDown") { e.preventDefault(); e.stopPropagation(); openPicker(); }
+                });
+                pickBtn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); openPicker(); });
+            }
             row.querySelector(".delete-row").onclick = () => {
+                /* v110: أصل الفاتورة القديمة يُسجَّل قبل الحذف كي لا يظهر تحذير خاطئ لبقية الأسطر */
+                if (typeof window.registerDeletedOriginal === 'function') window.registerDeletedOriginal(this.items[index]);
                 if (this.items.length === 1) this.items[0] = this.getEmptyItem();
                 else this.items.splice(index, 1);
                 this.saveToLocalStorage();
