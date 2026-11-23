@@ -94,6 +94,13 @@ class Dao:
         self.backend = ""
         self.cols = {}       # table -> {col: odbc_type_code}
         self._last_reprobe = 0.0   # 06av: آخر إعادة فحص شاملة للجداول الغائبة (على ping)
+        # v111: كاش «جدول ك صيدلية الحي» — الاستعلام التجميعي (ثلاث تجميعات + وصلتان في Jet)
+        # يستغرق دقائق على القواعد الكبيرة وكان يُرمى عند كل فتح/تحديث ويحمل القفل
+        # فتتوقف كل الكتابات والسحب. الآن: نتيجة واحدة كل 60 ثانية + طلب واحد حاسوب
+        # (single-flight) + إبطال فوري عند كتابة مبيعات/مشتريات/ك صيدلية.
+        self._k_cache = {"at": 0.0, "payload": None}
+        self._k_computing = False
+        self._k_cond = threading.Condition()
         self._connect()
 
     def _candidates(self):
@@ -290,10 +297,10 @@ class Dao:
                     "read_only": bool(CFG.get("read_only")),
                     "tables": [t for t in ALLOWED_TABLES if t in self.cols]}
 
-    def table(self, name):
+    def table(self, name, refresh=False):
         self._check(name)   # 06av: فصل «غير مسموح» عن «غير موجود» + إعادة الفحص
         if name == "جدول ك صيدلية":
-            return self.table_k_pharmacy()
+            return self.table_k_pharmacy(refresh=refresh)
         with self.lock:
             cur = self.conn.cursor()
             cur.execute("SELECT * FROM [" + name + "]")
@@ -341,7 +348,46 @@ class Dao:
         "ORDER BY q.[المادة], b.[الشركة]"
     )
 
-    def table_k_pharmacy(self):
+    K_CACHE_TTL = 60.0   # v111: ثواني صلاحية كاش «ك صيدلية الحي»
+
+    def _invalidate_k(self, name):
+        if name in ("مبيعات", "مشتريات", "جدول ك صيدلية"):
+            with self._k_cond:
+                self._k_cache.update({"at": 0.0, "payload": None})
+                self._k_cond.notify_all()
+
+    def table_k_pharmacy(self, refresh=False):
+        """v111: كاش + طلب حاسوب واحد — الاستعلام الثقيل يُنفَّذ مرة كل 60 ثانية
+        مهما تعددت الطلبات، والبقية تنتظر النتيجة الجاهزة بدل تراكمها خلف القفل."""
+        import time as _time
+        if not refresh:
+            with self._k_cond:
+                if self._k_cache["payload"] and                         _time.time() - self._k_cache["at"] < self.K_CACHE_TTL:
+                    return self._k_cache["payload"]
+        self._compute_k_pharmacy()
+        with self._k_cond:
+            if self._k_cache["payload"]:
+                return self._k_cache["payload"]
+        # بديل: الجدول الثابت كما هو (قد يكون قديمًا — يُبنى عند الحفظ من أكسس فقط)
+        try:
+            with self.lock:
+                cur = self.conn.cursor()
+                cur.execute("SELECT * FROM [جدول ك صيدلية]")
+                names = [d[0] for d in cur.description]
+                rows = [dict(zip(names, (self._conv_out(v) for v in row)))
+                        for row in cur.fetchall()]
+                cur.close()
+            return {"ok": True, "cols": names, "rows": rows, "live": False}
+        except Exception as e:
+            return {"ok": False, "error": str(e)[:300]}
+
+    def _compute_k_pharmacy(self):
+        # طلب واحد حاسوب: من بدأ الحساب يكمل والبقية تنتظر الإشارة
+        with self._k_cond:
+            if self._k_computing:
+                self._k_cond.wait(timeout=120)
+                return
+            self._k_computing = True
         try:
             with self.lock:
                 cur = self.conn.cursor()
@@ -350,18 +396,18 @@ class Dao:
                 rows = [dict(zip(names, (self._conv_out(v) for v in row)))
                         for row in cur.fetchall()]
                 cur.close()
-            return {"ok": True, "cols": names, "rows": rows, "live": True}
+            payload = {"ok": True, "cols": names, "rows": rows, "live": True}
+            with self._k_cond:
+                self._k_cache.update({"at": __import__("time").time(), "payload": payload})
+                self._k_cond.notify_all()
         except Exception:
-            pass
-        # 06ay بديل: الجدول الثابت كما هو (قد يكون قديمًا — يُبنى عند الحفظ من أكسس فقط)
-        with self.lock:
-            cur = self.conn.cursor()
-            cur.execute("SELECT * FROM [جدول ك صيدلية]")
-            names = [d[0] for d in cur.description]
-            rows = [dict(zip(names, (self._conv_out(v) for v in row)))
-                    for row in cur.fetchall()]
-            cur.close()
-        return {"ok": True, "cols": names, "rows": rows, "live": False}
+            with self._k_cond:
+                self._k_cond.notify_all()
+        finally:
+            with self._k_cond:
+                self._k_computing = False
+                self._k_cond.notify_all()
+
 
     def _validate(self, name, data):
         self._check(name)   # 06av: فصل «غير مسموح» عن «غير موجود» + إعادة الفحص
@@ -394,6 +440,7 @@ class Dao:
                 n += 1
             self.conn.commit()
             cur.close()
+        self._invalidate_k(name)   # v111: كاش ك صيدلية يُبطل فورًا عند الكتابة
         return {"ok": True, "count": n}
 
     def update(self, name, items):
@@ -412,6 +459,7 @@ class Dao:
                 n += cur.rowcount if cur.rowcount > 0 else 0
             self.conn.commit()
             cur.close()
+        self._invalidate_k(name)   # v111
         return {"ok": True, "count": n}
 
     def delete(self, name, rows):
@@ -428,6 +476,7 @@ class Dao:
                 n += max(cur.rowcount, 0)
             self.conn.commit()
             cur.close()
+        self._invalidate_k(name)   # v111
         return {"ok": True, "count": n}
 
 
@@ -489,6 +538,13 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Access-Control-Allow-Origin", "*")
+        # v111: gzip للردود الكبيرة — سحب الجداول عبر الشبكة يتقلص 3-5 أضعاف
+        if len(body) > 4096 and "gzip" in (self.headers.get("Accept-Encoding") or ""):
+            import gzip as _gzip
+            comp = _gzip.compress(body, 5)
+            if len(comp) < len(body):
+                body = comp
+                self.send_header("Content-Encoding", "gzip")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -511,8 +567,10 @@ class Handler(BaseHTTPRequestHandler):
             elif p.startswith("/api/table/"):
                 if DAO is None:
                     raise ValueError("لم يتم اختيار قاعدة البيانات بعد — استخدم زر اختيار القاعدة في البرنامج")
-                from urllib.parse import unquote
-                self._send(DAO.table(unquote(p[len("/api/table/"):])))
+                from urllib.parse import unquote, parse_qs
+                q = parse_qs(self.path.split("?", 1)[1]) if "?" in self.path else {}
+                force = q.get("refresh", ["0"])[0] in ("1", "true")
+                self._send(DAO.table(unquote(p[len("/api/table/")]), refresh=force))
             else:
                 self._send({"ok": False, "error": "مسار غير معروف"}, 404)
         except Exception as e:

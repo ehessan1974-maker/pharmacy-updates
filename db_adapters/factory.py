@@ -2,15 +2,19 @@
 """db_adapters/factory.py — إنشاء المحوّلات وتفعيلها وحفظ إعدادات الاتصال.
 
 المصادر بترتيب الأولوية:
-  1) data/db_config.json (يُكتب من لوحة الإعدادات في البرنامج)
-  2) إعدادات_الجسر.json (db_path → Access — توافق رجعي مع الجسر)
-  3) متغيرات البيئة DB_ADAPTER / DB_PATH / DB_CONNECTION_STRING
-  4) SQLite الافتراضية (data/pharmacy.db)
+  1) data/db_config.json (يُكتب من لوحة الإعدادات في البرنامج فقط)
+  2) متغيرات البيئة DB_ADAPTER / DB_PATH / DB_CONNECTION_STRING
+  3) SQLite الافتراضية (data/pharmacy.db)
+  — مسار أكسس من «إعدادات_الجسر.json» يُعرض كاقتراح في اللوحة (access_hint)
+    ولا يُفعَّل محرك SQL تلقائيًا أبدًا (إصلاح انحدار v110: كان كل طلب API
+    يفتح اتصال ODBC على أكسس ثم يُنفّذ عليه SQL بصيغة SQLite فيفشل،
+    ويتنافس مع الجسر على ملف أكسس نفسه — فتتأخر الشاشات دقائق).
 """
 import os
 import json
 import shutil
 import threading
+import time
 
 from .base import BaseAdapter, DBError
 from .sqlite_adapter import SqliteAdapter
@@ -49,6 +53,11 @@ _lock = threading.RLock()
 _active = None
 _active_cfg = None
 
+# v111: تراجع بعد فشل التفعيل — محاولة اتصال فاشلة (أكسس مقفول/سائق ناقص/خادم متوقف)
+# لا تُعاد كل طلبٍ (كان يجمّد الشاشات دقائق)؛ تُعاد المحاولة بعد مهلة فقط برسالة فورية.
+_FAILURE = {"key": None, "at": 0.0, "error": None}
+_FAILURE_BACKOFF = 60.0
+
 
 def base_dir():
     import sys
@@ -64,29 +73,16 @@ def _abs(p):
 
 
 def load_saved_config():
-    """إعدادات الاتصال المحفوظة — أول مصدر موجود."""
+    """إعدادات الاتصال المحفوظة — أول مصدر موجود (بدون تفعيل تلقائي لأكسس)."""
     for f in (os.path.join(base_dir(), CONFIG_FILE), _abs(CONFIG_FILE)):
         if f and os.path.exists(f):
             try:
                 cfg = json.load(open(f, encoding="utf-8"))
                 if isinstance(cfg, dict) and cfg.get("kind"):
+                    cfg.setdefault("source", "saved")
                     return cfg
             except Exception:
                 pass
-    bridge = os.path.join(base_dir(), BRIDGE_CONFIG)
-    if os.path.exists(bridge):
-        try:
-            cfg = json.load(open(bridge, encoding="utf-8"))
-            db_path = cfg.get("db_path")
-            if db_path and str(db_path).lower().endswith((".accdb", ".mdb")):
-                return {
-                    "kind": "access",
-                    "path": db_path,
-                    "read_only": bool(cfg.get("read_only", False)),
-                    "source": BRIDGE_CONFIG,
-                }
-        except Exception:
-            pass
     env_kind = os.getenv("DB_ADAPTER")
     if env_kind:
         return {
@@ -100,6 +96,50 @@ def load_saved_config():
     return {"kind": "sqlite",
             "path": os.getenv("DB_PATH") or "data/pharmacy.db",
             "source": "default"}
+
+
+def access_hint():
+    """مسار أكسس من إعدادات_الجسر.json — ليعبّئه زر الاستعراض في اللوحة تلقائيًا."""
+    bridge = os.path.join(base_dir(), BRIDGE_CONFIG)
+    if os.path.exists(bridge):
+        try:
+            cfg = json.load(open(bridge, encoding="utf-8"))
+            p = cfg.get("db_path")
+            if p and str(p).lower().endswith((".accdb", ".mdb")):
+                return {"path": p, "read_only": bool(cfg.get("read_only", False))}
+        except Exception:
+            pass
+    return None
+
+
+def activate(cfg):
+    """تفويض المحوّل الحالي وتفعيل الجديد (أو إعادة تفعيل الحالي)."""
+    global _active, _active_cfg
+    with _lock:
+        cfg = dict(cfg)
+        key = (cfg.get("kind"), cfg.get("path"), cfg.get("connection_string"),
+               bool(cfg.get("read_only")))
+        if key == _FAILURE["key"] and (time.time() - _FAILURE["at"]) < _FAILURE_BACKOFF:
+            raise DBError(
+                "تعذر الاتصال مؤخرًا بنفس الإعدادات: " + str(_FAILURE["error"]) +
+                "\nتُعاد المحاولة تلقائيًا بعد دقيقة، أو صحّح الإعدادات ثم «حفظ وتفعيل فورًا»."
+            )
+        adapter = create_adapter(cfg)
+        try:
+            adapter.connect()
+        except Exception as e:
+            _FAILURE.update({"key": key, "at": time.time(),
+                             "error": getattr(e, "message_ar", str(e))})
+            raise
+        _FAILURE.update({"key": None, "at": 0.0, "error": None})
+        if _active is not None:
+            try:
+                _active.close()
+            except Exception:
+                pass
+        _active = adapter
+        _active_cfg = cfg
+        return adapter
 
 
 def save_config(cfg):
@@ -131,22 +171,6 @@ def create_adapter(cfg):
         c["path"] = _abs(c["path"])
     return cls(c)
 
-
-def activate(cfg):
-    """تفويض المحوّل الحالي وتفعيل الجديد (أو إعادة تفعيل الحالي)."""
-    global _active, _active_cfg
-    with _lock:
-        cfg = dict(cfg)
-        adapter = create_adapter(cfg)
-        adapter.connect()
-        if _active is not None:
-            try:
-                _active.close()
-            except Exception:
-                pass
-        _active = adapter
-        _active_cfg = cfg
-        return adapter
 
 
 def get_adapter(force=False):

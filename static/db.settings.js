@@ -33,8 +33,13 @@
     return pill;
   }
 
+  var _pillBusy = false;
   function refreshPill() {
+    /* v111: استقصاء رخيص — تخطَّ التبويب المخفي ولا تكدّس الطلبات */
+    if (_pillBusy || (document.visibilityState && document.visibilityState !== 'visible')) return;
+    _pillBusy = true;
     fetch('/api/db/status').then(function (r) { return r.json(); }).then(function (d) {
+      _pillBusy = false;
       var p = buildPill();
       var m = d.meta || {};
       var name = (m.path || m.connection_string || '').split(/[\\/]/).pop() || '—';
@@ -44,14 +49,18 @@
         p.innerHTML = '<b>' + esc(kindLabel) + '</b><span>' + esc(name) +
           (d.read_only ? ' • قراءة فقط' : ' • متصل ✓') +
           (d.missing && d.missing.length ? ' • جداول ناقصة: ' + d.missing.length : '') + '</span>';
+      } else if (d.status === 'idle') {
+        p.className = 'dbPill dbPill-idle';
+        p.innerHTML = '<b>' + esc(kindLabel) + '</b><span>' + esc(name) + ' • جاهز — الفحص عند الطلب</span>';
       } else {
         p.className = 'dbPill dbPill-err';
-        p.innerHTML = '<b>قاعدة البيانات</b><span>غير متصل ✗ — انقر للإعدادات</span>';
+        p.innerHTML = '<b>قاعدة البيانات</b><span>انقر للإعدادات والفحص</span>';
       }
     }).catch(function () {
+      _pillBusy = false;
       var p = buildPill();
       p.className = 'dbPill dbPill-err';
-      p.innerHTML = '<b>قاعدة البيانات</b><span>غير متصل ✗</span>';
+      p.innerHTML = '<b>قاعدة البيانات</b><span>انقر للإعدادات</span>';
     });
   }
 
@@ -238,7 +247,7 @@
     ensureCss();
     buildPill();
     refreshPill();
-    setInterval(refreshPill, 30000);
+    setInterval(refreshPill, 60000);   /* v111: 60 ث بدل 30 — مؤشر لا يثقل الخادم */
     /* مدخل في القائمة الجانبية إن وُجدت (الشريط الجانبي) */
     var menu = document.getElementById('invoiceSidebarMenu');
     if (menu && !menu.querySelector('#dbSettingsSidebarBtn')) {

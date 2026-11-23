@@ -1656,31 +1656,78 @@ def api_db_kinds():
         meta = db_factory.get_adapter().meta()
     except DBError as e:
         meta = {"connected": False, "error": e.message_ar}
-    return jsonify({"kinds": DB_KINDS, "current": cfg, "meta": meta})
+    return jsonify({"kinds": DB_KINDS, "current": cfg, "meta": meta,
+                    "access_hint": db_factory.access_hint()})
+
+
+_DB_STATUS_CACHE = {"at": 0.0, "payload": None}
 
 
 @app.route("/api/db/status")
 def api_db_status():
-    """مؤشر الحالة الدائم أعلى الواجهة: النوع + الملف + الاتصال."""
-    try:
-        a = db_factory.get_adapter()
-        cfg = db_factory.get_active_config()
+    """مؤشر الحالة الدائم أعلى الواجهة — v111: رخيص ومخزّن 30 ثانية.
+
+    كان كل استقصاء يفعّل المحوّل ويفتح اتصالًا (وأكسس ODBC تحديدًا 10-15 ث
+    لكل مرة كل 30 ثانية) فيبطئ كل شاشة — الآن: بلا تفعيل لأكسس/الشبكة،
+    وفحص رخيص فقط لأنواع الملفات المحلية، والبقية «جاهز — الفحص عند الطلب»."""
+    import time as _time
+    now = _time.time()
+    if _DB_STATUS_CACHE["payload"] and now - _DB_STATUS_CACHE["at"] < 30:
+        return jsonify(_DB_STATUS_CACHE["payload"])
+
+    def _label(kind):
+        for k in DB_KINDS:
+            if k["kind"] == kind:
+                return k["label"]
+        return kind
+
+    cfg = db_factory.load_saved_config()   # قراءة إعدادات فقط — بلا تفعيل ولا اتصال
+    kind = cfg.get("kind") or "sqlite"
+    payload = {
+        "meta": {"kind": kind, "label": _label(kind), "path": cfg.get("path") or "",
+                 "read_only": bool(cfg.get("read_only")), "source": cfg.get("source", "")},
+        "status": "idle", "missing": [], "read_only": bool(cfg.get("read_only")),
+    }
+    if kind == "sqlite":   # الفحص الرخيص فقط — ملف محلي
         try:
+            a = db_factory.get_adapter()
             tables = a.list_tables()
             missing = [t for t in DB_REQUIRED_TABLES if t not in tables]
-            status = "connected"
+            m = a.meta()
+            m["source"] = cfg.get("source", "")
+            m["tables_count"] = len(tables)
+            payload.update({"meta": m, "status": "connected", "missing": missing})
         except DBError as e:
-            return jsonify({"meta": a.meta(), "status": "error", "error": e.message_ar,
-                            "missing": DB_REQUIRED_TABLES})
-        m = a.meta()
-        m["source"] = cfg.get("source", "")
-        m["tables_count"] = len(tables)
-        return jsonify({"meta": m, "status": status,
-                        "missing": missing if missing else [],
-                        "read_only": bool(a.read_only)})
-    except DBError as e:
-        return jsonify({"meta": {"kind": "?", "connected": False}, "status": "error",
-                        "error": e.message_ar})
+            payload.update({"status": "error", "error": e.message_ar})
+        except Exception as e:
+            payload.update({"status": "error", "error": str(e)})
+    _DB_STATUS_CACHE.update({"at": now, "payload": payload})
+    return jsonify(payload)
+
+
+@app.after_request
+def _gzip_response(response):
+    """v111: ضغط الردود الكبيرة (JSON/HTML/CSS/JS) — /medicines وجداول الجسر
+    تتقلص 3-5 أضعاف، أثره كبير عبر الشبكة (ngrok) على سرعة فتح الفاتورة."""
+    try:
+        accept = request.headers.get("Accept-Encoding") or ""
+        if (response.status_code == 200
+                and not response.direct_passthrough
+                and "gzip" in accept
+                and response.mimetype in ("application/json", "text/html", "text/css",
+                                          "application/javascript", "text/plain")):
+            data = response.get_data()
+            if len(data) > 1024:
+                import gzip as _gzip
+                comp = _gzip.compress(data, 5)
+                if len(comp) < len(data):
+                    response.set_data(comp)
+                    response.headers["Content-Encoding"] = "gzip"
+                    response.headers["Content-Length"] = str(len(comp))
+                    response.headers.add("Vary", "Accept-Encoding")
+    except Exception:
+        pass
+    return response
 
 
 @app.route("/api/db/test", methods=["POST"])

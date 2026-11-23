@@ -311,6 +311,45 @@ class TestAdapters(unittest.TestCase):
             saved = json.load(open(p, encoding="utf-8"))
             self.assertEqual(saved["kind"], "sqlite")
 
+    # ---------- v111: انحدار البطء — الجسر لا يفعّل أكسس تلقائيًا ----------
+    def test_bridge_config_never_auto_activates_access(self):
+        """إعدادات_الجسر.json (أكسس) لا تصير محرك SQL للسيرفر — كان كل طلب API
+        يفتح ODBC ويجري SQL بصيغة SQLite عليه فيبطئ الفتح دقائق (انحدار v110)."""
+        import json as _json
+        from unittest.mock import patch
+        from db_adapters.factory import load_saved_config, access_hint
+        d = self._tmp()
+        with open(os.path.join(d, "إعدادات_الجسر.json"), "w", encoding="utf-8") as f:
+            _json.dump({"db_path": r"E:\تقسيم\MDB_be.accdb", "read_only": False}, f, ensure_ascii=False)
+        with patch("db_adapters.factory.base_dir", return_value=d):
+            cfg = load_saved_config()
+            self.assertEqual(cfg["kind"], "sqlite")          # الافتراضي يبقى SQLite
+            hint = access_hint()
+            self.assertIsNotNone(hint)                        # المسار يُعرض كاقتراح باللوحة
+            self.assertEqual(hint["path"], r"E:\تقسيم\MDB_be.accdb")
+
+    # ---------- v111: تراجع فشل التفعيل — بلا محاولات لكل طلب ----------
+    def test_activate_failure_backoff(self):
+        """فشل اتصال (ملف غائب) لا يعاد كل طلبٍ — المحاولة الثانية ترفض فورًا."""
+        import time as _time
+        from unittest.mock import patch
+        from db_adapters.factory import activate
+        from db_adapters.base import DBError
+        d = self._tmp()
+        # read_only + ملف غائب = رفض فوري (DBError) وبلا أثر على المحوّل النشط عالميًا
+        cfg = {"kind": "sqlite", "path": os.path.join(d, "missing.db"), "read_only": True}
+        with patch("db_adapters.factory.base_dir", return_value=d):
+            t0 = _time.time()
+            with self.assertRaises(DBError):
+                activate(cfg)
+            t1 = _time.time()
+            with self.assertRaises(DBError) as ctx:
+                activate(cfg)
+            t2 = _time.time()
+            self.assertIn("تعذر الاتصال مؤخرًا", str(ctx.exception))
+            self.assertLess(t2 - t1, 0.05)                    # رفض فوري — بلا محاولة اتصال
+            self.assertLess(t1 - t0, 5)                        # الأولى محاولة فعلية سريعة
+
     # ---------- أخطاء عربية واضحة ----------
     def test_arabic_errors(self):
         a = create_adapter({"kind": "excel", "path": "X_nonexistent.xlsx", "read_only": True})
