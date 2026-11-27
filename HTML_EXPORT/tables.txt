@@ -1,0 +1,230 @@
+===== TABLE: USysApplicationLog =====
+ID  |  Type=4  |  Size=4
+SourceObject  |  Type=10  |  Size=255
+Data Macro Instance ID  |  Type=10  |  Size=255
+Error Number  |  Type=4  |  Size=4
+Category  |  Type=10  |  Size=255
+Object Type  |  Type=10  |  Size=255
+Description  |  Type=12  |  Size=0
+Context  |  Type=10  |  Size=255
+Created  |  Type=8  |  Size=8
+PK: ID
+
+===== TABLE: √Ã“«¡ «·ﬂ„Ì«  =====
+«·—ﬁ„  |  Type=7  |  Size=8
+«·«”„  |  Type=10  |  Size=255
+«· — Ì»  |  Type=4  |  Size=4
+«·ﬂ„Ì…  |  Type=7  |  Size=8
+«·Ã“¡  |  Type=7  |  Size=8
+PK: (·« ÌÊÃœ)
+
+===== TABLE: ¬Œ—  ⁄œÌ· =====
+«·—ﬁ„  |  Type=7  |  Size=8
+«”„ «·„” Õ÷—  |  Type=10  |  Size=255
+«”„ «·„⁄„·  |  Type=10  |  Size=255
+«· —ﬂÌ»  |  Type=10  |  Size=255
+⁄Ì«— «·„” Õ÷—  |  Type=10  |  Size=255
+«·‘ﬂ· «·’Ìœ·«‰Ì  |  Type=10  |  Size=255
+«· ⁄»∆…  |  Type=10  |  Size=255
+«·”⁄— ··’Ìœ·Ì  |  Type=7  |  Size=8
+«·”⁄— ··⁄„Ê„  |  Type=7  |  Size=8
+„·«ÕŸ…  |  Type=10  |  Size=255
+PK: (·« ÌÊÃœ)
+
+===== TABLE: »ÿ«ﬁ«  «·„Ê«œ =====
+—„“ «·»«—ﬂÊœ  |  Type=10  |  Size=255
+«·„«œ…  |  Type=10  |  Size=255
+«·‘—ﬂ…  |  Type=10  |  Size=255
+«·”⁄— «·√”«”Ì  |  Type=7  |  Size=8
+⁄„Ê„ Õ—  |  Type=4  |  Size=4
+⁄„Ê„ 20 %  |  Type=4  |  Size=4
+⁄„Ê„ „⁄ „œ  |  Type=4  |  Size=4
+«· ’‰Ì›  |  Type=10  |  Size=255
+‰”»… «·—»Õ  |  Type=7  |  Size=8
+«·«”„ «··« Ì‰Ì  |  Type=10  |  Size=255
+‰Ì  Õ—  |  Type=4  |  Size=4
+«·⁄»Ê…  |  Type=10  |  Size=255
+«·⁄Ì«—  |  Type=10  |  Size=255
+«·‘ﬂ· «·’Ìœ·«‰Ì  |  Type=10  |  Size=255
+«· —ﬂÌ» «·ﬂÌ„Ì«∆Ì  |  Type=10  |  Size=255
+ÊÕœ… «·⁄»Ê…  |  Type=10  |  Size=255
+«”„ «·„” Õ÷—  |  Type=10  |  Size=255
+«·—„“  |  Type=10  |  Size=255
+ ⁄œÌ· ÃœÌœ  |  Type=1  |  Size=1
+«·”⁄— «·√”«”Ì œÊ·«—  |  Type=7  |  Size=8
+⁄„Ê„ „⁄ „œ œÊ·«—  |  Type=7  |  Size=8
+⁄„Ê„ 20 % œÊ·«—  |  Type=7  |  Size=8
+PK: (·« ÌÊÃœ)
+
+===== TABLE: ÃœÊ·  Ã„Ì⁄ «·„‘ —Ì«  Ê«·„»Ì⁄«  =====
+ «—ÌŒ «·„‘ —Ì«   |  Type=10  |  Size=255
+ «—ÌŒ «·„»Ì⁄«   |  Type=10  |  Size=255
+≈Ã„«·Ì ﬂ„Ì… «·„‘ —Ì«   |  Type=7  |  Size=8
+≈Ã„«·Ì ﬂ„Ì… «·„»Ì⁄«   |  Type=7  |  Size=8
+≈Ã„«·Ì ﬁÌ„… «·„‘ —Ì«   |  Type=7  |  Size=8
+≈Ã„«·Ì ﬁÌ„… «·„»Ì⁄«   |  Type=7  |  Size=8
+«·—»Õ  |  Type=7  |  Size=8
+PK: (·« ÌÊÃœ)
+
+===== TABLE: ÃœÊ· ﬂ ’Ìœ·Ì… =====
+«·„«œ…  |  Type=10  |  Size=255
+«·‘—ﬂ…  |  Type=10  |  Size=255
+«· ﬂ·›…  |  Type=7  |  Size=8
+⁄„Ê„  |  Type=4  |  Size=4
+ﬂ ’Ìœ·Ì…  |  Type=7  |  Size=8
+—ﬁ„ «·ÿ»Œ…  |  Type=10  |  Size=255
+ «—ÌŒ «·’‰⁄  |  Type=8  |  Size=8
+ «—ÌŒ «‰ Â«¡ «·›⁄«·Ì…  |  Type=8  |  Size=8
+—„“ «·»«—ﬂÊœ  |  Type=10  |  Size=255
+ﬂ „‘ —Ì«   |  Type=7  |  Size=8
+ﬂ „»Ì⁄«   |  Type=7  |  Size=8
+«· ’‰Ì›  |  Type=10  |  Size=255
+«· —ﬂÌ» «·ﬂÌ„Ì«∆Ì  |  Type=10  |  Size=255
+«·—„“  |  Type=10  |  Size=255
+«·”⁄— «·√”«”Ì  |  Type=7  |  Size=8
+PK: (·« ÌÊÃœ)
+
+===== TABLE: ÃœÊ· „»Ì⁄«  Ê„‘ —Ì«  Ê√—»«Õ =====
+«·„«œ…  |  Type=10  |  Size=255
+ﬁÌ„… «·„‘ —Ì«   |  Type=7  |  Size=8
+ﬁÌ„… «·„»Ì⁄«   |  Type=7  |  Size=8
+√—»«Õ «·„«œ…  |  Type=7  |  Size=8
+‰”»… √—»«Õ «·„«œ…  |  Type=7  |  Size=8
+ﬂ „‘ —Ì«   |  Type=7  |  Size=8
+ﬂ „»Ì⁄«   |  Type=7  |  Size=8
+«·—’Ìœ  |  Type=7  |  Size=8
+—„“ «·»«—ﬂÊœ  |  Type=10  |  Size=255
+PK: (·« ÌÊÃœ)
+
+===== TABLE: ›« Ê—… „»Ì⁄«  =====
+«·„«œ…  |  Type=10  |  Size=255
+«·ﬂ„Ì…  |  Type=7  |  Size=8
+”⁄— «·„»Ì⁄  |  Type=7  |  Size=8
+Õ”„ %  |  Type=7  |  Size=8
+ﬁÌ„… «·Õ”„  |  Type=7  |  Size=8
+«·≈Ã„«·Ì »⁄œ «·Õ”„  |  Type=7  |  Size=8
+—ﬁ„ «·ÿ»Œ…  |  Type=10  |  Size=255
+«· ﬂ·›…  |  Type=7  |  Size=8
+≈Ã„«·Ì «· ﬂ·›…  |  Type=7  |  Size=8
+«·≈Ã„«·Ì ﬁ»· «·Õ”„  |  Type=7  |  Size=8
+≈Ã„«·Ì «·—»Õ  |  Type=7  |  Size=8
+«·„»·€ «·„ﬁ»Ê÷ „‰ „«œ… Ê«Õœ…  |  Type=7  |  Size=8
+≈Ì’«· ‰”»… «·—»Õ ≈·Ï  |  Type=7  |  Size=8
+‰”»… «·—»Õ  |  Type=7  |  Size=8
+PK: (·« ÌÊÃœ)
+
+===== TABLE: „»Ì⁄«  =====
+«·„«œ…  |  Type=10  |  Size=255
+«·ﬂ„Ì…  |  Type=7  |  Size=8
+”⁄— «·„»Ì⁄  |  Type=7  |  Size=8
+Õ”„ %  |  Type=7  |  Size=8
+—ﬁ„ «·ÿ»Œ…  |  Type=10  |  Size=255
+—ﬁ„ «·›« Ê—…  |  Type=10  |  Size=255
+«·„” Œœ„  |  Type=10  |  Size=255
+„‰  |  Type=10  |  Size=255
+≈·Ï  |  Type=10  |  Size=255
+«· «—ÌŒ  |  Type=8  |  Size=8
+«·Êﬁ   |  Type=8  |  Size=8
+ ÕœÌœ  |  Type=1  |  Size=1
+ —ﬁÌ„  |  Type=4  |  Size=4
+PK:  —ﬁÌ„
+
+===== TABLE: „»Ì⁄«  ﬁ»· 1/1/2026 =====
+Expr1  |  Type=10  |  Size=255
+Expr2  |  Type=10  |  Size=255
+«·ﬂ„Ì…  |  Type=7  |  Size=8
+”⁄— «·„»Ì⁄  |  Type=7  |  Size=8
+PK: (·« ÌÊÃœ)
+
+===== TABLE: „»Ì⁄«  ﬁ»· 1/7/2025 =====
+Expr1  |  Type=10  |  Size=255
+Expr2  |  Type=10  |  Size=255
+«·ﬂ„Ì…  |  Type=7  |  Size=8
+”⁄— «·„»Ì⁄  |  Type=7  |  Size=8
+PK: (·« ÌÊÃœ)
+
+===== TABLE: „œ›Ê⁄«  =====
+ —ﬁÌ„  ·ﬁ«∆Ì  |  Type=4  |  Size=4
+«·»Ì«‰  |  Type=10  |  Size=255
+«·ﬁÌ„…  |  Type=7  |  Size=8
+«· «—ÌŒ  |  Type=8  |  Size=8
+«·„” Œœ„  |  Type=10  |  Size=255
+„‰  |  Type=10  |  Size=255
+≈·Ï  |  Type=10  |  Size=255
+—ﬁ„ «·›« Ê—…  |  Type=10  |  Size=255
+«·„Ã„Ê⁄…  |  Type=10  |  Size=255
+PK: (·« ÌÊÃœ)
+
+===== TABLE: „‘ —Ì«  =====
+ — Ì»  |  Type=4  |  Size=4
+«·„«œ…  |  Type=10  |  Size=255
+√”«” «·⁄—÷  |  Type=7  |  Size=8
+„Ã«‰Ì «·⁄—÷  |  Type=7  |  Size=8
+Õ”„ «·⁄—÷  |  Type=7  |  Size=8
+«·ﬂ„Ì…  |  Type=7  |  Size=8
+«·„Ã«‰Ì  |  Type=7  |  Size=8
+”⁄— «·‘—«¡  |  Type=7  |  Size=8
+Õ”„ %  |  Type=7  |  Size=8
+—ﬁ„ «·ÿ»Œ…  |  Type=10  |  Size=255
+ «—ÌŒ «·’‰⁄  |  Type=8  |  Size=8
+ «—ÌŒ «‰ Â«¡ «·›⁄«·Ì…  |  Type=8  |  Size=8
+—ﬁ„ «·›« Ê—…  |  Type=10  |  Size=255
+«·„” Œœ„  |  Type=10  |  Size=255
+„‰  |  Type=10  |  Size=255
+≈·Ï  |  Type=10  |  Size=255
+«· «—ÌŒ  |  Type=8  |  Size=8
+«·Êﬁ   |  Type=8  |  Size=8
+„·«ÕŸ«   |  Type=10  |  Size=255
+«·»Ì«‰  |  Type=10  |  Size=255
+PK: (·« ÌÊÃœ)
+
+===== TABLE: „ÿ·Ê» =====
+«·„«œ…  |  Type=10  |  Size=255
+„ÿ·Ê»  |  Type=4  |  Size=4
+«·‘—ﬂ…  |  Type=10  |  Size=255
+«·—’Ìœ  |  Type=4  |  Size=4
+PK: (·« ÌÊÃœ)
+
+===== TABLE: ‰”Œ… „‰  »ÿ«ﬁ«  «·„Ê«œ =====
+—„“ «·»«—ﬂÊœ  |  Type=10  |  Size=255
+«·„«œ…  |  Type=10  |  Size=255
+«·‘—ﬂ…  |  Type=10  |  Size=255
+«·”⁄— «·√”«”Ì  |  Type=7  |  Size=8
+⁄„Ê„ Õ—  |  Type=4  |  Size=4
+⁄„Ê„ 20 %  |  Type=4  |  Size=4
+⁄„Ê„ „⁄ „œ  |  Type=4  |  Size=4
+«· ’‰Ì›  |  Type=10  |  Size=255
+‰”»… «·—»Õ  |  Type=7  |  Size=8
+«·«”„ «··« Ì‰Ì  |  Type=10  |  Size=255
+‰Ì  Õ—  |  Type=4  |  Size=4
+«·⁄»Ê…  |  Type=10  |  Size=255
+«·⁄Ì«—  |  Type=10  |  Size=255
+«·‘ﬂ· «·’Ìœ·«‰Ì  |  Type=10  |  Size=255
+«· —ﬂÌ» «·ﬂÌ„Ì«∆Ì  |  Type=10  |  Size=255
+ÊÕœ… «·⁄»Ê…  |  Type=10  |  Size=255
+«”„ «·„” Õ÷—  |  Type=10  |  Size=255
+«·—„“  |  Type=10  |  Size=255
+ ⁄œÌ· ÃœÌœ  |  Type=1  |  Size=1
+PK: (·« ÌÊÃœ)
+
+===== TABLE: ‰”Œ… „‰  ÃœÊ· ﬂ ’Ìœ·Ì… =====
+«·„«œ…  |  Type=10  |  Size=255
+ﬂ ’Ìœ·Ì…  |  Type=4  |  Size=4
+PK: (·« ÌÊÃœ)
+
+===== TABLE: ‰”Œ… „‰  „»Ì⁄«  =====
+«·„«œ…  |  Type=10  |  Size=255
+«·ﬂ„Ì…  |  Type=7  |  Size=8
+”⁄— «·„»Ì⁄  |  Type=7  |  Size=8
+Õ”„ %  |  Type=7  |  Size=8
+—ﬁ„ «·ÿ»Œ…  |  Type=10  |  Size=255
+—ﬁ„ «·›« Ê—…  |  Type=10  |  Size=255
+«·„” Œœ„  |  Type=10  |  Size=255
+„‰  |  Type=10  |  Size=255
+≈·Ï  |  Type=10  |  Size=255
+«· «—ÌŒ  |  Type=8  |  Size=8
+«·Êﬁ   |  Type=8  |  Size=8
+ ÕœÌœ  |  Type=1  |  Size=1
+ —ﬁÌ„  |  Type=4  |  Size=4
+PK:  —ﬁÌ„
+
