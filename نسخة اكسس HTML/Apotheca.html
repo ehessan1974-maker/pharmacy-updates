@@ -476,14 +476,14 @@ body.selgrab table.sheet th.colsel,body.selgrab table.sheet tr.rowsel td.rowh{cu
 .subnote{font-size:11px;color:#8a8781;margin-top:2px}
 .kbd{background:#eceae6;border:1px solid #c2bfba;border-bottom-width:2px;border-radius:3px;padding:0 5px;font-size:10.5px;font-family:Consolas,monospace;color:#333}
 .section-title{font-size:12.5px;font-weight:700;color:var(--acc-dark);border-bottom:1px dashed #c9c6c0;padding-bottom:4px;margin-bottom:2px}
-/* قسم التحكم في القائمة الجانبية: يمدد ويتقلص بالنقر على عنوانه */
-#ctrlgrp{flex:none;margin:4px 8px 0;border-top:1px solid #c6c3bd;padding-top:4px}
-#ctrlgrp .ngrp-body{
-  display:grid;grid-template-columns:1fr;gap:5px;padding:6px 2px 8px;
-  max-height:44vh;overflow-y:auto;
-}
-#ctrlgrp .ngrp-body .tbtn{width:100%;padding:6px 8px;font-size:12px}
-#ctrlgrp.collapsed .ngrp-body{display:none}
+/* v131: قسم «التحكم» حُلَّ — عناصره (الأزرار الأربعة عشر) نُقلت كلها إلى مجموعة «فاتورة مشتريات»
+   في لوحة الكائنات بطلب المستخدم، فالقسم الأصلي صار مخفيًا بلا مدخل في القائمة الجانبية.
+   تُنقل عقد DOM نفسها (لا استنساخ) في buildTabs فتبقى معالجاتها المربوطة بمعرّفها سليمة. */
+#ctrlgrp{display:none}
+/* تنسيق الأزرار المنقولة داخل مجموعة «فاتورة مشتريات»: كاملة العرض كبنود القائمة،
+   مع فاصل خفيف يُميّزها عن بند فاتورة المشتريات (النافذة) أعلاها */
+.ngrp[data-grp="فاتورة مشتريات"] .ngrp-body .tbtn{display:block;width:100%;padding:6px 8px;font-size:12px;margin:1px 0;text-align:start}
+.ngrp[data-grp="فاتورة مشتريات"] .ngrp-body .ctrl-sep{height:0;border-top:1px dashed #c9c6c0;margin:4px 2px}
 /* قسم الإعدادات في القائمة الجانبية: أحجام خط الجدول وبيانات الفاتورة وشريط الحالة */
 #setgrp{flex:none;margin:4px 8px 0}
 #setgrp .ngrp-body{display:grid;grid-template-columns:1fr;gap:5px;padding:6px 2px 8px}
@@ -1509,7 +1509,7 @@ const CARDS_SEED_V = 3;
 
 /* إصدار البرنامج — يعرض في شريط الحالة ويستخدمه المشغّل لاختيار أحدث مصدر تحديث */
 const APP_VER = '2026-11-27c';   /* v116: لاحقة لتفريق إصدارات نفس اليوم — SU القديمة (v108) ترفض '2026-11-23' بلا لاحقة ك«غير أحدث» */   /* 06bj: «التحديث لا يصل بشكل تلقائي !!!» — وحدة تحديث ذاتي داخل البرنامج نفسه (SU أدناه): سابقاً كان وصول التحديث معتمداً كلياً على ملف المشغّل عند المستخدم (وإن كان قديماً أو حُجبت raw عن شبكته بقي على نسخته)، ومن الآن بعد الإقلاع بـ15 ثانية يفحص البرنامج version.txt من أربعة مصادر حية (raw بكاسر كاش، gh-proxy، jsDelivr، api.github) ويأخذ الأحدث بينها حمايةً من مرآة متقادمة، وإن كان الرقم البعيد أكبر من APP_NUM نزّل النسخة كاملة (مهلة 60 ث) وتحقق من سلامتها (الحجم + SEED_B64 + APP_VER أحدث من الحالية) ثم حفظها في نفس مفاتيح المشغّل (__fatoret_last_html/__fatoret_last_ver) فتصبح أي فتح لاحق بالمشغّل أو بدونه على الأحدث، وأظهر لافتة علوية «تشغيل التحديث الآن / لاحقاً» والتشغيل يستبدل المستند كما يفعل المشغّل تماماً والمسودة والجلسة تُستعاد تلقائياً، وإن نُزّل تحديث في جلسة سابقة ثم فُتح ملف أقدم ظهرت اللافتة فوراً من التخزين بلا شبكة، والفحص يتكرر كل 30 دقيقة، والنقر على «الإصدار» في شريط الحالة يفحص فوراً ويخبر بالنتيجة، وكل فشل صامت لا يزعج العمل */
-const APP_NUM = 130;   /* v95: رقم version.txt في المستودع — كان عالقًا على 92 منذ إصدار قديم فجعل وحدة التحديث الذاتي تعيد تنزيل النسخة البعيدة كل جلسة */   /* رقم version.txt في المستودع — يُرفع مع كل نشر ويستخدمه الفحص الذاتي 06bj للبوابة الرقمية الرخيصة قبل تنزيل الملف الكبير */
+const APP_NUM = 131;   /* v131: نقل عناصر قسم «التحكم» كلها إلى مجموعة «فاتورة مشتريات» في القائمة الجانبية بطلب المستخدم — القسم الأصلي صار مخفيًا بلا مدخل */   /* v95: رقم version.txt في المستودع — كان عالقًا على 92 منذ إصدار قديم فجعل وحدة التحديث الذاتي تعيد تنزيل النسخة البعيدة كل جلسة */   /* رقم version.txt في المستودع — يُرفع مع كل نشر ويستخدمه الفحص الذاتي 06bj للبوابة الرقمية الرخيصة قبل تنزيل الملف الكبير */
 
 const LS_KEY = 'fatora_mushtariat_db_v1';
 const DRAFT_KEY = 'fatora_mushtariat_draft_v1';   /* مسودة الفاتورة الجارية (سطور + رأس) — تُستعاد عند تحديث الصفحة أو تغيير قاعدة البيانات (06a) */
@@ -4008,6 +4008,22 @@ function buildTabs() {
       t.onclick = w.act ? () => openSalesAction(w.act) : (isSales ? () => openSalesScreen(w.scr) : (isOrders ? () => openOrdersScreen(w.scr) : (isWh ? () => openWhScreen(w.scr) : (isDabt ? () => openDabtScreen(w.scr) : (isDafat ? () => openDafatScreen(w.scr) : () => openWindow(w.id))))));   /* 2026-11-13a — 06am — 06an — 06ao — 06ap — 06ar */
       bd.appendChild(t);
     });
+    /* v131: عناصر قسم «التحكم» نُقلت كلها إلى مجموعة «فاتورة مشتريات» بطلب المستخدم —
+       تُنقل عقد DOM نفسها (لا استنساخ) فتبقى معالجاتها المربوطة بمعرّفها سليمة،
+       وقسم «التحكم» مخفيٌّ في CSS (#ctrlgrp{display:none}) فلا يظهر رأسه الفارغ.
+       مُدخل القائمة هو المجموعة الديناميكية وحدها (data-grp="فاتورة مشتريات")،
+       والفاصل ctrl-sep يُميّز الأزرار عن بند النافذة أعلاها */
+    if (g === 'فاتورة مشتريات') {
+      const ctrls = [...document.querySelectorAll('#ctrlgrp .ngrp-body > .tbtn')];
+      if (ctrls.length) {
+        const sep = document.createElement('div');
+        sep.className = 'ctrl-sep';
+        bd.appendChild(sep);
+        ctrls.forEach(b => bd.appendChild(b));
+      }
+      const gc = h.querySelector('.gcount');   /* h هو رأس المجموعة وفيه gcount — يُضمَّن إلى grp بعد هذا الكتل */
+      if (gc) gc.textContent = String(items.length + (ctrls.length || 0));
+    }
     grp.appendChild(h);
     grp.appendChild(bd);
     body.appendChild(grp);
